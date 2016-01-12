@@ -1,0 +1,10 @@
+sudo
+kmod
+apt
+apt-utils
+aptitude
+u-boot-tools
+mount
+rsyslog
+ca-certificates
+

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+NM_SYS_CON_DIR="/etc/NetworkManager/system-connections"
+
+## system connections must have permissions 0600.
+echo "Changing permissions: ${NM_SYS_CON_DIR}/*"
+${CHROOTCMD} bash -c "chmod 600 ${NM_SYS_CON_DIR}/*"
+

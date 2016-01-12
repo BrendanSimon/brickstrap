@@ -1,0 +1,60 @@
+#!/bin/bash
+
+## Install linux image from zynq_IND build directory.
+## NOTE: requires SEPL_PREFIX env var to be set (for now).
+
+
+DEB_IMAGE="linux-image-4.0.0-ge2aa738-dirty_4.0.0-ge2aa738-dirty-1_armhf.deb"
+
+
+DTB_IMAGE="zynq-IND.dtb"
+
+
+LINUX_BUILD_DIR="${SEPL_PREFIX}/linux/kutu_linux_build"
+
+ZYNQ_IND_LINUX_BUILD_DIR="${LINUX_BUILD_DIR}/zynq_IND"
+
+DTB_BUILD_DIR="${SEPL_PREFIX}/linux/kutu_linux_build/arch/arm/boot/dts"
+
+#BRICKSTRAP_BUILD_DIR=""
+
+## directory to access host filesystem from QEMU chroot environment.
+HOSTFS_DIR="/host-rootfs"
+
+HOSTFS_SEPL_PREFIX="${HOSTFS_DIR}/${SEPL_PREFIX}"
+
+HOSTFS_LINUX_BUILD_DIR="${HOSTFS_SEPL_PREFIX}/linux/kutu_linux_build"
+
+HOSTFS_ZYNQ_IND_LINUX_BUILD_DIR="${HOSTFS_DIR}/${ZYNQ_IND_LINUX_BUILD_DIR}"
+
+HOSTFS_DTB_BUILD_DIR="${HOSTFS_ZYNQ_IND_LINUX_BUILD_DIR}/arch/arm/boot/dts"
+
+
+HOSTFS_DEB_IMAGE="${HOSTFS_LINUX_BUILD_DIR}/${DEB_IMAGE}"
+
+HOSTFS_DTB_IMAGE="${HOSTFS_DTB_BUILD_DIR}/${DTB_IMAGE}"
+
+
+
+#$CHROOTCMD adduser --disabled-password --gecos \"\" brendan
+#echo "brendan:brendan" | $CHROOTCMD chpasswd
+#$CHROOTCMD usermod -a -G sudo brendan
+
+##
+## Install linux debian package.
+##
+echo "Installing '${DEB_IMAGE}' ..."
+$CHROOTCMD dpkg -i "${HOSTFS_DEB_IMAGE}"
+
+##
+## Setup uImage symlink.
+##
+$CHROOTCMD bash -c 'cd /boot && ln -sf $(ls -1rt uImage-* | tail -n 1) uImage'
+
+##
+## Install device tree.
+##
+$CHROOTCMD cp "${HOSTFS_DTB_IMAGE}" /boot/
+#cp ${DTB_BUILD_DIR)/${DTB_IMAGE} {BRICKSTRAP_BUILD_DIR}/boot/
+$CHROOTCMD bash -c 'cd /boot && ln -sf zynq-IND.dtb ind.dtb'
+

@@ -1,0 +1,10 @@
+python2.7
+python2.7-numpy
+python2.7-gps
+python-enum34
+python-serial
+python-cjson
+python-requests
+python-arrow
+python-dbus
+

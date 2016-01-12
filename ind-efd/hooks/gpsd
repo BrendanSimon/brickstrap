@@ -1,0 +1,36 @@
+#!/bin/bash
+
+## script to setup/modify the chrony config file.
+
+GPSD_DIR=/etc/default
+
+GPSD_CONF="${GPSD_DIR}/gpsd"
+
+GPSD_CONF_ORIG="${GPSD_CONF}.ORIG"
+
+GPSD_CONF_TMP="${GPSD_CONF}.TMP"
+
+## Remove temp file so that it's empty to append to.
+${CHROOTCMD} rm -f "${GPSD_CONF_TMP}"
+
+## Replace DEVICES="" with DEVICES="/dev/ttyPS1"
+## FIXME: This pattern works but isn't pretty.
+## FIXME: Is there a neater or better way to do this?
+SED_PATTERNS="'s/DEVICES=\\\"\\\"/DEVICES=\\\"\/dev\/ttyPS1\\\"/g'"
+
+echo "${GPSD_DIR}"
+echo "${GPSD_CONF}"
+echo "${GPSD_CONF_TMP}"
+echo "${SED_PATTERNS}"
+
+## Make a copy of the original file.
+${CHROOTCMD} bash -c "cd ${GPSD_DIR} && cp ${GPSD_CONF} ${GPSD_CONF_ORIG}"
+
+${CHROOTCMD} bash -c "cd ${GPSD_DIR} && cat ${GPSD_CONF} | sed ${SED_PATTERNS} >> ${GPSD_CONF_TMP}"
+
+## Copy temp file back fo conf file.
+${CHROOTCMD} bash -c "cd ${GPSD_DIR} && mv ${GPSD_CONF_TMP} ${GPSD_CONF}"
+
+## Enable gpsd systemd service.
+$CHROOTBINDCMD systemctl enable gpsd
+

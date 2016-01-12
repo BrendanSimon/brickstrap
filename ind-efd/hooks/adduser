@@ -1,0 +1,53 @@
+#!/bin/bash
+# Add default user and give them sudo powers
+
+function check-user-exists()
+{
+    local username=$1
+
+    ret=$($CHROOTCMD id ${username})
+    echo "${ret}"
+}
+
+function add-user()
+{
+    local username=$1
+
+    ret=$(check-user-exists ${username})
+    if [ -n "${ret}" ] ; then
+        echo "User '${username}' exists.  Skipping add-user"
+        return
+    fi
+
+    $CHROOTCMD adduser --disabled-password --gecos \"\" ${username}
+    echo "${username}:${username}" | $CHROOTCMD chpasswd
+}
+
+function add-admin()
+{
+    local username=$1
+
+    #check-user-exists ${username}
+
+    ret=$(add-user ${username})
+    if [ -n "${ret}" ] ; then
+        echo "User '${username}' exists.  Skipping add-admin"
+        #return
+    fi
+
+    echo "Add '${username}' to sudo group."
+    $CHROOTCMD usermod -a -G sudo ${username}
+}
+
+#$CHROOTCMD adduser --disabled-password --gecos \"\" brendan
+#echo "brendan:brendan" | $CHROOTCMD chpasswd
+#$CHROOTCMD usermod -a -G sudo brendan
+
+add-admin sepladmin
+
+add-user sepluser
+
+add-admin efdadmin
+
+add-user efduser
+
