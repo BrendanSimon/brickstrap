@@ -1,0 +1,8 @@
+kernel_image=/boot/uImage
+devicetree_image=/boot/ind.dtb
+boot_part=2
+sdboot=if mmcinfo; then echo Copying Linux from SD to RAM... && ext2load mmc 0:${boot_part} ${kernel_load_address} ${kernel_image} && ext2load mmc 0:${boot_part} ${devicetree_load_address} ${devicetree_image} && bootm ${kernel_load_address} - ${devicetree_load_address}; fi
+mode_boot=sdboot
+uenvcmd=boot
+
+

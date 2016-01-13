@@ -1,4 +1,4 @@
-boot/flash/dummy
+boot/flash/readme
 etc/flash-kernel
 etc/kernel-img.conf
 etc/ssh/ssh_host_dsa_key
