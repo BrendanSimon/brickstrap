@@ -1,0 +1,10 @@
+[Unit]
+Description=SEPL Startup service to enable modem network
+After=network.target auditd.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/sbin/modem-power-enable.sh
+
+[Install]
+WantedBy=multi-user.target
