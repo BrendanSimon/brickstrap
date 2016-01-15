@@ -7,7 +7,7 @@
 # Default-Start: S
 # Default-Stop:
 # X-Start-Before: ssh cdc-gadget rndis-gadget brickman
-# Short-Description: bjs first boot tasks
+# Short-Description: ind-efd first boot tasks
 ### END INIT INFO
 
 case "$1" in
@@ -36,9 +36,9 @@ EOF
 
         # expand the root file system
         # Note, this will break if using an initramfs
-        parted --script /dev/mmcblk0 unit % resizepart 2 100%
+        parted --script /dev/mmcblk0 unit % resizepart 4 100%
         partprobe
-        resize2fs /dev/mmcblk0p2
+        resize2fs /dev/mmcblk0p4
         ;;
     stop|restart|reload|force-reload|status)
         :
