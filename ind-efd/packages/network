@@ -17,4 +17,5 @@ usb-modeswitch
 curl
 wget
 ddclient
+gir1.2-modemmanager-1.0
 
