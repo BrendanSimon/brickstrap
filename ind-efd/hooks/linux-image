@@ -1,6 +1,22 @@
 #!/bin/bash
 
-## Install linux image from zynq_IND build directory.
+##============================================================================
+##
+##  Install linux image from <some known location>
+##  Use this hook if installing kernel via a debian package, and it is not
+##  in an apt repository for multistrap to install.
+##
+##  This is a useful way to install if using modules and everything is
+##  encapsulated int he one .deb package, with version information,
+##  and appropriate ermissions too.
+##
+##  Since the zynq_IND kernel image has been configured for all drivers to
+##  be built-in, we can just copy the uImage to root/boot/ directory,
+##  then do a bit of magic:
+##      * rename with version as suffix: uImage-<version>
+##      * create symlink uImage -> uImage-<version>
+##
+##============================================================================
 
 #DEB_IMAGE="linux-image-4.0.0-ge2aa738-dirty_4.0.0-ge2aa738-dirty-1_armhf.deb"
 
@@ -15,12 +31,21 @@
 ##
 ## Setup uImage symlink.
 ##
-#$CHROOTCMD bash -c 'cd /boot && ln -sf $(ls -1rt uImage-* | tail -n 1) uImage'
+uimage=boot/uImage
+root_uimage=${ROOTDIR}/${uimage}
+if [ -f ${root_uimage} -a ! -h ${root_uimage} ]; then
+    version=$(strings ${root_uimage} | grep 'Linux-' | cut -c 7-)
+    echo "Moving ${uimage} to ${uimage}-${version}"
+    mv ${root_uimage} ${root_uimage}-${version}
+    echo "Creating symlink /${uimage} to uImage-${version}"
+    ln -sf uImage-${version} ${ROOTDIR}/${uimage}
+else
+    echo "No uImage found !!!"
+fi
 
 ##
-## Install device tree.
+## Setup device-tree symlink.
 ##
-#$CHROOTCMD cp "${HOSTFS_DTB_IMAGE}" /boot/
-#cp ${DTB_BUILD_DIR)/${DTB_IMAGE} {BRICKSTRAP_BUILD_DIR}/boot/
-#$CHROOTCMD bash -c 'cd /boot && ln -sf zynq-IND.dtb ind.dtb'
+dtb=zynq-IND.dtb
+ln -sf ${dtb} ${ROOTDIR}/boot/ind.dtb
 
