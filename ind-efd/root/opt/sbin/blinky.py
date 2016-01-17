@@ -1,4 +1,12 @@
-"""IND Driver Module."""
+#!/usr/bin/env python2
+
+##############################################################################
+##
+##  Author:     Successful Endeavours Pty Ltd
+##
+##############################################################################
+
+'''IND Driver Module.'''
 
 import time
 import ind

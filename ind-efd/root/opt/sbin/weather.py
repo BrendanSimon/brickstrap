@@ -1,10 +1,12 @@
+#!/usr/bin/env python2
+
 ##############################################################################
 ##
 ##  Author:     Successful Endeavours Pty Ltd
 ##
 ##############################################################################
 
-'''\
+'''
 This module retrieves weather parameters from a weather station.
 Support weather stations are:
     * Vaisala Weather Transmitter WXT520

@@ -1,12 +1,16 @@
+#!/usr/bin/env python2
+
 ##############################################################################
 ##
 ##  Author:     Successful Endeavours Pty Ltd
 ##
 ##############################################################################
 
-'''This module will generate sinusoidal data that simulates real world
+'''
+This module will generate sinusoidal data that simulates real world
 data acquired via a high speed A2D converter.
-Default parameters are 250 MS/s 16-bit data.'''
+Default parameters are 250 MS/s 16-bit data.
+'''
 
 import sys
 import os.path

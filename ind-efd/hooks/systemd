@@ -11,8 +11,12 @@ $CHROOTBINDCMD systemctl disable smbd.service
 # we really don't want this running - it causes a long timeout on boot
 $CHROOTBINDCMD systemctl mask samba-ad-dc.service
 
-## Enable sepl-blinky service.
-## NOTE: THIS IS JUST A TEMPORARY TEST !!
-$CHROOTCMD chmod +x /opt/sbin/blinky.py
-$CHROOTBINDCMD systemctl enable sepl-blinky
+## make python apps executable.
+$CHROOTCMD chmod ug+x /opt/sbin/efd_app.py
+$CHROOTCMD chmod ug+x /opt/sbin/blinky.py
+$CHROOTCMD chmod ug+x /opt/sbin/modem.py
+$CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
+$CHROOTCMD chmod ug+x /opt/sbin/weather.py
+## Enable efd service -- automatically run at boot via systemd.
+$CHROOTBINDCMD systemctl enable efd
 

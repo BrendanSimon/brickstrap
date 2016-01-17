@@ -1,10 +1,13 @@
+#!/usr/bin/env python2
+
 ##############################################################################
 ##
 ##  Author:     Successful Endeavours Pty Ltd
 ##
 ##############################################################################
 
-'''\
+
+'''
 This module will perform the Time/Frequency mapping over input data.
 '''
 
