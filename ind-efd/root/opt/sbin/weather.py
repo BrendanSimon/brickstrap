@@ -77,11 +77,10 @@ class Weather_Station_Thread(threading.Thread):
             self.weather_station.wait_and_process() #this will continue to loop, wait for data, and process it.
 
     def cleanup(self):
-        #print('DEBUG: cleaning up ...')
+        print('INFO: Weather_Thread: Cleaning up ...')
         self.running = False
-        #print('DEBUG: thread join ...')
         self.join()
-        #print('DEBUG: thread joined')
+        print('INFO: Weather_Thread: Done.')
 
 ##============================================================================
 

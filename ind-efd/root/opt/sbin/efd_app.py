@@ -31,9 +31,8 @@ from collections import namedtuple
 
 from persistent_dict import PersistentDict
 
-
-
 from weather import Weather_Station_Thread
+from cloud import Cloud_Thread
 
 #import peak_detect
 
@@ -62,8 +61,10 @@ class GPS_Poller_Thread(threading.Thread):
             self.gpsd.next() #this will continue to loop and grab EACH set of gpsd info to clear the buffer
 
     def cleanup(self):
+        print('INFO: GPS_Poller_Thread: Cleaning up ...')
         self.running = False
         self.join() # wait for the thread to finish what it's doing
+        print('INFO: GPS_Poller_Thread: Done.')
 
 ##============================================================================
 
@@ -94,7 +95,12 @@ class Config(object):
     ## Default values.  Can be overridden by settings file or command line.
     ##
 
+    version_str = '0.3'
+
     serial_number = '0'
+
+    pd_event_reporting_interval_minutes = 5             ## report PD events every 5 minutes (minimum interval)
+    reporting_sms_phone_numbers         = []            ## empty list of phone numbers.
 
     web_server = 'http://portal.efdweb.com'
 
@@ -191,18 +197,39 @@ class Config(object):
 
     state_filename = os.path.join(data_dir, 'efd_app.state')
 
+    measurements_log_field_names = [
+        'datetime_utc', 'datetime_local',
+        'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
+        'T2_red', 'W2_red',
+        'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
+        'T2_red', 'W2_wht',
+        'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
+        'T2_blu', 'W2_blu',
+        'temperature', 'humidity', 'rain_intensity',
+        ]
+
     def __init__(self):
         self.read_settings_file()
+
         self.set_capture_count()
         self.set_fft_size()
+        #self.set_serial_number()
 
     def read_settings_file(self):
         ## Using 'import' is quick and dirty method to read in settings from a file.
         ## It relies on settings.py being avaiable in the python path to load the 'module'
         ## Currently a symlink is used from settings.py in app directory to the settings file.
         import settings
-        self.serial_number = settings.SERIAL_NUMBER
-        self.site_name = settings.SITE_NAME
+        self.set_serial_number(settings.SERIAL_NUMBER)
+        self.site_name                              = settings.SITE_NAME
+        self.reporting_sms_phone_numbers            = list(settings.REPORTING_SMS_PHONE_NUMBERS)
+        self.pd_event_trigger_voltage               = float(settings.PD_EVENT_TRIGGER_VOLTAGE)
+        self.pd_event_reporting_interval_minutes    = int(settings.PD_EVENT_REPORTING_INTERVAL_MINUTES)
+
+    def set_serial_number(self, serial_number):
+        self.serial_number                  = serial_number
+        self.web_server_ping                = '{ws}/api/Ping/{sn}'.format(ws=self.web_server, sn=serial_number)
+        self.web_server_measurements_log    = '{ws}/api/AddEFDLog/{sn}'.format(ws=self.web_server, sn=serial_number)
 
     def set_capture_count(self, capture_count=None):
         if capture_count:
@@ -234,6 +261,8 @@ class Config(object):
         print("-------------------------------------------------------------")
         print("Config values")
         print("-------------")
+
+        print("version_str = {}".format(self.version_str))
 
         print("serial_number = {}".format(self.serial_number))
         print("site_name = {}".format(self.site_name))
@@ -295,6 +324,9 @@ class Config(object):
         print("show_measurements = {}".format(self.show_measurements))
         print("show_measurements_post = {}".format(self.show_measurements_post))
 
+        print("reporting_sms_phone_numbers = {}".format(self.reporting_sms_phone_numbers))
+        print("pd_event_reporting_interval_minutes = {}".format(self.pd_event_reporting_interval_minutes))
+
         print("page_size = {}".format(self.page_size))
         print("page_width = {}".format(self.page_width))
 
@@ -305,23 +337,15 @@ class Config(object):
 
 ##============================================================================
 
-measurements_log_field_names = [
-    'datetime_utc', 'datetime_local',
-    'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
-    'T2_red', 'W2_red',
-    'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
-    'T2_red', 'W2_wht',
-    'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
-    'T2_blu', 'W2_blu',
-    'temperature', 'humidity', 'rain_intensity',
-    ]
-
 class Measuremenets_Log(object):
     '''Manage logging measurement data to log files.'''
     '''Uses csv module and csv.DictWriter object.'''
     '''Rotate log files each day, based on 'datetime_utc' field.'''
 
-    def __init__(self, url, field_names=measurements_log_field_names):
+    ## FIXME: not sure if putting the measurements_log_field_names in the config object is the right thing.
+
+    def __init__(self, app_state, url, field_names=Config.measurements_log_field_names):
+        self.app_state = app_state
         self.url = url
         self.field_names = field_names
         self.csv_file = None
@@ -332,6 +356,14 @@ class Measuremenets_Log(object):
         self.filename_extension = '.csv'
         self.day_saved = 0
 
+        ## initialise csv header string.
+        hdr_sio = StringIO()
+        writer = csv.DictWriter(hdr_sio, fieldnames=self.field_names, extrasaction='ignore')
+        writer.writeheader()
+        self.csv_header = hdr_sio.getvalue()
+        hdr_sio.close()
+
+        ## Create directory to store measurements log if it doesn't exisit.
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
@@ -344,19 +376,12 @@ class Measuremenets_Log(object):
             filename = '{prefix}{dtstr}{extension}'.format(prefix=self.filename_prefix, dtstr=dt_str, extension=self.filename_extension)
             self.filename = filename
 
+
         self.day_saved = dt.day
 
         ## Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
         #measurements['datetime_utc'] = utc_dt.isoformat(sep=' ')
         #measurements['datetime_local'] = loc_dt.isoformat(sep=' ')
-
-
-        ## FIXME: can initialise hdr_str once and reuse !!
-        hdr_sio = StringIO()
-        writer = csv.DictWriter(hdr_sio, fieldnames=self.field_names, extrasaction='ignore')
-        writer.writeheader()
-        hdr_str = hdr_sio.getvalue()
-        hdr_sio.close()
 
         ## format csv output to a string (not a file) so the same output
         ## can be efficiently saved to a file and post to web server.
@@ -376,7 +401,7 @@ class Measuremenets_Log(object):
             if new_file:
                 ## write header to new file.
                 #writer.writeheader()
-                csvfile.write(hdr_str)
+                csvfile.write(self.csv_header)
             ## write measurements to file.
             #writer.writerow(measurements)
             csvfile.write(row_str)
@@ -384,16 +409,23 @@ class Measuremenets_Log(object):
         ##
         ## Post csv info to web server.
         ##
-        #r = requests.post("http://httpbin.org/post", data=payload)
-        csv_data = "{hdr}{row}".format(hdr=hdr_str, row=row_str)
-        #r = requests.get(self.url, data=csv_data)
-        #print("DEBUG: requests get response = {}".format(r))
-        r = requests.post(self.url, data=csv_data)
-        if config.show_measurements_post:
-            print("DEBUG: url = {}".format(self.url))
-            print("DEBUG: csv_data = ...")
-            print(csv_data)
-            print("DEBUG: requests post response = {}".format(r))
+        ## FIXME: can't do this here as it takes too long to respond.
+        ## FIXME: use another thread !!
+        ##
+        if 1:
+            ## use app_state to pass information to other threads.
+            self.app_state['measurements_log_path'] = path_filename
+            self.app_state['measurements_log_data'] = row_str
+        else:
+            #r = requests.post("http://httpbin.org/post", data=payload)
+            csv_data = "{hdr}{row}".format(hdr=hdr_str, row=row_str)
+            #print("DEBUG: requests get response = {}".format(r))
+            r = requests.post(self.url, data=csv_data)
+            if config.show_measurements_post:
+                print("DEBUG: url = {}".format(self.url))
+                print("DEBUG: csv_data = ...")
+                print(csv_data)
+                print("DEBUG: requests post response = {}".format(r))
 
 ##============================================================================
 
@@ -405,6 +437,14 @@ class EFD_App(object):
         print(self.__doc__)
 
         self.config = config
+
+        ## Shelf is used to maintain state accross program invocation.
+        ## Shelf naitively supports pickle format, however the
+        ## PersistentDict object can be used to provide picket, json or cvs.
+        ## json was chosen to text readability.  It is also more portable,
+        ## though it is not expected to move away from Python for the app.
+        pd = PersistentDict(self.config.state_filename, 'c', format='json')
+        self.app_state = shelve.Shelf(pd)
 
         self.dev_name = ind.dev_name
         self.dev_hand = None
@@ -443,7 +483,7 @@ class EFD_App(object):
         self.tf_map = tf_mapping.Null_TF_Map
 
         self.measurements = {}
-        self.measurements_log = Measuremenets_Log(url=self.config.web_server_measurements_log)
+        self.measurements_log = Measuremenets_Log(app_state=self.app_state, url=self.config.web_server_measurements_log)
 
         ## Setup thread to retrieve GPS information.
         self.gps_poller = GPS_Poller_Thread()
@@ -453,13 +493,9 @@ class EFD_App(object):
         self.ws_thread = Weather_Station_Thread()
         self.ws_info = self.ws_thread.weather_station
 
-        ## Shelf is used to mainstate accross program invokation.
-        ## Shelf naitively supports pickle format, however the
-        ## PersistentDict object can be used to provide picket, json or cvs.
-        ## json was chosen to text readability.  It is also more portable,
-        ## though it is not expected to move away from Python for the app.
-        pd = PersistentDict(self.config.state_filename, 'c', format='json')
-        self.app_state = shelve.Shelf(pd)
+        ## Setup thread to post information to the cloud service.
+        self.cloud_thread = Cloud_Thread(config=config, app_state=self.app_state)
+        self.cloud = self.cloud_thread.cloud
 
     def set_capture_count(self, capture_count):
         self.config.set_capture_count(capture_count)
@@ -584,6 +620,7 @@ class EFD_App(object):
         print "\nStopping Threads..."
         self.gps_poller.cleanup()
         self.ws_thread.cleanup()
+        self.cloud_thread.cleanup()
         print "\nThreads Stopped."
 
     def adc_numpy_array(self):
@@ -1133,6 +1170,8 @@ class EFD_App(object):
         #self.ws_thread.init()
         self.ws_thread.start()
 
+        self.cloud_thread.start()
+
         print("DEBUG: capture_count = {}".format(self.config.capture_count))
         print("DEBUG: delay_count   = {}".format(self.config.delay_count))
         ## Start the analog acquisition.
@@ -1144,16 +1183,19 @@ class EFD_App(object):
             select_datetime_utc = arrow.utcnow()
             select_datetime_local = select_datetime_utc.to('local')
 
+            if 1:
+                print("\n========================================")
+
             ## Skip processing if system date is not set properly (year <= 2015).
             if select_datetime_utc.year <= 2015:
                 print("Data Captured: Skip processing.  year <= 2015.")
                 continue
 
+            self.app_state['capture_datetime_utc'] = self.capture_datetime_utc
+            self.app_state['capture_datetime_local'] = self.capture_datetime_local
+
             ## Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
-
-            if config.show_capture_debug:
-                print("\n========================================")
 
             ## Temporary hack to work around multiple interrupts with BOOT-20160110.BIN
             ## Getting 3 interrupts, after each channel DMA, instead of 1 interrupt after last channel DMA.
@@ -1204,29 +1246,29 @@ class EFD_App(object):
             ##
             ## Update measurements dictionary.
             ##
-            self.measurements['datetime_utc'] = self.capture_datetime_utc.isoformat(sep=' ')
-            self.measurements['datetime_local'] = self.capture_datetime_local.isoformat(sep=' ')
-            self.measurements['max_volt_red'] = self.peak_max_red.voltage
-            self.measurements['min_volt_red'] = self.peak_min_red.voltage
-            self.measurements['max_time_offset_red'] = self.peak_max_red.time_offset
-            self.measurements['min_time_offset_red'] = self.peak_min_red.time_offset
-            self.measurements['T2_red'] = self.tf_map_red.T2
-            self.measurements['W2_red'] = self.tf_map_red.F2
-            self.measurements['max_volt_wht'] = self.peak_max_wht.voltage
-            self.measurements['min_volt_wht'] = self.peak_min_wht.voltage
-            self.measurements['max_time_offset_wht'] = self.peak_max_wht.time_offset
-            self.measurements['min_time_offset_wht'] = self.peak_min_wht.time_offset
-            self.measurements['T2_wht'] = self.tf_map_wht.T2
-            self.measurements['W2_wht'] = self.tf_map_wht.F2
-            self.measurements['max_volt_blu'] = self.peak_max_blu.voltage
-            self.measurements['min_volt_blu'] = self.peak_min_blu.voltage
-            self.measurements['max_time_offset_blu'] = self.peak_max_blu.time_offset
-            self.measurements['min_time_offset_blu'] = self.peak_min_blu.time_offset
-            self.measurements['T2_blu'] = self.tf_map_blu.T2
-            self.measurements['W2_blu'] = self.tf_map_blu.F2
-            self.measurements['temperature'] = self.ws_info.temperature
-            self.measurements['humidity'] = self.ws_info.humidity
-            self.measurements['rain_intensity'] = self.ws_info.rain_intensity
+            self.measurements['datetime_utc']           = self.capture_datetime_utc.isoformat(sep=' ')
+            self.measurements['datetime_local']         = self.capture_datetime_local.isoformat(sep=' ')
+            self.measurements['max_volt_red']           = self.peak_max_red.voltage
+            self.measurements['min_volt_red']           = self.peak_min_red.voltage
+            self.measurements['max_time_offset_red']    = self.peak_max_red.time_offset
+            self.measurements['min_time_offset_red']    = self.peak_min_red.time_offset
+            self.measurements['T2_red']                 = self.tf_map_red.T2
+            self.measurements['W2_red']                 = self.tf_map_red.F2
+            self.measurements['max_volt_wht']           = self.peak_max_wht.voltage
+            self.measurements['min_volt_wht']           = self.peak_min_wht.voltage
+            self.measurements['max_time_offset_wht']    = self.peak_max_wht.time_offset
+            self.measurements['min_time_offset_wht']    = self.peak_min_wht.time_offset
+            self.measurements['T2_wht']                 = self.tf_map_wht.T2
+            self.measurements['W2_wht']                 = self.tf_map_wht.F2
+            self.measurements['max_volt_blu']           = self.peak_max_blu.voltage
+            self.measurements['min_volt_blu']           = self.peak_min_blu.voltage
+            self.measurements['max_time_offset_blu']    = self.peak_max_blu.time_offset
+            self.measurements['min_time_offset_blu']    = self.peak_min_blu.time_offset
+            self.measurements['T2_blu']                 = self.tf_map_blu.T2
+            self.measurements['W2_blu']                 = self.tf_map_blu.F2
+            self.measurements['temperature']            = self.ws_info.temperature
+            self.measurements['humidity']               = self.ws_info.humidity
+            self.measurements['rain_intensity']         = self.ws_info.rain_intensity
 
             ## write measurements dictionary to measurements log file.
             self.measurements_log.write(measurements=self.measurements, datetime=self.capture_datetime_utc)
