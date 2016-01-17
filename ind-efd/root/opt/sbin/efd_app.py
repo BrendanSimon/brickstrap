@@ -90,7 +90,11 @@ def sample_max(data):
 
 class Config(object):
 
-    serial_number = '123'
+    ##
+    ## Default values.  Can be overridden by settings file or command line.
+    ##
+
+    serial_number = '0'
 
     web_server = 'http://portal.efdweb.com'
 
@@ -188,8 +192,17 @@ class Config(object):
     state_filename = os.path.join(data_dir, 'efd_app.state')
 
     def __init__(self):
+        self.read_settings_file()
         self.set_capture_count()
         self.set_fft_size()
+
+    def read_settings_file(self):
+        ## Using 'import' is quick and dirty method to read in settings from a file.
+        ## It relies on settings.py being avaiable in the python path to load the 'module'
+        ## Currently a symlink is used from settings.py in app directory to the settings file.
+        import settings
+        self.serial_number = settings.SERIAL_NUMBER
+        self.site_name = settings.SITE_NAME
 
     def set_capture_count(self, capture_count=None):
         if capture_count:
@@ -216,6 +229,79 @@ class Config(object):
 
     def capture_data_polarity_is_signed(self):
         return self.sample_offset == 0
+
+    def show_all(self):
+        print("-------------------------------------------------------------")
+        print("Config values")
+        print("-------------")
+
+        print("serial_number = {}".format(self.serial_number))
+        print("site_name = {}".format(self.site_name))
+
+        print("web_server = {}".format(self.web_server))
+
+        print("web_server_ping = {}".format(self.web_server_ping))
+        print("web_server_measurements_log = {}".format(self.web_server_measurements_log))
+
+        print("num_channels = {}".format(self.num_channels))
+
+        print("sample_bits = {}".format(self.sample_bits))
+
+        print("sample_frequency = {}".format(self.sample_frequency))
+
+        print("sample_offset = {}".format(self.sample_offset))
+
+        print("voltage_range_pp = {}".format(self.voltage_range_pp))
+
+        print("pd_event_trigger_voltage = {}".format(self.pd_event_trigger_voltage))
+
+        print("capture_count = {}".format(self.capture_count))
+        print("total_count = {}".format(self.total_count))
+        print("delay_count = {}".format(self.delay_count))
+
+        print("initialise_capture_memory = {}".format(self.initialise_capture_memory))
+        print("show_intialised_capture_buffers = {}".format(self.show_intialised_capture_buffers))
+        print("show_intialised_phase_arrays = {}".format(self.show_intialised_phase_arrays))
+
+        print("show_capture_debug = {}".format(self.show_capture_debug))
+
+        print("capture_index_offset_red = {}".format(self.capture_index_offset_red))
+        print("capture_index_offset_wht = {}".format(self.capture_index_offset_wht))
+        print("capture_index_offset_blu = {}".format(self.capture_index_offset_blu))
+
+        print("fft_size = {}".format(self.fft_size))
+        print("fft_size_half = {}".format(self.fft_size_half))
+
+        print("show_phase_arrays = {}".format(self.show_phase_arrays))
+        print("show_phase_arrays_on_pd_event = {}".format(self.show_phase_arrays_on_pd_event))
+        print("show_capture_buffers = {}".format(self.show_capture_buffers))
+
+        print("peak_detect_numpy_capture_count_limit = {}".format(self.peak_detect_numpy_capture_count_limit))
+        print("peak_detect_numpy = {}".format(self.peak_detect_numpy))
+        print("peak_detect_numpy_debug = {}".format(self.peak_detect_numpy_debug))
+
+        print("peak_detect_fpga = {}".format(self.peak_detect_fpga))
+        print("peak_detect_fpga_debug = {}".format(self.peak_detect_fpga_debug))
+
+        print("peak_detect_fpga_fix = {}".format(self.peak_detect_fpga_fix))
+        print("peak_detect_fpga_fix_debug = {}".format(self.peak_detect_fpga_fix_debug))
+
+        print("peak_detection = {}".format(self.peak_detection))
+        print("peak_detection_debug = {}".format(self.peak_detection_debug))
+
+        print("tf_mapping = {}".format(self.tf_mapping))
+        print("tf_mapping_debug = {}".format(self.tf_mapping_debug))
+
+        print("show_measurements = {}".format(self.show_measurements))
+        print("show_measurements_post = {}".format(self.show_measurements_post))
+
+        print("page_size = {}".format(self.page_size))
+        print("page_width = {}".format(self.page_width))
+
+        print("data_dir = {}".format(self.data_dir))
+        print("state_filename = {}".format(self.state_filename))
+
+        print("-------------------------------------------------------------")
 
 ##============================================================================
 
@@ -810,6 +896,8 @@ class EFD_App(object):
         #self.save_data_raw(path, utc_filename, phase=phase)
         #self.save_data_raw(path, loc_filename, phase=phase)
 
+    ##------------------------------------------------------------------------
+
     def peak_convert_numpy(self, index, data, index_offset):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
         toff = float(index + index_offset) / self.config.sample_frequency
@@ -819,6 +907,8 @@ class EFD_App(object):
         peak = Peak(index=index, value=value, time_offset=toff, voltage=volt)
         return peak
 
+    ##------------------------------------------------------------------------
+
     def peak_min(self, data, index_offset):
         '''Search numpy data array for minimum value and the index.'''
         '''Value is converted from sample level to volts.'''
@@ -826,12 +916,16 @@ class EFD_App(object):
         peak = self.peak_convert_numpy(index=idx, data=data, index_offset=index_offset)
         return peak
 
+    ##------------------------------------------------------------------------
+
     def peak_max(self, data, index_offset):
         '''Search numpy data array for maximum value and the index.'''
         '''Value is converted from sample level to volts.'''
         idx = np.argmax(data)
         peak = self.peak_convert_numpy(index=idx, data=data, index_offset=index_offset)
         return peak
+
+    ##------------------------------------------------------------------------
 
     def peak_detection_numpy(self):
         '''Perform peak detection on current phases using numpy.'''
@@ -859,6 +953,8 @@ class EFD_App(object):
         self.peak_max_blu = peak_max_blu
         self.peak_min_blu = peak_min_blu
 
+    ##------------------------------------------------------------------------
+
     def peak_convert_fpga(self, index, value, index_offset):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
         toff = float(index + index_offset) / self.config.sample_frequency
@@ -867,6 +963,8 @@ class EFD_App(object):
         volt = value * self.voltage_factor
         peak = Peak(index=index, value=value, time_offset=toff, voltage=volt)
         return peak
+
+    ##------------------------------------------------------------------------
 
     def peak_detection_fpga(self):
         '''Get peak detection info from FPGA.'''
@@ -903,6 +1001,37 @@ class EFD_App(object):
             print("DEBUG: Peak Detect FPGA: maxmin = {}".format(maxmin))
             print("DEBUG: Peak Detect FPGA: t_delta_1 = {}".format(t_delta_1))
             print("DEBUG: Peak Detect FPGA: t_delta_2 = {}".format(t_delta_2))
+
+        ##
+        ## Fix FPGA peak-detection errors.
+        ##
+        if config.peak_detect_fpga_fix:
+            self.peak_detection_fpga_fix(maxmin=maxmin)
+
+    ##------------------------------------------------------------------------
+
+    def peak_detection_fpga_fix(self, maxmin):
+        '''Fix peak detection errors from FPGA.'''
+
+        ## FIXME: forget this for now -- higher priority issues !!
+        return
+
+        ##
+        ## Fix FPGA peak-detection errors.
+        ##
+        t1 = time.time()
+
+        ## Red
+        tmp_phase = self.phase_array_around_index(phase=self.red_phase, index=self.peak_max_red.index, size_half=8)
+        print("DEBUG: tmp_phase = {!r}".format(tmp_phase))
+        print("DEBUG: tmp_phase = {}".format(tmp_phase))
+
+        peak_max_red = self.peak_convert_fpga(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red)
+        peak_min_red = self.peak_convert_fpga(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red)
+
+        return
+
+    ##------------------------------------------------------------------------
 
     def peak_detection(self):
         '''Perform peak detection on current phases.'''
@@ -957,28 +1086,39 @@ class EFD_App(object):
 
         return ret
 
+    ##------------------------------------------------------------------------
+
+    def phase_array_around_index(self, phase, index, size_half):
+        if index < size_half:
+            beg = 0
+            end = size_half + size_half
+        elif index > (len(phase) - size_half):
+            end = len(phase)
+            beg = end - size_half - size_half
+        else:
+            beg = index - size_half
+            end = index + size_half
+
+        if 0:
+            print("DEBUG: phase_array_around_index: index={}".format(index))
+            print("DEBUG: phase_array_around_index: size_half={}".format(size_half))
+            print("DEBUG: phase_array_around_index: beg={}".format(beg))
+            print("DEBUG: phase_array_around_index: end={}".format(end))
+
+        return phase[beg:end]
 
     def tf_map_calculate(self, phase, index):
-        fft_size_half = self.config.fft_size_half
-        if index < fft_size_half:
-            beg = 0
-            end = self.config.fft_size
-        elif index > (len(phase) - fft_size_half):
-            end = len(phase)
-            beg = end - self.config.fft_size
-            fft_phase = phase[0:self.config.fft_size]
-        else:
-            beg = index - fft_size_half
-            end = index + fft_size_half
-
-        tstart = beg
-        tstop = end
+        #fft_size_half = self.config.fft_size_half
+        fft_phase = self.phase_array_around_index(phase, index, size_half=config.fft_size_half)
+        tstart = 0
+        tstop = len(fft_phase)
 
         #fft_time = np.arange(start=tstart, stop=tstop, step=1, dtype=tf_mapping.DTYPE) / self.config.sample_frequency
         fft_time = np.arange(start=tstart, stop=tstop, step=1, dtype=tf_mapping.DTYPE) * self.time_resolution
         #print("DEBUG: fft_time = {!r}".format(fft_time))
 
-        fft_phase = phase[beg:end] * self.voltage_factor
+        #fft_phase = phase[beg:end] * self.voltage_factor
+        fft_phase = fft_phase * self.voltage_factor
         #print("DEBUG: fft_phase = {!r}".format(fft_phase))
 
         tf_map = tf_map_calculate(tdata=fft_time, ydata=fft_phase, sample_freq=self.config.sample_frequency, fft_length=0)
@@ -1003,6 +1143,11 @@ class EFD_App(object):
 
             select_datetime_utc = arrow.utcnow()
             select_datetime_local = select_datetime_utc.to('local')
+
+            ## Skip processing if system date is not set properly (year <= 2015).
+            if select_datetime_utc.year <= 2015:
+                print("Data Captured: Skip processing.  year <= 2015.")
+                continue
 
             ## Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
@@ -1044,7 +1189,7 @@ class EFD_App(object):
                 print
 
             if self.config.tf_mapping:
-                ## FIXME: do we do this for all phases, or just the 'worst' phase (based on peak results)?
+                ## perform TF Mapping calculations for all phases.
                 self.tf_map_red = self.tf_map_calculate(phase=self.red_phase, index=self.peak_max_red.index)
                 self.tf_map_wht = self.tf_map_calculate(phase=self.wht_phase, index=self.peak_max_wht.index)
                 self.tf_map_blu = self.tf_map_calculate(phase=self.blu_phase, index=self.peak_max_blu.index)
@@ -1177,6 +1322,8 @@ def main():
     except:
         print("EXCEPTION: no argument supplied for capture_count.  Defaulting to {}".format(config.capture_count))
         #raise
+
+    config.show_all()
 
     app = EFD_App(config=config)
     app.init()
