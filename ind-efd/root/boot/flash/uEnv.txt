@@ -1,8 +1,8 @@
+boot_part=2
 kernel_load_address=0x3000000
 kernel_image=/boot/uImage
 devicetree_image=/boot/ind.dtb
 devicetree_load_address=0x2a00000
-boot_part=2
 bootargs2=console=ttyPS0,115200 root=/dev/mmcblk0p2 ro earlyprintk rootfstype=ext4 rootwait
 bootargs3=console=ttyPS0,115200 root=/dev/mmcblk0p3 ro earlyprintk rootfstype=ext4 rootwait
 bootargsx=console=ttyPS0,115200 root=/dev/mmcblk0p${boot_part} ro earlyprintk rootfstype=ext4 rootwait
