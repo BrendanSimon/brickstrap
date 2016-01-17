@@ -1,0 +1,17 @@
+[Unit]
+Description=Early Fault Detection Daemon
+After=network.target auditd.service
+
+[Service]
+ExecStart=/opt/sbin/efd_app.py
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+#Type=simple
+#User=example
+#Group=example
+
+[Install]
+WantedBy=multi-user.target
+#Alias=selp-efd.service
+
