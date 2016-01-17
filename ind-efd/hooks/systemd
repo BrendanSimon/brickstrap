@@ -18,5 +18,5 @@ $CHROOTCMD chmod ug+x /opt/sbin/modem.py
 $CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
 $CHROOTCMD chmod ug+x /opt/sbin/weather.py
 ## Enable efd service -- automatically run at boot via systemd.
-$CHROOTBINDCMD systemctl enable efd
+$CHROOTBINDCMD systemctl enable efd.service
 
