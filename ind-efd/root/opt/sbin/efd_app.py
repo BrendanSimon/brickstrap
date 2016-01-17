@@ -50,7 +50,7 @@ import ind
 ## FIXME: should probably be in a separate module.
 
 class GPS_Poller_Thread(threading.Thread):
-  
+
     def __init__(self):
         threading.Thread.__init__(self)
 
@@ -141,6 +141,12 @@ class Config(object):
 
     delay_count = total_count - capture_count
 
+    initialise_capture_memory = False
+    show_intialised_capture_buffers = False
+    show_intialised_phase_arrays = False
+
+    show_capture_debug = False
+
     capture_index_offset_red = 0
     capture_index_offset_wht = total_count
     capture_index_offset_blu = total_count * 2
@@ -153,11 +159,14 @@ class Config(object):
     show_capture_buffers = False
 
     peak_detect_numpy_capture_count_limit = 1*1000*1000
-    peak_detect_numpy = True
-    peak_detect_numpy_debug = True
+    peak_detect_numpy = False
+    peak_detect_numpy_debug = False
 
     peak_detect_fpga = True
-    peak_detect_fpga_debug = True
+    peak_detect_fpga_debug = False
+
+    peak_detect_fpga_fix = True
+    peak_detect_fpga_fix_debug = True
 
     peak_detection = True
     peak_detection_debug = False
@@ -166,6 +175,7 @@ class Config(object):
     tf_mapping_debug = False
 
     show_measurements = False
+    show_measurements_post = False
 
     #page_size = 1024
     page_size = 32
@@ -249,11 +259,11 @@ class Measuremenets_Log(object):
             self.filename = filename
 
         self.day_saved = dt.day
-        
+
         ## Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
         #measurements['datetime_utc'] = utc_dt.isoformat(sep=' ')
         #measurements['datetime_local'] = loc_dt.isoformat(sep=' ')
-        
+
 
         ## FIXME: can initialise hdr_str once and reuse !!
         hdr_sio = StringIO()
@@ -290,13 +300,14 @@ class Measuremenets_Log(object):
         ##
         #r = requests.post("http://httpbin.org/post", data=payload)
         csv_data = "{hdr}{row}".format(hdr=hdr_str, row=row_str)
-        print("DEBUG: url = {}".format(self.url))
-        print("DEBUG: csv_data = ...")
-        print(csv_data)
         #r = requests.get(self.url, data=csv_data)
         #print("DEBUG: requests get response = {}".format(r))
-        #r = requests.post(self.url, data=csv_data)
-        #print("DEBUG: requests post response = {}".format(r))
+        r = requests.post(self.url, data=csv_data)
+        if config.show_measurements_post:
+            print("DEBUG: url = {}".format(self.url))
+            print("DEBUG: csv_data = ...")
+            print(csv_data)
+            print("DEBUG: requests post response = {}".format(r))
 
 ##============================================================================
 
@@ -447,7 +458,7 @@ class EFD_App(object):
 
         print("Python System Version = {}".format(sys.version))
         print
-    
+
         self.sample_levels = (1 << self.config.sample_bits)
         self.time_resolution = 1.0 / self.config.sample_frequency
         self.voltage_factor = self.config.voltage_range_pp / self.sample_levels
@@ -467,13 +478,16 @@ class EFD_App(object):
         self.adc_stop()
 
         self.adc_capture_array = self.adc_numpy_array()
-        if 1:
+        if self.config.initialise_capture_memory:
             print("Initialise capture array : filling with 0x6141")
             self.adc_capture_array.fill(0x6141)
-        self.show_all_capture_buffers()
+
+        if self.config.show_intialised_capture_buffers:
+            self.show_all_capture_buffers()
 
         self.init_phase_arrays()
-        self.show_phase_arrays()
+        if self.config.show_intialised_phase_arrays:
+            self.show_phase_arrays()
 
     def cleanup(self):
         '''Cleanup application before exit.'''
@@ -604,18 +618,18 @@ class EFD_App(object):
         '''Get sample data from memory mapped buffer.'''
         self.adc_semaphore_set(0)
         self.adc_data_ready_wait()
-    
+
     def get_sample_data(self):
         '''Get sample data from memory mapped buffer or capture files.'''
         '''FIXME: capture files not implemented !!'''
         self.get_mmap_sample_data()
-    
+
     def get_capture_datetime(self):
         '''Get the datetime stamp .'''
         utc_dt = arrow.utcnow().floor('second')
         self.capture_datetime_utc = utc_dt
         self.capture_datetime_local = utc_dt.to('local')
-    
+
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
         for channel in range(self.config.num_channels):
@@ -634,7 +648,7 @@ class EFD_App(object):
                     val -= self.config.sample_offset
                     print(" {:6},".format(val)),
                 print
-    
+
     def show_capture_buffer(self, offset):
         '''Show contents in capture buffer.'''
 
@@ -658,7 +672,7 @@ class EFD_App(object):
             end = self.config.capture_count
             self.show_capture_buffer_part(beg=beg, end=end, offset=offset)
         print
-    
+
     def show_all_capture_buffers(self):
         '''Show contents in all capture buffer.'''
 
@@ -679,7 +693,7 @@ class EFD_App(object):
                 val -= self.config.sample_offset
                 print(" {:6},".format(val)),
             print
-    
+
     def show_phase(self, phase):
         '''Show data in phase arrays.'''
 
@@ -821,7 +835,7 @@ class EFD_App(object):
 
     def peak_detection_numpy(self):
         '''Perform peak detection on current phases using numpy.'''
-        
+
         t1 = time.time()
         peak_max_red = self.peak_max(self.red_phase, index_offset=self.config.capture_index_offset_red)
         t2 = time.time()
@@ -856,12 +870,11 @@ class EFD_App(object):
 
     def peak_detection_fpga(self):
         '''Get peak detection info from FPGA.'''
-        
+
         t1 = time.time()
 
         ## Read the maxmin registers from the fpga.
         maxmin = ind.adc_capture_maxmin_get(dev_hand=self.dev_hand)
-        print("DEBUG: maxmin = {}".format(maxmin))
 
         ## Red
         peak_max_red = self.peak_convert_fpga(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red)
@@ -886,8 +899,10 @@ class EFD_App(object):
         self.peak_min_blu = peak_min_blu
 
         t_delta_2 = time.time() - t1
-        print("DEBUG: Peak Detect FPGA: t_delta_1 = {}".format(t_delta_1))
-        print("DEBUG: Peak Detect FPGA: t_delta_2 = {}".format(t_delta_2))
+        if config.peak_detect_fpga_debug:
+            print("DEBUG: Peak Detect FPGA: maxmin = {}".format(maxmin))
+            print("DEBUG: Peak Detect FPGA: t_delta_1 = {}".format(t_delta_1))
+            print("DEBUG: Peak Detect FPGA: t_delta_2 = {}".format(t_delta_2))
 
     def peak_detection(self):
         '''Perform peak detection on current phases.'''
@@ -941,7 +956,7 @@ class EFD_App(object):
             print("DEBUG: peak_min_blu: fpga={} numpy={}".format(self.peak_min_blu.value, value))
 
         return ret
-        
+
 
     def tf_map_calculate(self, phase, index):
         fft_size_half = self.config.fft_size_half
@@ -992,7 +1007,8 @@ class EFD_App(object):
             ## Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
 
-            print("\n========================================")
+            if config.show_capture_debug:
+                print("\n========================================")
 
             ## Temporary hack to work around multiple interrupts with BOOT-20160110.BIN
             ## Getting 3 interrupts, after each channel DMA, instead of 1 interrupt after last channel DMA.
@@ -1007,7 +1023,8 @@ class EFD_App(object):
                     print("FIXME: capture_count={}, delay_count={}, total_count={}".format(self.config.capture_count, self.config.delay_count, self.config.total_count))
                     continue
 
-            print("DEBUG: Data Captured - Processing ...")
+            if config.show_capture_debug:
+                print("DEBUG: Data Captured - Processing ...")
 
             self.adc_capture_buffer_next()  ## use next capture bufer for ping-pong
 
@@ -1147,10 +1164,11 @@ class EFD_App(object):
 
 ##############################################################################
 
+## Make config object global.
+config = Config()
+
 def main():
     """Main entry if running this module directly."""
-    
-    config = Config()
 
     ## FIXME: should use argparse module !!
     try:
