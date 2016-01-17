@@ -2,33 +2,38 @@
 
 ## script to setup/modify the chrony config file.
 
-CHRONY_DIR=/etc/chrony
+## NOTE: most of the stuff below is commented out as it easier
+## NOTE: to just put the correct chrony.conf file in /etc rather
+## NOTE: than programmatically edit the default.
 
-CHRONY_CONF="${CHRONY_DIR}/chrony.conf"
 
-CHRONY_CONF_ORIG="${CHRONY_CONF}.ORIG"
+#CHRONY_DIR=/etc/chrony
 
-CHRONY_CONF_TMP="${CHRONY_CONF}.TMP"
+#CHRONY_CONF="${CHRONY_DIR}/chrony.conf"
+
+#CHRONY_CONF_ORIG="${CHRONY_CONF}.ORIG"
+
+#CHRONY_CONF_TMP="${CHRONY_CONF}.TMP"
 
 ## Remove chrony.conf temp file so that it's empty to append to.
-${CHROOTCMD} rm -f "${CHRONY_CONF_TMP}"
+#${CHROOTCMD} rm -f "${CHRONY_CONF_TMP}"
 
-SED_PATTERNS="'s/debian.pool.ntp.org/au.pool.ntp.org/g'"
+#SED_PATTERNS="'s/debian.pool.ntp.org/au.pool.ntp.org/g'"
 
-echo "${CHRONY_DIR}"
-echo "${CHRONY_CONF}"
-echo "${CHRONY_CONF_TMP}"
-echo "${SED_PATTERNS}"
+#echo "${CHRONY_DIR}"
+#echo "${CHRONY_CONF}"
+#echo "${CHRONY_CONF_TMP}"
+#echo "${SED_PATTERNS}"
 
 ## Make a copy of the original file.
-${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && cp ${CHRONY_CONF} ${CHRONY_CONF_ORIG}"
+#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && cp ${CHRONY_CONF} ${CHRONY_CONF_ORIG}"
 
 ## Search/Replace patterns.
-${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && cat ${CHRONY_CONF} | sed ${SED_PATTERNS} >> ${CHRONY_CONF_TMP}"
+#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && cat ${CHRONY_CONF} | sed ${SED_PATTERNS} >> ${CHRONY_CONF_TMP}"
 
 
-MAKESTEP='makestep 1000 -1'
-${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && echo ${MAKESTEP} >> ${CHRONY_CONF_TMP}"
+#MAKESTEP='makestep 1000 -1'
+#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && echo ${MAKESTEP} >> ${CHRONY_CONF_TMP}"
 
 
 ## FIXME: can't get HEREDOC working :(
@@ -57,7 +62,7 @@ ${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && echo ${MAKESTEP} >> ${CHRONY_CONF_TMP}
 
 
 ## Copy temp file back fo conf file.
-${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && mv ${CHRONY_CONF_TMP} ${CHRONY_CONF}"
+#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && mv ${CHRONY_CONF_TMP} ${CHRONY_CONF}"
 
 ## Enable chrony systemd service.
 $CHROOTBINDCMD systemctl enable chrony
