@@ -39,7 +39,13 @@ EOF
         parted --script /dev/mmcblk0 unit % resizepart 4 100%
         partprobe
         resize2fs /dev/mmcblk0p4
+
+        ## ensure directories on /mnt/data are created
+        ## Are filesystems mounted yet?
+        echo "Mounted filesystems ..."
+        mount
         ;;
+
     stop|restart|reload|force-reload|status)
         :
         ;;
