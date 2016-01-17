@@ -7,4 +7,5 @@ u-boot-tools
 mount
 rsyslog
 ca-certificates
+cron
 
