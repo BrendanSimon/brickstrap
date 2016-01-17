@@ -1,0 +1,18 @@
+#!/bin/bash
+
+## NOTE: this file is 'sourced', not executed.
+
+##
+##  Create syslinks for efd_app.
+##
+##  The user settings is stored in a file: /mnt/data/etc/settings
+##  efd_app.py imports this file as a module (needs a .py extension) and
+##  must be in the python search path.
+##  Make a symlink from settings.py in app directory to settings file
+##  in user configuration settings directory.
+##
+##  i.e. /opt/bin/settings.py -> /mnt/data/etc/settings
+##
+
+ln -sf /mnt/data/etc/settings ${ROOTDIR}/opt/sbin/settings.py
+
