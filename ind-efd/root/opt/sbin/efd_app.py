@@ -1183,7 +1183,8 @@ class EFD_App(object):
             select_datetime_utc = arrow.utcnow()
             select_datetime_local = select_datetime_utc.to('local')
 
-            if 1:
+            ## NOTE: stdout ends up in /var/log/syslog when app run via systemd !!
+            if 0:
                 print("\n========================================")
 
             ## Skip processing if system date is not set properly (year <= 2015).
