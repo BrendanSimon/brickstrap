@@ -1,5 +1,5 @@
 ##
-## cron.d/efd-ping -- do an EFD Ping everying minute.
+## cron.d/ind-efd -- Perform all IND-EFD specific cron jobs
 ##
 
 ## By default, run at 00:57 on every Sunday, but do nothing unless the day of
@@ -7,5 +7,9 @@
 ## each month. crontab(5) sucks, unfortunately, in this regard; therefore this
 ## hack (see #380425).
 #57 0 * * 0 root if [ -x /usr/share/mdadm/checkarray ] && [ $(date +\%d) -le 7 ]; then /usr/share/mdadm/checkarray --cron --all --idle --quiet; fi
+
+# do an EFD Ping everying minute
 * * * * * root /opt/sbin/efd-ping.sh
 
+# Re-start the modem at 3AM everyday
+0 3 * * * /opt/sbin/modem-power-enable.sh
