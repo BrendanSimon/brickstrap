@@ -7,12 +7,12 @@
 PHONE="${1}"
 MSG="${2}"
 
-if [ -z ${PHONE} ]; then
+if [ -z "${PHONE}" ]; then
         echo "Missing Phone #"
         exit 1
 fi
 
-if [ -z ${MSG} ]; then
+if [ -z "${MSG}" ]; then
         echo "Missing Message"
         exit 1
 fi

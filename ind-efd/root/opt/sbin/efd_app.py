@@ -337,7 +337,7 @@ class Config(object):
 
 ##============================================================================
 
-class Measuremenets_Log(object):
+class Measurements_Log(object):
     '''Manage logging measurement data to log files.'''
     '''Uses csv module and csv.DictWriter object.'''
     '''Rotate log files each day, based on 'datetime_utc' field.'''
@@ -363,7 +363,7 @@ class Measuremenets_Log(object):
         self.csv_header = hdr_sio.getvalue()
         hdr_sio.close()
 
-        ## Create directory to store measurements log if it doesn't exisit.
+        ## Create directory to store measurements log if it doesn't exists.
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
@@ -416,6 +416,7 @@ class Measuremenets_Log(object):
             ## use app_state to pass information to other threads.
             self.app_state['measurements_log_path'] = path_filename
             self.app_state['measurements_log_data'] = row_str
+            self.measurements_log_data = row_str
         else:
             #r = requests.post("http://httpbin.org/post", data=payload)
             csv_data = "{hdr}{row}".format(hdr=hdr_str, row=row_str)
@@ -427,6 +428,19 @@ class Measuremenets_Log(object):
                 print(csv_data)
                 print("DEBUG: requests post response = {}".format(r))
 
+    def send_sms(self):
+        '''Send SMS -- Measurements_Log.'''
+
+        csv_data = self.measurements_log_data
+
+        message = "EFD PD Event\nSite: {site}\n{csv_data}".format(site=config.site_name, csv_data=csv_data)
+
+        for phone_number in config.reporting_sms_phone_numbers:
+            ## Call script to send SMS.
+            cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
+            print("DEBUG: send_sms: cmd = {}".format(cmd))
+            os.system(cmd)
+            
 ##============================================================================
 
 class EFD_App(object):
@@ -483,7 +497,7 @@ class EFD_App(object):
         self.tf_map = tf_mapping.Null_TF_Map
 
         self.measurements = {}
-        self.measurements_log = Measuremenets_Log(app_state=self.app_state, url=self.config.web_server_measurements_log)
+        self.measurements_log = Measurements_Log(app_state=self.app_state, url=self.config.web_server_measurements_log)
 
         ## Setup thread to retrieve GPS information.
         self.gps_poller = GPS_Poller_Thread()
@@ -924,6 +938,10 @@ class EFD_App(object):
         #path = '/mnt/data/log/samples'
         path = os.path.join(os.sep, 'mnt', 'data', 'log', 'samples')
 
+        ## Create directory to store samples log if it doesn't exists.
+        if not os.path.exists(path):
+            os.makedirs(path)
+
         self.save_data_numpy(path, utc_filename, phase=phase)
         #self.save_data_numpy(path, loc_filename, phase=phase)
 
@@ -932,6 +950,13 @@ class EFD_App(object):
 
         #self.save_data_raw(path, utc_filename, phase=phase)
         #self.save_data_raw(path, loc_filename, phase=phase)
+
+    def send_sms(self):
+        '''Send SMS'''
+
+        ## send_sms() currently implemented in Measurements_Log class.
+        ## so just wrap it up here.
+        self.measurements_log.send_sms()
 
     ##------------------------------------------------------------------------
 
@@ -1325,7 +1350,12 @@ class EFD_App(object):
                     trigger_phase = self.blu_phase
 
             if trigger_phase is not None:
-                self.save_data(phase=trigger_phase)
+                ## DEBUG TRIGGER
+                if config.pd_event_reporting_interval_minutes:
+                    self.save_data(phase=trigger_phase)
+                    self.send_sms()
+                    ## TEMP DEV HACK: set reporting interval to 0 to force single sms only.
+                    config.pd_event_reporting_interval_minutes = 0
                 if self.config.show_phase_arrays_on_pd_event:
                     self.show_phase_arrays()
                     #self.show_all_capture_buffers()
