@@ -12,4 +12,5 @@
 * * * * * root /opt/sbin/efd-ping.sh
 
 # Re-start the modem at 3AM everyday
-0 3 * * * /opt/sbin/modem-power-enable.sh
+0 3 * * * root /opt/sbin/modem-power-enable.sh
+
