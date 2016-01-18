@@ -99,8 +99,8 @@ class Config(object):
 
     serial_number = '0'
 
-    pd_event_reporting_interval_minutes = 5             ## report PD events every 5 minutes (minimum interval)
-    reporting_sms_phone_numbers         = []            ## empty list of phone numbers.
+    pd_event_reporting_interval = 5 * 60            ## report PD events every 5 minutes (minimum interval)
+    reporting_sms_phone_numbers = []                ## empty list of phone numbers.
 
     web_server = 'http://portal.efdweb.com'
 
@@ -165,7 +165,7 @@ class Config(object):
     fft_size_half = fft_size >> 1
 
     show_phase_arrays = False
-    show_phase_arrays_on_pd_event = True
+    show_phase_arrays_on_pd_event = False
     show_capture_buffers = False
 
     peak_detect_numpy_capture_count_limit = 1*1000*1000
@@ -224,7 +224,7 @@ class Config(object):
         self.site_name                              = settings.SITE_NAME
         self.reporting_sms_phone_numbers            = list(settings.REPORTING_SMS_PHONE_NUMBERS)
         self.pd_event_trigger_voltage               = float(settings.PD_EVENT_TRIGGER_VOLTAGE)
-        self.pd_event_reporting_interval_minutes    = int(settings.PD_EVENT_REPORTING_INTERVAL_MINUTES)
+        self.pd_event_reporting_interval            = int(settings.PD_EVENT_REPORTING_INTERVAL)
 
     def set_serial_number(self, serial_number):
         self.serial_number                  = serial_number
@@ -325,7 +325,7 @@ class Config(object):
         print("show_measurements_post = {}".format(self.show_measurements_post))
 
         print("reporting_sms_phone_numbers = {}".format(self.reporting_sms_phone_numbers))
-        print("pd_event_reporting_interval_minutes = {}".format(self.pd_event_reporting_interval_minutes))
+        print("pd_event_reporting_interval = {}".format(self.pd_event_reporting_interval))
 
         print("page_size = {}".format(self.page_size))
         print("page_width = {}".format(self.page_width))
@@ -510,6 +510,8 @@ class EFD_App(object):
         ## Setup thread to post information to the cloud service.
         self.cloud_thread = Cloud_Thread(config=config, app_state=self.app_state)
         self.cloud = self.cloud_thread.cloud
+
+        self.last_pd_event_report_datetime_utc = arrow.Arrow(1,1,1)
 
     def set_capture_count(self, capture_count):
         self.config.set_capture_count(capture_count)
@@ -1351,11 +1353,13 @@ class EFD_App(object):
 
             if trigger_phase is not None:
                 ## DEBUG TRIGGER
-                if config.pd_event_reporting_interval_minutes:
-                    self.save_data(phase=trigger_phase)
-                    self.send_sms()
-                    ## TEMP DEV HACK: set reporting interval to 0 to force single sms only.
-                    config.pd_event_reporting_interval_minutes = 0
+                if config.pd_event_reporting_interval:
+                    delta_dt = self.capture_datetime_utc - self.last_pd_event_report_datetime_utc
+                    if delta_dt.total_seconds() >= config.pd_event_reporting_interval:
+                        print("PD Event Detected @ {} UTC, {} LOCAL", self.capture_datetime_utc, self.capture_datetime_local)
+                        self.save_data(phase=trigger_phase)
+                        self.send_sms()
+                        self.last_pd_event_report_datetime_utc = self.capture_datetime_utc
                 if self.config.show_phase_arrays_on_pd_event:
                     self.show_phase_arrays()
                     #self.show_all_capture_buffers()
