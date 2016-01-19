@@ -1171,6 +1171,8 @@ class EFD_App(object):
 
         return phase[beg:end]
 
+    ##------------------------------------------------------------------------
+
     def tf_map_calculate(self, phase, index):
         #fft_size_half = self.config.fft_size_half
         fft_phase = self.phase_array_around_index(phase, index, size_half=config.fft_size_half)
@@ -1189,8 +1191,20 @@ class EFD_App(object):
 
         return tf_map
 
+    ##------------------------------------------------------------------------
+
+    def running_led_on(self):
+
+        on = ind.LED.Running
+        off = 0
+        ind.leds_modify(on=on, off=off, dev_hand=self.dev_hand)
+
+    ##------------------------------------------------------------------------
+
     def main_loop(self):
         '''Run main loop of EFD_App.'''
+
+        self.running_led_on()
 
         self.gps_poller.start()
 
