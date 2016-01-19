@@ -21,8 +21,8 @@ max_capture_count = 10 * 1024 * 1024
 ## 2 bytes per sample.  2 buffers for ping-pong acquisition.
 max_capture_size = max_capture_count * max_channels * 2 * 2
 mmap_memory_size = 128 * 1024 * 1024
-print("DEBUG: max_capture_size={}".format(max_capture_size))
-print("DEBUG: mmap_memory_size={}".format(mmap_memory_size))
+#print("DEBUG: max_capture_size={}".format(max_capture_size))
+#print("DEBUG: mmap_memory_size={}".format(mmap_memory_size))
 assert(max_capture_size <= mmap_memory_size)
 
 ##
