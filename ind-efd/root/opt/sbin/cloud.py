@@ -71,10 +71,13 @@ class Cloud(object):
         ## initialise csv header string.
         ## FIXME: this is duplicated from efd_app.py
         hdr_sio = StringIO()
+        hdr_sio.write("data=")
         writer = csv.DictWriter(hdr_sio, fieldnames=self.config.measurements_log_field_names, extrasaction='ignore')
         writer.writeheader()
         self.measurements_log_csv_header = hdr_sio.getvalue()
         hdr_sio.close()
+
+        self.web_server_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
     ##------------------------------------------------------------------------
 
@@ -90,12 +93,21 @@ class Cloud(object):
     def post_measurements_data(self, csv_data):
         '''Post measurements data to the cloud service.'''
 
-        #print("DEBUG: requests.post:")
         data = self.measurements_log_csv_header + csv_data
-        #print("DEBUG: requests.post: data = {}".format(data))
 
-        r = requests.post(self.config.web_server_measurements_log, data=data)
-        #print("DEBUG: post measurements data: r = {!r}".format(r))
+        r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data)
+        if 0:
+            print("DEBUG: *******************************************")
+            print("DEBUG: requests.post:")
+            print("DEBUG: requests.headers: data = {}".format(self.web_server_headers))
+            print("DEBUG: requests.post: data = {}".format(data))
+            print("DEBUG: -------------------------------------------")
+            print("DEBUG: post measurements data: r = {!r}".format(r))
+            print("DEBUG: post measurements r.status_code = {}".format(r.status_code
+))
+            print("DEBUG: post measurements r.headers = {}".format(r.headers))
+            print("DEBUG: post measurements r.text = {}".format(r.text))
+            print("DEBUG: *******************************************")
 
     ##------------------------------------------------------------------------
 
@@ -124,11 +136,13 @@ class Cloud(object):
             delay = 0.1
             #delay = 3
             #print("DEBUG: Cloud: sleeping for {} second/s.".format(delay))
-            time.sleep(delay)
+            #time.sleep(delay)
             return
 
-        if m_log_data != self.last_measurements_log_data:
+        #if m_log_data != self.last_measurements_log_data:
+        else:
             self.post_measurements_data(csv_data=m_log_data)
+            self.last_measurements_log_data = m_log_data
 
         return
 
