@@ -200,11 +200,11 @@ class Config(object):
     measurements_log_field_names = [
         'datetime_utc', 'datetime_local',
         'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
-        'T2_red', 'W2_red',
+        't2_red', 'w2_red',
         'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
-        'T2_red', 'W2_wht',
+        't2_wht', 'w2_wht',
         'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
-        'T2_blu', 'W2_blu',
+        't2_blu', 'w2_blu',
         'temperature', 'humidity', 'rain_intensity',
         ]
 
@@ -1280,20 +1280,20 @@ class EFD_App(object):
             self.measurements['min_volt_red']           = self.peak_min_red.voltage
             self.measurements['max_time_offset_red']    = self.peak_max_red.time_offset
             self.measurements['min_time_offset_red']    = self.peak_min_red.time_offset
-            self.measurements['T2_red']                 = self.tf_map_red.T2
-            self.measurements['W2_red']                 = self.tf_map_red.F2
+            self.measurements['t2_red']                 = self.tf_map_red.T2
+            self.measurements['w2_red']                 = self.tf_map_red.F2
             self.measurements['max_volt_wht']           = self.peak_max_wht.voltage
             self.measurements['min_volt_wht']           = self.peak_min_wht.voltage
             self.measurements['max_time_offset_wht']    = self.peak_max_wht.time_offset
             self.measurements['min_time_offset_wht']    = self.peak_min_wht.time_offset
-            self.measurements['T2_wht']                 = self.tf_map_wht.T2
-            self.measurements['W2_wht']                 = self.tf_map_wht.F2
+            self.measurements['t2_wht']                 = self.tf_map_wht.T2
+            self.measurements['w2_wht']                 = self.tf_map_wht.F2
             self.measurements['max_volt_blu']           = self.peak_max_blu.voltage
             self.measurements['min_volt_blu']           = self.peak_min_blu.voltage
             self.measurements['max_time_offset_blu']    = self.peak_max_blu.time_offset
             self.measurements['min_time_offset_blu']    = self.peak_min_blu.time_offset
-            self.measurements['T2_blu']                 = self.tf_map_blu.T2
-            self.measurements['W2_blu']                 = self.tf_map_blu.F2
+            self.measurements['t2_blu']                 = self.tf_map_blu.T2
+            self.measurements['w2_blu']                 = self.tf_map_blu.F2
             self.measurements['temperature']            = self.ws_info.temperature
             self.measurements['humidity']               = self.ws_info.humidity
             self.measurements['rain_intensity']         = self.ws_info.rain_intensity
