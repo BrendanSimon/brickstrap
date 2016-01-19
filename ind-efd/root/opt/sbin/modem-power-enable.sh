@@ -6,6 +6,9 @@ function toggle_power {
         /opt/sbin/modem.py 0.2
 }
 
+## Turn Modem LED off
+/opt/sbin/modem_led.py 0
+
 device=cdc-wdm0
 dev_file=/dev/${device}
 # If the modem is already ON, we need to power it down first to
@@ -27,3 +30,7 @@ do
         sleep 0.1
 done
 nmcli d connect cdc-wdm0
+
+## Turn Modem LED on
+/opt/sbin/modem_led.py 1
+
