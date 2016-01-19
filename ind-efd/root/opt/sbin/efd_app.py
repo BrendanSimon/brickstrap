@@ -104,8 +104,8 @@ class Config(object):
 
     web_server = 'http://portal.efdweb.com'
 
-    web_server_ping = '{ws}/api/Ping/{sn}'.format(ws=web_server, sn=serial_number)
-    web_server_measurements_log = '{ws}/api/AddEFDLog/{sn}'.format(ws=web_server, sn=serial_number)
+    web_server_ping = '{ws}/api/Ping/{sn}/'.format(ws=web_server, sn=serial_number)
+    web_server_measurements_log = '{ws}/api/AddEFDLog/{sn}/'.format(ws=web_server, sn=serial_number)
 
     num_channels = 3
 
@@ -228,8 +228,8 @@ class Config(object):
 
     def set_serial_number(self, serial_number):
         self.serial_number                  = serial_number
-        self.web_server_ping                = '{ws}/api/Ping/{sn}'.format(ws=self.web_server, sn=serial_number)
-        self.web_server_measurements_log    = '{ws}/api/AddEFDLog/{sn}'.format(ws=self.web_server, sn=serial_number)
+        self.web_server_ping                = '{ws}/api/Ping/{sn}/'.format(ws=self.web_server, sn=serial_number)
+        self.web_server_measurements_log    = '{ws}/api/AddEFDLog/{sn}/'.format(ws=self.web_server, sn=serial_number)
 
     def set_capture_count(self, capture_count=None):
         if capture_count:
