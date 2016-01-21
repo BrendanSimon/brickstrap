@@ -39,6 +39,12 @@ Null_TF_Map = TF_Map(t0=0, T=0, T2=0, F=0, F2=0)
 
 def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
 
+    if DEBUG:
+        print("DEBUG: tf_map_calculate: sample_freq = {}".format(sample_freq))
+        print("DEBUG: tf_map_calculate: fft_length = {}".format(fft_length))
+        print("DEBUG: tf_map_calculate: tdata = {}".format(tdata))
+        print("DEBUG: tf_map_calculate: ydata = {}".format(ydata))
+
     ##
     ## Calculate Effective Time-Length and Effective Bandwidth around max peak.
     ##
@@ -74,6 +80,8 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
     sum_t_s2 = t_s2.sum()
     
     t0 = sum_t_s2 / sum_s2
+    if not math.isfinite(t0):
+        t0 = 0.0
 
     ##
     ## Calculate T^2 -- "equivalent time-length"
@@ -92,6 +100,8 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
     sum_t_t0_delta2_s2 = t_t0_delta2_s2.sum()
     
     T2 = sum_t_t0_delta2_s2 / sum_s2
+    if not math.isfinite(T2):
+        T2 = 0.0
     
     T = math.sqrt(T2)
     
@@ -175,8 +185,11 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
 
     d = y2_f2.sum()
     e = y2.sum()
-    
+
     W2 = d / e
+    if not math.isfinite(W2):
+        W2 = 0.0
+
     W = math.sqrt(W2)
     
     tf_map = TF_Map(t0=t0, T=T, T2=T2, F=W, F2=W2)
