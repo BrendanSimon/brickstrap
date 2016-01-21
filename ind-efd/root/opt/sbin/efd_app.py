@@ -769,6 +769,9 @@ class EFD_App(object):
         self.capture_datetime_utc = utc_dt
         self.capture_datetime_local = utc_dt.to('local')
 
+        self.app_state['capture_datetime_utc'] = self.capture_datetime_utc
+        self.app_state['capture_datetime_local'] = self.capture_datetime_local
+
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
         for channel in range(self.config.num_channels):
@@ -1232,9 +1235,6 @@ class EFD_App(object):
             if select_datetime_utc.year <= 2015:
                 print("Data Captured: Skip processing.  year <= 2015.")
                 continue
-
-            self.app_state['capture_datetime_utc'] = self.capture_datetime_utc
-            self.app_state['capture_datetime_local'] = self.capture_datetime_local
 
             ## Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
