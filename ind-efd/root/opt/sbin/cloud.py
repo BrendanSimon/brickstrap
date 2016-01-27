@@ -119,11 +119,11 @@ class Cloud(object):
 #        if not r[0]:
 #            print("DEBUG: TIMEOUT: wait_and_process")
 #            return
-        m_log_path = self.app_state['measurements_log_path']
-        m_log_data = self.app_state['measurements_log_data']
+        m_log_path = self.app_state.get('measurements_log_path', '')
+        m_log_data = self.app_state.get('measurements_log_data', '')
 
         #m_log_datetime = self.app_state['measurements_log_datetime']
-        m_log_datetime = self.app_state['capture_datetime_utc']
+        m_log_datetime = self.app_state.get('capture_datetime_utc')
         #capture_datetime_utc = self.app_state['capture_datetime_utc']
         #capture_datetime_local = self.app_state['capture_datetime_local']
 
