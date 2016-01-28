@@ -37,17 +37,17 @@ Null_TF_Map = TF_Map(t0=0, T=0, T2=0, F=0, F2=0)
 
 ##============================================================================
 
-def math_isfinite(value):
+def sepl_math_isfinite(value):
     return not (math.isnan(value) or math.isinf(value))
 
 ## math.isfinite was introduced in Python 3.2.
 ## Use a wrapper function if using Python 2.7 (or anything < 3.2).
-## Assign the the math.isfinite function if available, otherwise use
-## a wrapper function to provide the same funcitonality.
+## Assign the the math.isfinite function if available, otherwise
+## assign the wrapper function to provide the same funcitonality.
 try:
-    isfinite = math.isfinite
+    math_isfinite = math.isfinite
 except AttributeError:
-    isfinite = math_isfinite
+    math_isfinite = sepl_math_isfinite
 
 ##============================================================================
 
@@ -94,7 +94,7 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
     sum_t_s2 = t_s2.sum()
     
     t0 = sum_t_s2 / sum_s2
-    if not isfinite(t0):
+    if not math_isfinite(t0):
         t0 = 0.0
 
     ##
@@ -114,7 +114,7 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
     sum_t_t0_delta2_s2 = t_t0_delta2_s2.sum()
     
     T2 = sum_t_t0_delta2_s2 / sum_s2
-    if not isfinite(T2):
+    if not math_isfinite(T2):
         T2 = 0.0
     
     T = math.sqrt(T2)
@@ -201,7 +201,7 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
     e = y2.sum()
 
     W2 = d / e
-    if not isfinite(W2):
+    if not math_isfinite(W2):
         W2 = 0.0
 
     W = math.sqrt(W2)

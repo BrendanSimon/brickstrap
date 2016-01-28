@@ -20,6 +20,7 @@ import time
 #import datetime
 import arrow
 import select
+import Queue as queue       ## Python 3 renames Queue module as queue.
 import threading
 import gps
 import csv
@@ -95,7 +96,7 @@ class Config(object):
     ## Default values.  Can be overridden by settings file or command line.
     ##
 
-    version_str = '0.4.1'
+    version_str = '0.5'
 
     serial_number = '0'
 
@@ -337,6 +338,8 @@ class Config(object):
 
 ##============================================================================
 
+##FIXME: the entire logging of measurements should happen in another thread.
+##FIXME: including saving the csv file, posting to the web and sending sms alerts.
 class Measurements_Log(object):
     '''Manage logging measurement data to log files.'''
     '''Uses csv module and csv.DictWriter object.'''
@@ -344,8 +347,9 @@ class Measurements_Log(object):
 
     ## FIXME: not sure if putting the measurements_log_field_names in the config object is the right thing.
 
-    def __init__(self, app_state, url, field_names=Config.measurements_log_field_names):
+    def __init__(self, app_state, cloud_queue, url, field_names=Config.measurements_log_field_names):
         self.app_state = app_state
+        self.cloud_queue = cloud_queue
         self.url = url
         self.field_names = field_names
         self.csv_file = None
@@ -388,7 +392,7 @@ class Measurements_Log(object):
         row_sio= StringIO()
         writer = csv.DictWriter(row_sio, fieldnames=self.field_names, extrasaction='ignore')
         writer.writerow(measurements)
-        row_str = row_sio.getvalue()
+        self.csv_data = row_sio.getvalue()
         row_sio.close()
 
         ##
@@ -404,34 +408,22 @@ class Measurements_Log(object):
                 csvfile.write(self.csv_header)
             ## write measurements to file.
             #writer.writerow(measurements)
-            csvfile.write(row_str)
+            csvfile.write(self.csv_data)
 
         ##
-        ## Post csv info to web server.
+        ## use queue to send the csv row to the cloud thread.
+        ## NOTE: could send the measurement dict to the cloud thread and let it:
+        ## generate the csv for saving to file and posting to web, and send sms.
         ##
-        ## FIXME: can't do this here as it takes too long to respond.
-        ## FIXME: use another thread !!
-        ##
-        if 1:
-            ## use app_state to pass information to other threads.
-            self.app_state['measurements_log_path'] = path_filename
-            self.app_state['measurements_log_data'] = row_str
-            self.measurements_log_data = row_str
-        else:
-            #r = requests.post("http://httpbin.org/post", data=payload)
-            csv_data = "{hdr}{row}".format(hdr=hdr_str, row=row_str)
-            #print("DEBUG: requests get response = {}".format(r))
-            r = requests.post(self.url, data=csv_data)
-            if config.show_measurements_post:
-                print("DEBUG: url = {}".format(self.url))
-                print("DEBUG: csv_data = ...")
-                print(csv_data)
-                print("DEBUG: requests post response = {}".format(r))
+        try:
+            self.cloud_queue.put(item=self.csv_data, block=False)
+        except queue.Full:
+            print("EXCEPTION: could not queue measurement data to cloud thread.")
 
     def send_sms(self):
         '''Send SMS -- Measurements_Log.'''
 
-        csv_data = self.measurements_log_data
+        csv_data = self.csv_data
 
         message = "EFD PD Event\nSite: {site}\n{csv_data}".format(site=config.site_name, csv_data=csv_data)
 
@@ -440,7 +432,7 @@ class Measurements_Log(object):
             cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
             print("DEBUG: send_sms: cmd = {}".format(cmd))
             os.system(cmd)
-            
+
 ##============================================================================
 
 class EFD_App(object):
@@ -496,9 +488,6 @@ class EFD_App(object):
         #self.tf_map = TF_Map(t0=None, T=None, T2=None, F=None, F2=None)
         self.tf_map = tf_mapping.Null_TF_Map
 
-        self.measurements = {}
-        self.measurements_log = Measurements_Log(app_state=self.app_state, url=self.config.web_server_measurements_log)
-
         ## Setup thread to retrieve GPS information.
         self.gps_poller = GPS_Poller_Thread()
         self.gpsd = self.gps_poller.gpsd
@@ -508,8 +497,12 @@ class EFD_App(object):
         self.ws_info = self.ws_thread.weather_station
 
         ## Setup thread to post information to the cloud service.
-        self.cloud_thread = Cloud_Thread(config=config, app_state=self.app_state)
+        self.cloud_queue = queue.Queue()
+        self.cloud_thread = Cloud_Thread(config=config, app_state=self.app_state, cloud_queue=self.cloud_queue)
         self.cloud = self.cloud_thread.cloud
+
+        self.measurements = {}
+        self.measurements_log = Measurements_Log(app_state=self.app_state, cloud_queue=self.cloud_queue, url=self.config.web_server_measurements_log)
 
         self.last_pd_event_report_datetime_utc = arrow.Arrow(1,1,1)
 
@@ -630,14 +623,18 @@ class EFD_App(object):
     def cleanup(self):
         '''Cleanup application before exit.'''
 
-        print "\nStopping ADC."
+        print("Stopping ADC.")
         self.adc_stop()
 
-        print "\nStopping Threads..."
+        print("Waiting for queues to empty...")
+        self.cloud_queue.join()
+        print("Queues empty.")
+
+        print("Stopping Threads...")
         self.gps_poller.cleanup()
         self.ws_thread.cleanup()
         self.cloud_thread.cleanup()
-        print "\nThreads Stopped."
+        print("Threads Stopped.")
 
     def adc_numpy_array(self):
         mem = ind.adc_memory_map(dev_hand=self.dev_hand)
@@ -1393,8 +1390,9 @@ class EFD_App(object):
             ## FIXME: DEBUG: exit after one cycle.
             #break
 
-            self.app_state['last_capture_datetime_utc'] = self.capture_datetime_utc
-            self.app_state['last_capture_datetime_local'] = self.capture_datetime_local
+            ##FIXME: do we need to save this in persisent storage?
+            #self.app_state['last_capture_datetime_utc'] = self.capture_datetime_utc
+            #self.app_state['last_capture_datetime_local'] = self.capture_datetime_local
 
 ##----------------------------------------------------------------------------
 
