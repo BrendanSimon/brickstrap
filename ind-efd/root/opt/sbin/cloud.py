@@ -88,9 +88,7 @@ class Cloud(object):
     def post_ping(self):
         '''Post measurements data to the cloud service.'''
 
-        print("DEBUG: requests.post:")
         r = requests.get(self.config.web_server_ping)
-        print("DEBUG: post measurements data: r = {!r}".format(r))
 
     ##------------------------------------------------------------------------
 
@@ -100,7 +98,7 @@ class Cloud(object):
         #data = self.measurements_log_csv_header + csv_data
 
         r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data)
-        if 1:
+        if 0:
             print("DEBUG: *******************************************")
             print("DEBUG: requests.post:")
             print("DEBUG: requests.headers: data = {}".format(self.web_server_headers))
