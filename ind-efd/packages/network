@@ -1,6 +1,7 @@
 network-manager
 modemmanager
 mobile-broadband-provider-info
+ifupdown
 net-tools
 isc-dhcp-client
 iputils-ping
