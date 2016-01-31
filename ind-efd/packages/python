@@ -7,4 +7,5 @@ python-cjson
 python-requests
 python-arrow
 python-dbus
+python-argh
 
