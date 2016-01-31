@@ -16,3 +16,8 @@ tzdata	tzdata/Zones/Atlantic	select
 tzdata	tzdata/Zones/Indian	select
 beep	beep/suid_option	select	true
 flash-kernel	flash-kernel/linux_cmdline	select
+watchdog watchdog/run_keepalive select false
+watchdog watchdog/restart select false
+watchdog watchdog/module select none
+watchdog watchdog/run select true
+
