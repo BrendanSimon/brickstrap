@@ -1,3 +1,48 @@
+##============================================================================
+##
+## script to setup/modify the systemd config file.
+##
+##============================================================================
+
+##----------------------------------------------------------------------------
+## Setup hardware watchdog using systemd.
+##----------------------------------------------------------------------------
+
+SYSTEMD_DIR=/etc/systemd
+
+SYSTEMD_CONF="${SYSTEMD_DIR}/system.conf"
+
+SYSTEMD_CONF_ORIG="${SYSTEMD_CONF}.ORIG"
+
+SYSTEMD_CONF_TMP="${SYSTEMD_CONF}.TMP"
+
+## Replace DEVICES="" with DEVICES="/dev/ttyPS1"
+## FIXME: This pattern works but isn't pretty.
+## FIXME: Is there a neater or better way to do this?
+SED_PATTERNS=""
+SED_PATTERNS="${SED_PATTERNS} s/^.*RuntimeWatchdogSec=.*/RuntimeWatchdogSec=20/ ;"
+SED_PATTERNS="${SED_PATTERNS} s/^.*ShutdownWatchdogSec=.*/ShutdownWatchdogSec=1min/ ;"
+
+echo "${SYSTEMD_DIR}"
+echo "${SYSTEMD_CONF}"
+echo "${SYSTEMD_CONF_TMP}"
+echo "SED_PATTERNS = ${SED_PATTERNS}"
+echo "SED_PATTERNS = '${SED_PATTERNS}'"
+
+## Make a copy of the original file.
+${CHROOTCMD} bash -c "cd ${SYSTEMD_DIR} && cp ${SYSTEMD_CONF} ${SYSTEMD_CONF_ORIG}"
+
+## Remove temp file so that it's empty to append to.
+${CHROOTCMD} rm -f "${SYSTEMD_CONF_TMP}"
+
+## apply changes and append to temp file.
+${CHROOTCMD} bash -c "cd ${SYSTEMD_DIR} && cat ${SYSTEMD_CONF} | sed '${SED_PATTERNS}' >> ${SYSTEMD_CONF_TMP}"
+
+## Copy/Rename temp file back fo conf file.
+${CHROOTCMD} bash -c "cd ${SYSTEMD_DIR} && mv ${SYSTEMD_CONF_TMP} ${SYSTEMD_CONF}"
+
+##----------------------------------------------------------------------------
+
 # make sure serial-getty@.service does not try to use the serial port
 # so that it can be used by BrickPi
 $CHROOTBINDCMD systemctl mask serial-getty@ttyAMA0.service
