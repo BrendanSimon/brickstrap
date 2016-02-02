@@ -21,6 +21,9 @@ function modem_power_cycle
 ## Turn Modem LED off
 /opt/sbin/modem_led.py 0
 
+## period to wait before checking results of a command.
+delay=0.5
+
 device=cdc-wdm0
 dev_file=/dev/${device}
 # If the modem is already ON, we need to power it down first to
@@ -28,20 +31,20 @@ dev_file=/dev/${device}
 while [ -e ${dev_file} ];
 do
     modem_power_off
-    sleep 0.1
+    sleep ${delay}
 done
 
 while [ ! -e ${dev_file} ];
 do
     modem_power_on
-    sleep 0.1
+    sleep ${delay}
 done
 
 # Bring up the network connection once the network interface
 # is available
 until nmcli d | grep ${device}
 do
-    sleep 0.1
+    sleep ${delay}
 done
 
 nmcli d connect cdc-wdm0
