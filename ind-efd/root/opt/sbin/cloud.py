@@ -13,6 +13,7 @@ This module posts data to a service in the "cloud".
 
 #import sys
 #from collections import namedtuple
+import traceback
 import threading
 import time
 import arrow
@@ -36,7 +37,11 @@ class Cloud_Thread(threading.Thread):
     def run(self):
         while self.running:
             ## continue to loop, wait for data, and process.
-            self.cloud.wait_and_process()
+            try:
+                self.cloud.wait_and_process()
+            except Exception as exc:
+                print(repr(exc))
+                print(traceback.format_exc())
 
     def cleanup(self):
         print('INFO: Cloud_Thread: Cleaning up ...')
@@ -88,28 +93,35 @@ class Cloud(object):
     def post_ping(self):
         '''Post measurements data to the cloud service.'''
 
-        r = requests.get(self.config.web_server_ping)
+        try:
+            r = requests.get(self.config.web_server_ping)
+        except Exception as exc:
+            print(repr(exc))
+            print(traceback.format_exc())
 
     ##------------------------------------------------------------------------
 
     def post_measurements_data(self, data):
         '''Post measurements data to the cloud service.'''
 
-        #data = self.measurements_log_csv_header + csv_data
-
-        r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data)
-        if 0:
-            print("DEBUG: *******************************************")
-            print("DEBUG: requests.post:")
-            print("DEBUG: requests.headers: data = {}".format(self.web_server_headers))
-            print("DEBUG: requests.post: data = {}".format(data))
-            print("DEBUG: -------------------------------------------")
-            print("DEBUG: post measurements data: r = {!r}".format(r))
-            print("DEBUG: post measurements r.status_code = {}".format(r.status_code
+        try:
+            r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data)
+        except Exception as exc:
+            print(repr(exc))
+            print(traceback.format_exc())
+        else:
+            if 0:
+                print("DEBUG: *******************************************")
+                print("DEBUG: requests.post:")
+                print("DEBUG: requests.headers: data = {}".format(self.web_server_headers))
+                print("DEBUG: requests.post: data = {}".format(data))
+                print("DEBUG: -------------------------------------------")
+                print("DEBUG: post measurements data: r = {!r}".format(r))
+                print("DEBUG: post measurements r.status_code = {}".format(r.status_code
 ))
-            print("DEBUG: post measurements r.headers = {}".format(r.headers))
-            print("DEBUG: post measurements r.text = {}".format(r.text))
-            print("DEBUG: *******************************************")
+                print("DEBUG: post measurements r.headers = {}".format(r.headers))
+                print("DEBUG: post measurements r.text = {}".format(r.text))
+                print("DEBUG: *******************************************")
 
     ##------------------------------------------------------------------------
 
@@ -122,8 +134,8 @@ class Cloud(object):
         ## Block on receive queue for first time in the receive queue.
         try:
             item = self.cloud_queue.get(block=True, timeout=2)
-        except queue.Empty:
-            print("EXCEPTION: clould_queue timeout")
+        except queue.Empty as exc:
+            print(repr(exc))
             return
         else:
             #print("DEBUG: appending first csv_data.")
@@ -144,7 +156,11 @@ class Cloud(object):
         post_data = ''.join(csv_data)
         #print("DEBUG: post_data={}".format(post_data))
 
-        self.post_measurements_data(data=post_data)
+        try:
+            self.post_measurements_data(data=post_data)
+        except Exception as exc:
+            print(repr(exc))
+            print(traceback.format_exc())
 
         for i in range(len(csv_data)-1):
             #print("DEBUG: cloud_queue.task_done()")
@@ -238,13 +254,15 @@ def main():
                 try:
                     #cloud_queue.put(item=csv_str, block=False)
                     cloud_queue.put(item=csv_str, block=True)
-                except queue.Full:
+                except queue.Full as exc:
                     print("EXCEPTION: queue is full.  i={}".format(i))
+                    print(traceback.format_exc())
             print('----------------------------------------')
 
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt, SystemExit) as exc:
         ## ctrl+c key press or sys.exit() called.
         print("EXCEPTION: KeyboardInterrupt or SystemExit")
+        print(repr(exc))
     finally:
         print("Nearly done ...")
         print("joining queue ...")
