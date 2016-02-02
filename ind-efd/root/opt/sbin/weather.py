@@ -84,14 +84,14 @@ class Weather_Station_Thread(threading.Thread):
 
 ##============================================================================
 
-## regular expression to match 'Ta=' + non-whitespace-chars + comma or whitespace char.
-temperature_regex = re.compile(r'Ta=(?P<temperature>\S*?)(?:,|$)')
+## regular expression to match 'Ta=' + non-whitespace-chars + (comma or whitespace-char or eol).
+temperature_regex = re.compile(r'Ta=(?P<temperature>\S*?)(?:,|\s|$)')
 
-## regular expression to match 'Ua=' + non-whitespace-chars + comma or whitespace char.
-humidity_regex = re.compile(r'Ua=(?P<humidity>\S*?)(?:,|$)')
+## regular expression to match 'Ua=' + non-whitespace-chars + (comma or whitespace-char or eol).
+humidity_regex = re.compile(r'Ua=(?P<humidity>\S*?)(?:,|\s|$)')
 
-## regular expression to match 'Ri=' + non-whitespace-chars + comma or whitespace char.
-rain_intensity_regex = re.compile(r'Ri=(?P<rain_intensity>\S*?)(?:,|$)')
+## regular expression to match 'Ri=' + non-whitespace-chars + (comma or whitespace-char or eol).
+rain_intensity_regex = re.compile(r'Ri=(?P<rain_intensity>\S*?)(?:,|\s|$)')
 
 def extract_temperature(s):
     '''return temperature field from input string, or null string.'''
@@ -294,6 +294,7 @@ def test_case():
 
     lines = [
         '0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M',
+        '0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M\r\n',
         '0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H',
         '0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M',
         'XXX,Ta=33.0C',
