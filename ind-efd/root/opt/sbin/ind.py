@@ -315,7 +315,7 @@ def modem_power_off(dev_hand=None):
 
     ## duration = 100-600ms => turn on modem.
     ## duration >= 600ms => turn off modem.  NB. seems to toggle power state.
-    duration = 0.6
+    duration = 0.7
     modem_power_pulse(duration=duration, dev_hand=dev_hand)
 
 def modem_power_on(dev_hand=None):
@@ -323,7 +323,7 @@ def modem_power_on(dev_hand=None):
 
     ## duration = 100-600ms => turn on modem.
     ## duration >= 600ms => turn off modem.  NB. seems to toggle power state.
-    duration = 0.1
+    duration = 0.2
     modem_power_pulse(duration=duration, dev_hand=dev_hand)
 
 def adc_memory_map(size=0, dev_hand=None):
