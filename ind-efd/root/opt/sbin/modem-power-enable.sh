@@ -1,9 +1,21 @@
 #!/bin/bash
 
-# The modem python script toggles the modem power
-# line
-function toggle_power {
-        /opt/sbin/modem.py 0.2
+## The modem python script removes power to the modem.
+function modem_power_off
+{
+    /opt/sbin/modem.py power-off
+}
+
+## The modem python script restores power to the modem.
+function modem_power_on
+{
+    /opt/sbin/modem.py power-on
+}
+
+## The modem python script toggles the modem power line
+function modem_power_cycle
+{
+    /opt/sbin/modem.py power-cycle
 }
 
 ## Turn Modem LED off
@@ -13,23 +25,29 @@ device=cdc-wdm0
 dev_file=/dev/${device}
 # If the modem is already ON, we need to power it down first to
 # start it in a known state
-if [ -e $dev_file ]
-then
-        toggle_power
-        while [ -e $dev_file ];
-        do
-                sleep 0.1
-        done
-fi
-toggle_power
+while [ -e ${dev_file} ];
+do
+    modem_power_off
+    sleep 0.1
+done
+
+while [ ! -e ${dev_file} ];
+do
+    modem_power_on
+    sleep 0.1
+done
 
 # Bring up the network connection once the network interface
 # is available
-until nmcli d | grep $device
+until nmcli d | grep ${device}
 do
-        sleep 0.1
+    sleep 0.1
 done
+
 nmcli d connect cdc-wdm0
+if [ $? -ne 0 ] ; then
+    exit -1
+fi
 
 ## Turn Modem LED on
 /opt/sbin/modem_led.py 1
