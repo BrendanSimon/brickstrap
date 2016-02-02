@@ -18,9 +18,6 @@ function modem_power_cycle
     /opt/sbin/modem.py power-cycle
 }
 
-## Turn Modem LED off
-/opt/sbin/modem_led.py 0
-
 ## period to wait before checking results of a command.
 delay=0.5
 
@@ -33,6 +30,9 @@ do
     modem_power_off
     sleep ${delay}
 done
+
+## Turn Modem LED off
+/opt/sbin/modem_led.py off
 
 while [ ! -e ${dev_file} ];
 do
@@ -53,5 +53,5 @@ if [ $? -ne 0 ] ; then
 fi
 
 ## Turn Modem LED on
-/opt/sbin/modem_led.py 1
+/opt/sbin/modem_led.py on
 
