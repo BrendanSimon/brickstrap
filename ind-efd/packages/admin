@@ -11,4 +11,5 @@ cron
 watchdog
 logrotate
 dosfstools
+psmisc
 
