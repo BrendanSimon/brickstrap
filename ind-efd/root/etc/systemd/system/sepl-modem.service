@@ -4,13 +4,8 @@ After=network.target auditd.service
 
 [Service]
 ExecStart=/opt/sbin/check-internet-connection.sh
-ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
-#Restart=on-failure
 Restart=always
-#Type=simple
-#User=example
-#Group=example
 
 [Install]
 WantedBy=multi-user.target
