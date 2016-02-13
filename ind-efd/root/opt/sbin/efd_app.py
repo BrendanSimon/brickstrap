@@ -1012,6 +1012,7 @@ class EFD_App(object):
             ## Call script to send SMS.
             cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
             print("DEBUG: send_sms: cmd = {}".format(cmd))
+            ## FIXME: check return/exception for os.system(cmd)
             os.system(cmd)
 
     ##------------------------------------------------------------------------
