@@ -77,6 +77,9 @@ class Weather_Station_Thread(threading.Thread):
     ##------------------------------------------------------------------------
 
     def run(self):
+        #self.weather_station.init(dev_name=dev_name)
+        self.weather_station.init()
+
         self.weather_station.configure()
 
         while self.running:
@@ -171,12 +174,13 @@ class Weather_Station(object):
         self.cleanup()
 
         self.ser_dev_name = ser_dev_name
-        self.ser_dev_hand = serial.Serial(port=ser_dev_name, baudrate=baudrate,
-                                      #parity=serial.PARITY_ODD,
-                                      #stopbits=serial.STOPBITS_TWO,
-                                      #bytesize=serial.SEVENBITS,
-                                      timeout=self.serial_timeout
-                                     )
+        self.ser_dev_hand = serial.Serial(port=ser_dev_name,
+                                          baudrate=baudrate,
+                                          #parity=serial.PARITY_ODD,
+                                          #stopbits=serial.STOPBITS_TWO,
+                                          #bytesize=serial.SEVENBITS,
+                                          timeout=self.serial_timeout
+                                         )
 
         self.ind_dev_hand = ind.get_device_handle()
 

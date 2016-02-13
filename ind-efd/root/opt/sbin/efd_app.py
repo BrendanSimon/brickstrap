@@ -353,7 +353,6 @@ class Measurements_Log(object):
         self.url = url
         self.field_names = field_names
         self.csv_file = None
-        #self.path = '/mnt/data/log/measurements'
         self.path = os.path.join(os.sep, 'mnt', 'data', 'log', 'measurements')
         self.filename = ''
         self.filename_prefix = 'measurements-'
@@ -367,6 +366,8 @@ class Measurements_Log(object):
         self.csv_header = hdr_sio.getvalue()
         hdr_sio.close()
 
+    def init(self):
+        '''Runtime intialisation method.'''
         ## Create directory to store measurements log if it doesn't exists.
         if not os.path.exists(self.path):
             os.makedirs(self.path)
@@ -420,18 +421,18 @@ class Measurements_Log(object):
         except queue.Full:
             print("EXCEPTION: could not queue measurement data to cloud thread.")
 
-    def send_sms(self):
-        '''Send SMS -- Measurements_Log.'''
-
-        csv_data = self.csv_data
-
-        message = "EFD PD Event\nSite: {site}\n{csv_data}".format(site=config.site_name, csv_data=csv_data)
-
-        for phone_number in config.reporting_sms_phone_numbers:
-            ## Call script to send SMS.
-            cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
-            print("DEBUG: send_sms: cmd = {}".format(cmd))
-            os.system(cmd)
+#    def send_sms(self):
+#        '''Send SMS -- Measurements_Log.'''
+#
+#        csv_data = self.csv_data
+#
+#        message = "EFD PD Event\nSite: {site}\n{csv_data}".format(site=config.site_name, csv_data=csv_data)
+#
+#        for phone_number in config.reporting_sms_phone_numbers:
+#            ## Call script to send SMS.
+#            cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
+#            print("DEBUG: send_sms: cmd = {}".format(cmd))
+#            os.system(cmd)
 
 ##============================================================================
 
@@ -444,14 +445,7 @@ class EFD_App(object):
 
         self.config = config
 
-        ## Shelf is used to maintain state accross program invocation.
-        ## Shelf naitively supports pickle format, however the
-        ## PersistentDict object can be used to provide picket, json or cvs.
-        ## json was chosen to text readability.  It is also more portable,
-        ## though it is not expected to move away from Python for the app.
-        pd = PersistentDict(self.config.state_filename, 'c', format='json')
-        self.app_state = shelve.Shelf(pd)
-
+        self.app_state = None
         self.dev_name = ind.dev_name
         self.dev_hand = None
         self.adc_capture_array = None
@@ -590,6 +584,7 @@ class EFD_App(object):
         print("Python System Version = {}".format(sys.version))
         print
 
+        #self.path = '/mnt/data/log/measurements'
         self.sample_levels = (1 << self.config.sample_bits)
         self.time_resolution = 1.0 / self.config.sample_frequency
         self.voltage_factor = self.config.voltage_range_pp / self.sample_levels
@@ -619,6 +614,17 @@ class EFD_App(object):
         self.init_phase_arrays()
         if self.config.show_intialised_phase_arrays:
             self.show_phase_arrays()
+
+        ## Initialise the meausrements_log object.
+        self.measurements_log.init()
+
+        ## Shelf is used to maintain state accross program invocation.
+        ## Shelf naitively supports pickle format, however the
+        ## PersistentDict object can be used to provide picket, json or cvs.
+        ## json was chosen to text readability.  It is also more portable,
+        ## though it is not expected to move away from Python for the app.
+        pd = PersistentDict(self.config.state_filename, 'c', format='json')
+        self.app_state = shelve.Shelf(pd)
 
     def cleanup(self):
         '''Cleanup application before exit.'''
@@ -953,12 +959,56 @@ class EFD_App(object):
         #self.save_data_raw(path, utc_filename, phase=phase)
         #self.save_data_raw(path, loc_filename, phase=phase)
 
-    def send_sms(self):
-        '''Send SMS'''
+    def generate_sms_message(self):
+        '''Generate the SMS message'''
 
         ## send_sms() currently implemented in Measurements_Log class.
         ## so just wrap it up here.
-        self.measurements_log.send_sms()
+        #self.measurements_log.send_sms()
+
+        ##
+        ## Example message.
+        ## ----------------
+        ##
+        ## EFD PD Event
+        ## Unit: 2
+        ## Site: EFD2-Springvale-South
+        ## Time (L): 2016-01-18 18:58:15+11:00
+        ## RED: Vmax=-0.0004, Vmin=-0.0026, T2=5.7e-09, W2=3.2e13 *
+        ## WHT: Vmax=-0.0003, Vmin=-0.0027, T2=5.7e-09, W2=3.4e13
+        ## BLU: Vmax=-0.0001, Vmin=-0.0029, T2=5.7e-09, W2=3.2e13
+        ## Temp: 28.5C
+        ## Humidity: 29.6P
+        ## Rain-Int: 0
+        ##
+
+        m = self.measurements
+
+        sms_message = '\n'.join([
+            "EFD PD Event",
+            "Unit: {}".format(config.serial_number),
+            "Site: {}".format(config.site_name),
+            "Time (L): {}".format(m.get('datetime_local','')),
+            "RED: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e}".format(m.get('max_volt_red',''), m.get('min_volt_red',''), m.get('t2_red',''), m.get('w2_red','')),
+            "WHT: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e}".format(m.get('max_volt_wht',''), m.get('min_volt_wht',''), m.get('t2_wht',''), m.get('w2_wht','')),
+            "BLU: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e}".format(m.get('max_volt_blu',''), m.get('min_volt_blu',''), m.get('t2_blu',''), m.get('w2_blu','')),
+            "Temp: {}".format(m.get('temperature')),
+            "Humidity: {}".format(m.get('humidity')),
+            "Rain-Int: {}".format(m.get('rain_intensity')),
+            ])
+
+        return sms_message
+        
+    def send_sms(self):
+        '''Send SMS'''
+
+        message = self.generate_sms_message()
+
+        for phone_number in config.reporting_sms_phone_numbers:
+            ## Call script to send SMS.
+            cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
+            print("DEBUG: send_sms: cmd = {}".format(cmd))
+            os.system(cmd)
 
     ##------------------------------------------------------------------------
 
@@ -1421,7 +1471,7 @@ def main():
     app.init()
     try:
         app.main_loop()
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt):
         ## ctrl+c key press.
         print("KeyboardInterrupt -- exiting ...")
     except (SystemExit):
