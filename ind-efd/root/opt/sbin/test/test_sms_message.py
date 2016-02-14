@@ -50,6 +50,18 @@ test_measurements = {
     'rain_intensity'        : '0.0M',
     }
 
+test_results = '''\
+EFD PD Event
+Unit: 0
+Site: Unit-Test
+Time (L): 2016-02-12 20:18:23+10:00
+RED: Vmax=+0.0018, Vmin=+0.0000, T2=+5.7e-09, W2=+2.5e+14
+WHT: Vmax=+0.0024, Vmin=-0.0024, T2=+5.7e-09, W2=+1.2e+14
+BLU: Vmax=+0.0014, Vmin=-0.0014, T2=+5.7e-09, W2=+1.4e+14
+Temp: 20.2C
+Humidity: 73.2P
+Rain-Int: 0.0M\
+'''
 
 def test_generate_sms_message():
     app.measurements = test_measurements
@@ -57,7 +69,8 @@ def test_generate_sms_message():
     print("TEST OUTPUT: message length = {}".format(len(message)))
     print("TEST OUTPUT: message = ...")
     print(message)
-    print("TEST RESULT: PASS")
+    status = message == test_results
+    print("TEST RESULT: {}".format("PASS" if status else "FAIL"))
 
 def test_main():
     global config
