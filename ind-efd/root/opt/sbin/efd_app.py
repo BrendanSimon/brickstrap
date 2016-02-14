@@ -209,6 +209,9 @@ class Config(object):
         'temperature', 'humidity', 'rain_intensity',
         ]
 
+    max_cloud_queue_size = 600          ## max of 600 seconds (10 minutes) data can be queued.
+    max_records_per_post = 60       ## max of 60 seconds (1 minute) of data per post to web portal.
+
     def __init__(self):
         self.read_settings_file()
 
@@ -478,7 +481,7 @@ class EFD_App(object):
         self.ws_info = self.ws_thread.weather_station
 
         ## Setup thread to post information to the cloud service.
-        self.cloud_queue = queue.Queue()
+        self.cloud_queue = queue.Queue(maxsize=config.max_cloud_queue_size)
         self.cloud_thread = Cloud_Thread(config=config, app_state=self.app_state, cloud_queue=self.cloud_queue)
         self.cloud = self.cloud_thread.cloud
 

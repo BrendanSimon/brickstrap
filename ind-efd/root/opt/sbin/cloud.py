@@ -96,6 +96,9 @@ class Cloud(object):
         self.measurements_log_csv_header = hdr_sio.getvalue()
         hdr_sio.close()
 
+        ## list of csv data records to post.
+        self.csv_data = []
+
         self.web_server_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
     ##------------------------------------------------------------------------
@@ -157,36 +160,33 @@ class Cloud(object):
     def wait_and_process(self):
         '''wait for data and process it.'''
 
-        #csv_data = []
-        csv_data = [self.measurements_log_csv_header]
+        if len(self.csv_data) < self.config.max_records_per_post:
+            self.spare_led_off()
 
-        self.spare_led_off()
-
-        ## Block on receive queue for first time in the receive queue.
-        try:
-            item = self.cloud_queue.get(block=True, timeout=2)
-        except queue.Empty as exc:
-            print(repr(exc))
-            return
-        else:
-            #print("DEBUG: appending first csv_data.")
-            csv_data.append(item)
-
-        self.spare_led_on()
-
-        ## Remove any remaining items in the queue without blocking
-        ## max limit of 10 items.
-        for i in range(10):
+            ## Block on receive queue for first time in the receive queue.
             try:
-                item = self.cloud_queue.get(block=False)
-            except queue.Empty:
-                break
+                item = self.cloud_queue.get(block=True, timeout=2)
+            except queue.Empty as exc:
+                print(repr(exc))
+                return
             else:
-                #print("DEBUG: appending extra csv_data.")
-                csv_data.append(item)
+                #print("DEBUG: appending next csv_data.")
+                self.csv_data.append(item)
 
-        ## concatenate csv row data to form a single string.
-        post_data = ''.join(csv_data)
+            self.spare_led_on()
+
+            ## Remove any remaining items in the queue, up to post limit, without blocking.
+            while len(self.csv_data) < self.config.max_records_per_post:
+                try:
+                    item = self.cloud_queue.get(block=False)
+                except queue.Empty:
+                    break
+                else:
+                    #print("DEBUG: appending extra csv_data.")
+                    self.csv_data.append(item)
+
+        ## concatenate csv row header and data into a single string.
+        post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
         #print("DEBUG: post_data={}".format(post_data))
 
         try:
@@ -194,10 +194,13 @@ class Cloud(object):
         except Exception as exc:
             print(repr(exc))
             print(traceback.format_exc())
-
-        for i in range(len(csv_data)-1):
-            #print("DEBUG: cloud_queue.task_done()")
-            self.cloud_queue.task_done()      ## inform queue that item has been processed.
+        else:
+            ## inform queue that items have been processed.
+            for i in range(len(self.csv_data)):
+                #print("DEBUG: cloud_queue.task_done()")
+                self.cloud_queue.task_done()
+            ## reset to allow more csv data to accumulate from the queue.
+            self.csv_data = []
 
         return
 
