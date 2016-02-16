@@ -9,4 +9,5 @@ rsyslog
 ca-certificates
 cron
 watchdog
+logrotate
 
