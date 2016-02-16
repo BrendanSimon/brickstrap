@@ -170,6 +170,7 @@ class bit_flag_struct(ctypes.Structure):
     _fields_ = [
         ('set',             ctypes.c_uint),         ## __u32 set
         ('clear',           ctypes.c_uint),         ## __u32 clear
+        ('toggle',          ctypes.c_uint),         ## __u32 clear
     ]
 
 class spi_cmd_struct(ctypes.Structure):
@@ -221,8 +222,8 @@ class IOCTL:
     IND_USER_GET_SEM        = _IOWR(0x0D, structure=cmd_struct)
     IND_USER_SET_SEM        = _IOWR(0x0E, structure=cmd_struct)
     IND_USER_REG_DEBUG      = _IOWR(0x0F, structure=cmd_struct)
-    IND_USER_MODIFY_LEDS    = _IOWR(0x10, structure=cmd_struct)
-    IND_USER_MODIFY_CTRL    = _IOWR(0x11, structure=cmd_struct)
+    IND_USER_MODIFY_LEDS    = _IOWR(0x10, structure=bit_flag_struct)
+    IND_USER_MODIFY_CTRL    = _IOWR(0x11, structure=bit_flag_struct)
     IND_USER_READ_MAXMIN    = _IOWR(0x12, structure=maxmin_struct)
 
 
@@ -252,12 +253,16 @@ def fpga_reset(dev_hand=None):
         print("EXCEPTION: resetting ADC DMA engine.")
         raise 
 
-def leds_modify(on, off, dev_hand=None):
+def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
 
     bits = bit_flag_struct()
+
+    #print("DEBUG: leds_modify: on={}, off={}, toggle={}".format(on, off, toggle))
+
     bits.set = on & LED.All
     bits.clear = off & LED.All
+    bits.toggle = toggle & LED.All
 
     if not dev_hand:
         dev_hand = get_device_handle()
@@ -268,7 +273,6 @@ def leds_modify(on, off, dev_hand=None):
     except:
         print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
         raise
-
 
 def ctrl_modify(set, clear, dev_hand=None):
     '''Modify control register by setting and clearing bits.'''
@@ -497,6 +501,42 @@ def adc_output_mode_twos_complement(dev_hand=None):
     except:
         print("EXCEPTION: ADC Set Semaphore.")
         raise 
+
+##----------------------------------------------------------------------------
+
+def running_led_on(dev_hand):
+
+    on = LED.Running
+    off = 0
+    leds_modify(on=on, off=off, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def running_led_toggle(dev_hand):
+
+    led = LED.Running
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def pps_ok_led_toggle(dev_hand):
+
+    led = LED.PPS_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def modem_led_toggle(dev_hand):
+
+    led = LED.Modem_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def weather_led_toggle(dev_hand):
+
+    led = LED.Weather_Station_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
 
 
 ##===========================================================================

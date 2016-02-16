@@ -12,6 +12,7 @@ Support weather stations are:
     * Vaisala Weather Transmitter WXT520
 '''
 
+import ind
 
 ## =========================================
 ## Weather Station Output - composite output
@@ -65,16 +66,25 @@ BAUD_RATE = 19200
 
 class Weather_Station_Thread(threading.Thread):
   
+    ##------------------------------------------------------------------------
+
     def __init__(self):
         threading.Thread.__init__(self)
   
         self.weather_station = Weather_Station() #starting the stream of info
         self.running = True #setting the thread running to true
 
+    ##------------------------------------------------------------------------
+
     def run(self):
         self.weather_station.configure()
+
         while self.running:
             self.weather_station.wait_and_process() #this will continue to loop, wait for data, and process it.
+
+        self.weather_station.cleanup()
+
+    ##------------------------------------------------------------------------
 
     def cleanup(self):
         print('INFO: Weather_Thread: Cleaning up ...')
@@ -93,6 +103,8 @@ humidity_regex = re.compile(r'Ua=(?P<humidity>\S*?)(?:,|\s|$)')
 ## regular expression to match 'Ri=' + non-whitespace-chars + (comma or whitespace-char or eol).
 rain_intensity_regex = re.compile(r'Ri=(?P<rain_intensity>\S*?)(?:,|\s|$)')
 
+##----------------------------------------------------------------------------
+
 def extract_temperature(s):
     '''return temperature field from input string, or null string.'''
     m = temperature_regex.search(s)
@@ -105,6 +117,8 @@ def extract_temperature(s):
 
     return temperature
 
+##----------------------------------------------------------------------------
+
 def extract_humidity(s):
     '''return humidity field from input string, or null string.'''
     m = humidity_regex.search(s)
@@ -116,6 +130,8 @@ def extract_humidity(s):
         humidity = ''
 
     return humidity
+
+##----------------------------------------------------------------------------
 
 def extract_rain_intensity(s):
     '''return rain_intensity field from input string, or null string.'''
@@ -137,30 +153,52 @@ class Weather_Station(object):
 
     serial_timeout = 0.1
 
-    def __init__(self, dev_name=DEV_NAME, baudrate=BAUD_RATE):
+    ##------------------------------------------------------------------------
+
+    def __init__(self, ser_dev_name=DEV_NAME, baudrate=BAUD_RATE):
+
+        self.ser_dev_name = ser_dev_name
+        self.ser_dev_hand = None
+
+        self.ind_dev_hand = None
+
+        self.init(ser_dev_name=ser_dev_name)
+
+    ##------------------------------------------------------------------------
+
+    def init(self, ser_dev_name=DEV_NAME, baudrate=BAUD_RATE):
+
+        self.cleanup()
 
         self.dev_name = dev_name
-        self.dev_hand = None
-
-        self.init(dev_name=dev_name)
-
-    def init(self, dev_name=DEV_NAME, baudrate=BAUD_RATE):
-        if self.dev_hand:
-            self.dev_hand.close()
-        self.dev_name = dev_name
-        #self.dev_hand = open(dev_name, 'r+b')
-        self.dev_hand = serial.Serial(port=dev_name, baudrate=baudrate,
+        #self.ser_dev_hand = open(ser_dev_name, 'r+b')
+        self.ser_dev_hand = serial.Serial(port=ser_dev_name, baudrate=baudrate,
                                       #parity=serial.PARITY_ODD,
                                       #stopbits=serial.STOPBITS_TWO,
                                       #bytesize=serial.SEVENBITS,
                                       timeout=self.serial_timeout
                                      )
 
+        self.ind_dev_hand = ind.get_device_handle()
 
         ## Measurement data.
         self.temperature = '0'
         self.humidity = '0'
         self.rain_intensity = '0'
+
+    ##------------------------------------------------------------------------
+
+    def cleanup(self):
+
+        if self.ind_dev_hand:
+            self.ind_dev_hand.close()
+            self.ind_dev_hand = None
+
+        if self.ser_dev_hand:
+            self.ser_dev_hand.close()
+            self.ser_dev_hand = None
+
+    ##------------------------------------------------------------------------
 
     def configure(self):
         '''Configure the weather station to report only what we need.'''
@@ -210,12 +248,19 @@ class Weather_Station(object):
   
         for cmd in config_commands:
             #print("INFO: Weather Station command = {!r}".format(cmd))
-            self.dev_hand.write(cmd)
+            self.ser_dev_hand.write(cmd)
             time.sleep(0.1)
+
+    ##------------------------------------------------------------------------
+
+    def weather_led_toggle(self):
+        ind.weather_led_toggle(dev_hand=self.ind_dev_hand)
+
+    ##------------------------------------------------------------------------
 
     def wait_and_process(self):
         '''wait for data and process it.'''
-        r = select.select([self.dev_hand], [], [], self.select_timeout)
+        r = select.select([self.ser_dev_hand], [], [], self.select_timeout)
         #print("DEBUG: r = {!r}".format(r))
         if not r[0]:
             #print("DEBUG: TIMEOUT: wait_and_process")
@@ -231,7 +276,7 @@ class Weather_Station(object):
         #print("DEBUG: Weather Data Captured")
         #print("----------------------------")
 
-        for s in self.dev_hand.readlines():
+        for s in self.ser_dev_hand.readlines():
             #print("INFO: Weather Station Received: {}".format(s))
 
             temperature = extract_temperature(s)
@@ -245,6 +290,8 @@ class Weather_Station(object):
             rain_int = extract_rain_intensity(s)
             if rain_int:
                 self.rain_intensity = rain_int
+
+        self.weather_led_toggle()
 
 ##============================================================================
 
