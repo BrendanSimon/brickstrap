@@ -12,7 +12,7 @@
 ## call the modem-power-enable.sh script.
 ##
 
-ping_server="pool.ntp.org"
+ping_server="8.8.8.8"
 
 while true ; do
     echo "Pinging ${ping_server}"
