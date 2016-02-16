@@ -16,7 +16,7 @@ ping_server="pool.ntp.org"
 
 while true ; do
     echo "Pinging ${ping_server}"
-    ping -c 1 ${ping_server} > /dev/null
+    ping -c 3 ${ping_server} > /dev/null
     if [ $? -ne 0 ]; then
         echo "Ping failed.  Attempting to restart internet connection ..."
         /opt/sbin/modem-power-enable.sh
