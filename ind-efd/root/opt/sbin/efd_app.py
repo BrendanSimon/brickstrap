@@ -96,7 +96,7 @@ class Config(object):
     ## Default values.  Can be overridden by settings file or command line.
     ##
 
-    version_str = '0.7'
+    version_str = '0.7.1'
 
     serial_number = '0'
 
