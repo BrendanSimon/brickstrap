@@ -250,7 +250,7 @@ def fpga_reset(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_RESET, 0)
     except:
         print("EXCEPTION: resetting ADC DMA engine.")
-        raise 
+        raise
 
 def leds_modify(on, off, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
@@ -339,7 +339,7 @@ def adc_memory_map(size=0, dev_hand=None):
         mem = mmap.mmap(dev_hand.fileno(), length=size, offset=0)
     except:
         print("EXCEPTION: getting ADC Memory Map.")
-        raise 
+        raise
 
     return mem
 
@@ -352,7 +352,7 @@ def adc_dma_reset(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_DMA_RESET, 0)
     except:
         print("EXCEPTION: resetting ADC DMA engine.")
-        raise 
+        raise
 
 def adc_capture_address(dev_hand=None, address=0):
     '''Set capture offset address.  Use for ping-pong capture.  Should be either 0 or half the buffer size.'''
@@ -363,7 +363,7 @@ def adc_capture_address(dev_hand=None, address=0):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_ADDRESS, address)
     except:
         print("EXCEPTION: setting capture address.")
-        raise 
+        raise
 
 def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable=False, capture_count=0, delay_count=0, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
     '''Setup ADC Capture parameters.'''
@@ -401,7 +401,7 @@ def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_MODE, cmd)
     except:
         print("EXCEPTION: ADC Capture Setup.")
-        raise 
+        raise
 
     #status = status_get(dev_hand=dev_hand)
 
@@ -428,7 +428,7 @@ def adc_capture_maxmin_get(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN, maxmin, True)
     except:
         print("EXCEPTION: ADC Capture Max Mix Get.")
-        raise 
+        raise
 
     return maxmin
 
@@ -442,7 +442,7 @@ def status_get(dev_hand=None):
         value = struct.unpack('l', a)[0]
     except:
         print("EXCEPTION: Get Status.")
-        raise 
+        raise
 
     print("DEBUG: status_get: status = 0x{:08x}".format(value))
     return value
@@ -460,7 +460,7 @@ def adc_semaphore_get(dev_hand=None):
         value = struct.unpack('l', a)[0]
     except:
         print("EXCEPTION: ADC Get Semaphore.")
-        raise 
+        raise
 
     return value
 
@@ -473,7 +473,7 @@ def adc_semaphore_set(value=0, dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_SEM, value)
     except:
         print("EXCEPTION: ADC Set Semaphore.")
-        raise 
+        raise
 
 def adc_output_mode_twos_complement(dev_hand=None):
     '''Set ADC Semaphore.'''
@@ -485,18 +485,11 @@ def adc_output_mode_twos_complement(dev_hand=None):
     spi_cmd.port_data[0] = 0x08 | 0x01  ## default, two's complement.
     spi_cmd.num_spi_writes = 1
 
-    _fields_ = [
-        ('port_devices',    ctypes.c_uint * 16),    ## __u32 port_device[16]
-        ('port_addr',       ctypes.c_uint * 16),    ## __u32 port_addr[16]
-        ('port_data',       ctypes.c_uint * 16),    ## __u32 port_data[16]
-        ('num_spi_writes',  ctypes.c_uint)          ## __u32 num_spi_writes
-    ]
-
     try:
-        fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, value)
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, spi_cmd)
     except:
         print("EXCEPTION: ADC Set Semaphore.")
-        raise 
+        raise
 
 
 ##===========================================================================

@@ -24,11 +24,11 @@ or
 WDIOC_GETSUPPORT = _IOR(ord('W'), 0, "=II32s")
 or
 WDIOC_GETSUPPORT = _IOR(ord('W'), 0, 40)
-
-
 """
-#import struct
+
+import struct
 import ctypes
+
 # constant for linux portability
 _IOC_NRBITS = 8
 _IOC_TYPEBITS = 8
