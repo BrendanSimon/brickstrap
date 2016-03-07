@@ -489,15 +489,8 @@ def adc_output_mode_twos_complement(dev_hand=None):
     spi_cmd.port_data[0] = 0x08 | 0x01  ## default, two's complement.
     spi_cmd.num_spi_writes = 1
 
-    _fields_ = [
-        ('port_devices',    ctypes.c_uint * 16),    ## __u32 port_device[16]
-        ('port_addr',       ctypes.c_uint * 16),    ## __u32 port_addr[16]
-        ('port_data',       ctypes.c_uint * 16),    ## __u32 port_data[16]
-        ('num_spi_writes',  ctypes.c_uint)          ## __u32 num_spi_writes
-    ]
-
     try:
-        fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, value)
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, spi_cmd)
     except:
         print("EXCEPTION: ADC Set Semaphore.")
         raise
