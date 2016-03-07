@@ -251,7 +251,7 @@ def fpga_reset(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_RESET, 0)
     except:
         print("EXCEPTION: resetting ADC DMA engine.")
-        raise 
+        raise
 
 def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
@@ -343,7 +343,7 @@ def adc_memory_map(size=0, dev_hand=None):
         mem = mmap.mmap(dev_hand.fileno(), length=size, offset=0)
     except:
         print("EXCEPTION: getting ADC Memory Map.")
-        raise 
+        raise
 
     return mem
 
@@ -356,7 +356,7 @@ def adc_dma_reset(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_DMA_RESET, 0)
     except:
         print("EXCEPTION: resetting ADC DMA engine.")
-        raise 
+        raise
 
 def adc_capture_address(dev_hand=None, address=0):
     '''Set capture offset address.  Use for ping-pong capture.  Should be either 0 or half the buffer size.'''
@@ -367,7 +367,7 @@ def adc_capture_address(dev_hand=None, address=0):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_ADDRESS, address)
     except:
         print("EXCEPTION: setting capture address.")
-        raise 
+        raise
 
 def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable=False, capture_count=0, delay_count=0, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
     '''Setup ADC Capture parameters.'''
@@ -405,7 +405,7 @@ def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_MODE, cmd)
     except:
         print("EXCEPTION: ADC Capture Setup.")
-        raise 
+        raise
 
     #status = status_get(dev_hand=dev_hand)
 
@@ -432,7 +432,7 @@ def adc_capture_maxmin_get(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN, maxmin, True)
     except:
         print("EXCEPTION: ADC Capture Max Mix Get.")
-        raise 
+        raise
 
     return maxmin
 
@@ -446,7 +446,7 @@ def status_get(dev_hand=None):
         value = struct.unpack('l', a)[0]
     except:
         print("EXCEPTION: Get Status.")
-        raise 
+        raise
 
     print("DEBUG: status_get: status = 0x{:08x}".format(value))
     return value
@@ -464,7 +464,7 @@ def adc_semaphore_get(dev_hand=None):
         value = struct.unpack('l', a)[0]
     except:
         print("EXCEPTION: ADC Get Semaphore.")
-        raise 
+        raise
 
     return value
 
@@ -477,7 +477,7 @@ def adc_semaphore_set(value=0, dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_SEM, value)
     except:
         print("EXCEPTION: ADC Set Semaphore.")
-        raise 
+        raise
 
 def adc_output_mode_twos_complement(dev_hand=None):
     '''Set ADC Semaphore.'''
@@ -500,17 +500,19 @@ def adc_output_mode_twos_complement(dev_hand=None):
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, value)
     except:
         print("EXCEPTION: ADC Set Semaphore.")
-        raise 
+        raise
 
 ##----------------------------------------------------------------------------
+
+def running_led_off(dev_hand):
+
+    led = LED.Running
+    leds_modify(off=led, dev_hand=dev_hand)
 
 def running_led_on(dev_hand):
 
-    on = LED.Running
-    off = 0
-    leds_modify(on=on, off=off, dev_hand=dev_hand)
-
-##----------------------------------------------------------------------------
+    led = LED.Running
+    leds_modify(on=led, dev_hand=dev_hand)
 
 def running_led_toggle(dev_hand):
 
@@ -519,6 +521,16 @@ def running_led_toggle(dev_hand):
 
 ##----------------------------------------------------------------------------
 
+def pps_ok_led_off(dev_hand):
+
+    led = LED.PPS_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def pps_ok_led_on(dev_hand):
+
+    led = LED.PPS_OK
+    leds_modify(on=led, dev_hand=dev_hand)
+
 def pps_ok_led_toggle(dev_hand):
 
     led = LED.PPS_OK
@@ -526,12 +538,32 @@ def pps_ok_led_toggle(dev_hand):
 
 ##----------------------------------------------------------------------------
 
+def modem_led_off(dev_hand):
+
+    led = LED.Modem_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def modem_led_on(dev_hand):
+
+    led = LED.Modem_OK
+    leds_modify(on=led, dev_hand=dev_hand)
+
 def modem_led_toggle(dev_hand):
 
     led = LED.Modem_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
+
+def weather_led_off(dev_hand):
+
+    led = LED.Weather_Station_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def weather_led_on(dev_hand):
+
+    led = LED.Weather_Station_OK
+    leds_modify(on=led, dev_hand=dev_hand)
 
 def weather_led_toggle(dev_hand):
 

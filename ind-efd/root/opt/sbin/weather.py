@@ -17,16 +17,16 @@ import ind
 ## =========================================
 ## Weather Station Output - composite output
 ## =========================================
-## 
+##
 ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
 ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
 ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
 ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-## 
+##
 ## =======================================
 ## Weather Station Output - default output
 ## =======================================
-## 
+##
 ## 0TX,Start-up
 ## 0R5,Th=25.4C,Vh=0.0#,Vs=14.3V,Vr=3.491V
 ## 0R2,Ta=25.0C,Ua=38.4P,Pa=1008.1H
@@ -44,7 +44,7 @@ import ind
 ## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#Z
 ## 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
 ## 0R5,Th=25.2C,Vh=0.0#,Vs=14.4V,Vr=3.480V
-## 
+##
 ## =======================================
 
 
@@ -65,12 +65,12 @@ BAUD_RATE = 19200
 ##============================================================================
 
 class Weather_Station_Thread(threading.Thread):
-  
+
     ##------------------------------------------------------------------------
 
     def __init__(self):
         threading.Thread.__init__(self)
-  
+
         self.weather_station = Weather_Station() #starting the stream of info
         self.running = True #setting the thread running to true
 
@@ -157,7 +157,7 @@ class Weather_Station(object):
 
     def __init__(self, ser_dev_name=DEV_NAME, baudrate=BAUD_RATE):
 
-        self.ser_dev_name = ser_dev_name
+        self.ser_dev_name = None
         self.ser_dev_hand = None
 
         self.ind_dev_hand = None
@@ -170,7 +170,7 @@ class Weather_Station(object):
 
         self.cleanup()
 
-        self.dev_name = dev_name
+        self.ser_dev_name = ser_dev_name
         #self.ser_dev_hand = open(ser_dev_name, 'r+b')
         self.ser_dev_hand = serial.Serial(port=ser_dev_name, baudrate=baudrate,
                                       #parity=serial.PARITY_ODD,
@@ -245,13 +245,19 @@ class Weather_Station(object):
             ## Reset unit.
             '0XZ\r\n',
             ]
-  
+
         for cmd in config_commands:
             #print("INFO: Weather Station command = {!r}".format(cmd))
             self.ser_dev_hand.write(cmd)
             time.sleep(0.1)
 
     ##------------------------------------------------------------------------
+
+    def weather_led_off(self):
+        ind.weather_led_off(dev_hand=self.ind_dev_hand)
+
+    def weather_led_on(self):
+        ind.weather_led_on(dev_hand=self.ind_dev_hand)
 
     def weather_led_toggle(self):
         ind.weather_led_toggle(dev_hand=self.ind_dev_hand)
@@ -260,11 +266,17 @@ class Weather_Station(object):
 
     def wait_and_process(self):
         '''wait for data and process it.'''
+
+        #self.weather_led_off()
+
         r = select.select([self.ser_dev_hand], [], [], self.select_timeout)
         #print("DEBUG: r = {!r}".format(r))
         if not r[0]:
             #print("DEBUG: TIMEOUT: wait_and_process")
             return
+
+        #self.weather_led_on()
+        self.weather_led_toggle()
 
         ## Composite data output format.
         ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
@@ -290,8 +302,6 @@ class Weather_Station(object):
             rain_int = extract_rain_intensity(s)
             if rain_int:
                 self.rain_intensity = rain_int
-
-        self.weather_led_toggle()
 
 ##============================================================================
 
@@ -328,7 +338,7 @@ def main():
 ##============================================================================
 
 def test_case():
-    
+
     ## Composite data output format.
     ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
     ## Default data output format.
@@ -348,7 +358,7 @@ def test_case():
         'Ta=44.0C',
         'Ta=55.0C,XXX',
         ]
-        
+
     for s in lines:
         print("line: {!r}".format(s))
         temperature = extract_temperature(s)
@@ -357,13 +367,13 @@ def test_case():
 
         if temperature:
             print("DEBUG: temperature = {!r}".format(temperature))
-            
+
         if humidity:
             print("DEBUG: humidity = {!r}".format(humidity))
-            
+
         if rain_int:
             print("DEBUG: rain_intensity = {!r}".format(rain_int))
-            
+
         print
 
     #sys.exit(0)
