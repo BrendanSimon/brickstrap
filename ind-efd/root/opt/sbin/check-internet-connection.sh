@@ -12,11 +12,11 @@
 ## call the modem-power-enable.sh script.
 ##
 
-ping_server="pool.ntp.org"
+ping_server="8.8.8.8"
 
 while true ; do
     echo "Pinging ${ping_server}"
-    ping -c 1 ${ping_server} > /dev/null
+    ping -c 3 ${ping_server} > /dev/null
     if [ $? -ne 0 ]; then
         echo "Ping failed.  Attempting to restart internet connection ..."
         /opt/sbin/modem-power-enable.sh
