@@ -274,12 +274,13 @@ def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
         print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
         raise
 
-def ctrl_modify(set, clear, dev_hand=None):
+def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
     '''Modify control register by setting and clearing bits.'''
 
     bits = bit_flag_struct()
-    bits.set = set & LED.All
-    bits.clear = clear & LED.All
+    bits.set = set & Control.All
+    bits.clear = clear & Control.All
+    bits.toggle = toggle & Control.All
 
     if not dev_hand:
         dev_hand = get_device_handle()
@@ -300,17 +301,15 @@ def modem_power_pulse(duration, dev_hand=None):
     ## Assert power key signal.
     #on = Control.Modem_Reset | Control.Modem_Power
     on = Control.Modem_Power
-    off = 0
-    ctrl_modify(set=on, clear=off, dev_hand=dev_hand)
+    ctrl_modify(set=on, dev_hand=dev_hand)
 
     ## duration = 100-600ms => turn on.
     ## duration >= 600ms => turn off.  NB: seems to toggle power state.
     time.sleep(duration)
 
     ## Deassert power key signal.
-    on = 0
     off = Control.Modem_Power | Control.Modem_Reset
-    ctrl_modify(set=on, clear=off, dev_hand=dev_hand)
+    ctrl_modify(clear=off, dev_hand=dev_hand)
 
 def modem_power_off(dev_hand=None):
     '''Turn off modem - assert power key signal for 600ms.'''
@@ -563,6 +562,23 @@ def weather_led_toggle(dev_hand):
     led = LED.Weather_Station_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
+##----------------------------------------------------------------------------
+
+def spare_led_off(dev_hand):
+
+    led = LED.Spare
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def spare_led_on(dev_hand):
+
+    led = LED.Spare
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def spare_led_toggle(dev_hand):
+
+    led = LED.Spare
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
 
 ##===========================================================================
 ##  module test.
@@ -632,7 +648,7 @@ def main():
             print("DEBUG: on    = 0x{:0X}".format(on))
             print("DEBUG: off   = 0x{:0X}".format(off))
 
-        ctrl_modify(on, off, dev_hand=dev_hand)
+        ctrl_modify(set=on, clear=off, dev_hand=dev_hand)
 
         time.sleep(0.1)
 

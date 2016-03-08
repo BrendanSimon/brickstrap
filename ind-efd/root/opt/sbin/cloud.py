@@ -143,14 +143,14 @@ class Cloud(object):
 
     ##------------------------------------------------------------------------
 
-    def running_led_off(self):
-        ind.running_led_off(dev_hand=self.ind_dev_hand)
+    def spare_led_off(self):
+        ind.spare_led_off(dev_hand=self.ind_dev_hand)
 
-    def running_led_on(self):
-        ind.running_led_on(dev_hand=self.ind_dev_hand)
+    def spare_led_on(self):
+        ind.spare_led_on(dev_hand=self.ind_dev_hand)
 
-    def running_led_toggle(self):
-        ind.running_led_toggle(dev_hand=self.ind_dev_hand)
+    def spare_led_toggle(self):
+        ind.spare_led_toggle(dev_hand=self.ind_dev_hand)
 
     ##------------------------------------------------------------------------
 
@@ -160,7 +160,7 @@ class Cloud(object):
         #csv_data = []
         csv_data = [self.measurements_log_csv_header]
 
-        self.running_led_off()
+        self.spare_led_off()
 
         ## Block on receive queue for first time in the receive queue.
         try:
@@ -172,7 +172,7 @@ class Cloud(object):
             #print("DEBUG: appending first csv_data.")
             csv_data.append(item)
 
-        self.running_led_on()
+        self.spare_led_on()
 
         ## Remove any remaining items in the queue without blocking
         ## max limit of 10 items.

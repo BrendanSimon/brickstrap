@@ -53,6 +53,7 @@ if __name__ == '__main__':
     commands = [ power_off, power_on, power_cycle ]
     parser.add_commands(commands)
 
+    global dev_hand
     #with ind.get_device_handle() as dev_hand:
     dev_hand = ind.get_device_handle()
 

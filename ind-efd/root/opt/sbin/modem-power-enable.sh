@@ -23,6 +23,10 @@ delay=0.5
 
 device=cdc-wdm0
 dev_file=/dev/${device}
+
+## Turn Modem LED off
+#/opt/sbin/modem_led.py off
+
 # If the modem is already ON, we need to power it down first to
 # start it in a known state
 while [ -e ${dev_file} ];
@@ -31,8 +35,6 @@ do
     sleep ${delay}
 done
 
-## Turn Modem LED off
-/opt/sbin/modem_led.py off
 
 while [ ! -e ${dev_file} ];
 do
