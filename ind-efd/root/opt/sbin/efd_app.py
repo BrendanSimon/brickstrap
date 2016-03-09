@@ -421,19 +421,6 @@ class Measurements_Log(object):
         except queue.Full:
             print("EXCEPTION: could not queue measurement data to cloud thread.")
 
-#    def send_sms(self):
-#        '''Send SMS -- Measurements_Log.'''
-#
-#        csv_data = self.csv_data
-#
-#        message = "EFD PD Event\nSite: {site}\n{csv_data}".format(site=config.site_name, csv_data=csv_data)
-#
-#        for phone_number in config.reporting_sms_phone_numbers:
-#            ## Call script to send SMS.
-#            cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
-#            print("DEBUG: send_sms: cmd = {}".format(cmd))
-#            os.system(cmd)
-
 ##============================================================================
 
 class EFD_App(object):
@@ -962,10 +949,6 @@ class EFD_App(object):
     def generate_sms_message(self):
         '''Generate the SMS message'''
 
-        ## send_sms() currently implemented in Measurements_Log class.
-        ## so just wrap it up here.
-        #self.measurements_log.send_sms()
-
         ##
         ## Example message.
         ## ----------------
@@ -984,21 +967,43 @@ class EFD_App(object):
 
         m = self.measurements
 
+        max_volt_red = m.get('max_volt_red', 0.0)
+        max_volt_wht = m.get('max_volt_wht', 0.0)
+        max_volt_blu = m.get('max_volt_blu', 0.0)
+
+        min_volt_red = m.get('min_volt_red', 0.0)
+        min_volt_wht = m.get('min_volt_wht', 0.0)
+        min_volt_blu = m.get('min_volt_blu', 0.0)
+
+        t2_red = m.get('t2_red', 0.0)
+        t2_wht = m.get('t2_wht', 0.0)
+        t2_blu = m.get('t2_blu', 0.0)
+
+        w2_red = m.get('w2_red', 0.0)
+        w2_wht = m.get('w2_wht', 0.0)
+        w2_blu = m.get('w2_blu', 0.0)
+
+        max_volt = max( (max_volt_red, max_volt_wht, max_volt_blu) )
+
+        flag_red = '*' if max_volt_red == max_volt else ' '
+        flag_wht = '*' if max_volt_wht == max_volt else ' '
+        flag_blu = '*' if max_volt_blu == max_volt else ' '
+
         sms_message = '\n'.join([
             "EFD PD Event",
             "Unit: {}".format(config.serial_number),
             "Site: {}".format(config.site_name),
             "Time (L): {}".format(m.get('datetime_local','')),
-            "RED: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e}".format(m.get('max_volt_red',''), m.get('min_volt_red',''), m.get('t2_red',''), m.get('w2_red','')),
-            "WHT: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e}".format(m.get('max_volt_wht',''), m.get('min_volt_wht',''), m.get('t2_wht',''), m.get('w2_wht','')),
-            "BLU: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e}".format(m.get('max_volt_blu',''), m.get('min_volt_blu',''), m.get('t2_blu',''), m.get('w2_blu','')),
+            "RED: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_red, min_volt_red, t2_red, w2_red, flag_red),
+            "WHT: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_wht, min_volt_wht, t2_wht, w2_wht, flag_wht),
+            "BLU: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_blu, min_volt_blu, t2_blu, w2_blu, flag_blu),
             "Temp: {}".format(m.get('temperature')),
             "Humidity: {}".format(m.get('humidity')),
             "Rain-Int: {}".format(m.get('rain_intensity')),
             ])
 
         return sms_message
-        
+
     def send_sms(self):
         '''Send SMS'''
 
@@ -1398,6 +1403,7 @@ class EFD_App(object):
             ##
             ## Peak Threshold Detection.
             ## FIXME: this is ugly and not very pythonic.
+            ## FIXME: could use max() function instead.  See generate_sms_message() as an example.
             ##
             trigger_phase = None
             trigger_peak = None

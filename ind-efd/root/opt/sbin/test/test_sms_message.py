@@ -44,7 +44,7 @@ test_measurements = {
     'max_time_offset_blu'   : 0.0029754638671875,
     'min_time_offset_blu'   : 0.104449696,
     't2_blu'                : 5.6962919002124462e-09,
-    'w2_blu'                : 142273351310783.03,
+    #'w2_blu'                : 142273351310783.03,
     'temperature'           : '20.2C',
     'humidity'              : '73.2P',
     'rain_intensity'        : '0.0M',
@@ -55,9 +55,9 @@ EFD PD Event
 Unit: 0
 Site: Unit-Test
 Time (L): 2016-02-12 20:18:23+10:00
-RED: Vmax=+0.0018, Vmin=+0.0000, T2=+5.7e-09, W2=+2.5e+14
-WHT: Vmax=+0.0024, Vmin=-0.0024, T2=+5.7e-09, W2=+1.2e+14
-BLU: Vmax=+0.0014, Vmin=-0.0014, T2=+5.7e-09, W2=+1.4e+14
+RED: Vmax=+0.0018, Vmin=+0.0000, T2=+5.7e-09, W2=+2.5e+14  \n\
+WHT: Vmax=+0.0024, Vmin=-0.0024, T2=+5.7e-09, W2=+1.2e+14 *\n\
+BLU: Vmax=+0.0014, Vmin=-0.0014, T2=+5.7e-09, W2=+0.0e+00  \n\
 Temp: 20.2C
 Humidity: 73.2P
 Rain-Int: 0.0M\
@@ -71,6 +71,16 @@ def test_generate_sms_message():
     print(message)
     status = message == test_results
     print("TEST RESULT: {}".format("PASS" if status else "FAIL"))
+    if not status:
+        print('----------------------------------------')
+        print('Expected:')
+        print('----------------------------------------')
+        print(repr(test_results))
+        print('----------------------------------------')
+        print('Got:')
+        print('----------------------------------------')
+        print(repr(message))
+        print('----------------------------------------')
 
 def test_main():
     global config
