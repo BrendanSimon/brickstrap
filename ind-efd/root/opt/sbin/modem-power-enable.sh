@@ -25,7 +25,7 @@ device=cdc-wdm0
 dev_file=/dev/${device}
 
 ## Turn Modem LED off
-#/opt/sbin/modem_led.py off
+/opt/sbin/modem_led.py off
 
 # If the modem is already ON, we need to power it down first to
 # start it in a known state

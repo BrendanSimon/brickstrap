@@ -171,7 +171,6 @@ class Weather_Station(object):
         self.cleanup()
 
         self.ser_dev_name = ser_dev_name
-        #self.ser_dev_hand = open(ser_dev_name, 'r+b')
         self.ser_dev_hand = serial.Serial(port=ser_dev_name, baudrate=baudrate,
                                       #parity=serial.PARITY_ODD,
                                       #stopbits=serial.STOPBITS_TWO,
@@ -267,15 +266,12 @@ class Weather_Station(object):
     def wait_and_process(self):
         '''wait for data and process it.'''
 
-        #self.weather_led_off()
-
         r = select.select([self.ser_dev_hand], [], [], self.select_timeout)
         #print("DEBUG: r = {!r}".format(r))
         if not r[0]:
             #print("DEBUG: TIMEOUT: wait_and_process")
             return
 
-        #self.weather_led_on()
         self.weather_led_toggle()
 
         ## Composite data output format.

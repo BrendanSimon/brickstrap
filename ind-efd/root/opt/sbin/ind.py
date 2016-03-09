@@ -256,10 +256,16 @@ def fpga_reset(dev_hand=None):
 def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
 
+    #print("DEBUG: leds_modify: on=0x{:08X}, off=0x{:08X}, toggle=0x{:08X}".format(on, off, toggle))
+
+    if (on & off):
+        raise ValueError("'on' and 'off' arguments have conflicting bit(s) set (on=0x{:08X} off=0x{:08X} bits=0x{:08X})".format(on, off, (on & off)))
+    elif (on & toggle):
+        raise ValueError("'on' and 'toggle' arguments have conflicting bit(s) set (on=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(on, toggle, (on & toggle)))
+    elif (off & toggle):
+        raise ValueError("'off' and 'toggle' arguments have conflicting bit(s) set (off=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(off, toggle, (off & toggle)))
+
     bits = bit_flag_struct()
-
-    #print("DEBUG: leds_modify: on={}, off={}, toggle={}".format(on, off, toggle))
-
     bits.set = on & LED.All
     bits.clear = off & LED.All
     bits.toggle = toggle & LED.All
@@ -276,6 +282,13 @@ def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
 
 def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
     '''Modify control register by setting and clearing bits.'''
+
+    if (set & clear):
+        raise ValueError("'set' and 'clear' arguments have conflicting bit(s) set (set=0x{:08X} clear=0x{:08X} bits=0x{:08X})".format(set, clear, (set & clear)))
+    elif (set & toggle):
+        raise ValueError("'set' and 'toggle' arguments have conflicting bit(s) set (set=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(set, toggle, (set & toggle)))
+    elif (clear & toggle):
+        raise ValueError("'clear' and 'toggle' arguments have conflicting bit(s) set (clear=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(clear, toggle, (clear & toggle)))
 
     bits = bit_flag_struct()
     bits.set = set & Control.All
@@ -299,7 +312,6 @@ def modem_power_pulse(duration, dev_hand=None):
         dev_hand = get_device_handle()
 
     ## Assert power key signal.
-    #on = Control.Modem_Reset | Control.Modem_Power
     on = Control.Modem_Power
     ctrl_modify(set=on, dev_hand=dev_hand)
 
@@ -455,10 +467,7 @@ def adc_semaphore_get(dev_hand=None):
     if not dev_hand:
         dev_hand = get_device_handle()
 
-    #struct.unpack('h', fcntl.ioctl(0, termios.TIOCGPGRP, "  "))[0]
-    #buf = array.array('l', [0])
     try:
-        #fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, buf, 1)
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, "1234")
         value = struct.unpack('l', a)[0]
     except:
@@ -653,23 +662,6 @@ def main():
         time.sleep(0.1)
 
     dev_hand.close()
-
-
-##===========================================================================
-##  other reference stuff.
-##===========================================================================
-
-#ctypes snippets/examples.
-#Args = operation_args()
-#Args.field1 = data1;
-#Args.field2 = data2;
-#
-#devicehandle = open('/dev/my_usb', 'rw')
-#
-## try:
-#fcntl.ioctl(devicehandle, operation, Args)
-## exception block to check error
-
 
 ##===========================================================================
 ##  Check if running this module, rather than importing it.
