@@ -170,6 +170,7 @@ class bit_flag_struct(ctypes.Structure):
     _fields_ = [
         ('set',             ctypes.c_uint),         ## __u32 set
         ('clear',           ctypes.c_uint),         ## __u32 clear
+        ('toggle',          ctypes.c_uint),         ## __u32 clear
     ]
 
 class spi_cmd_struct(ctypes.Structure):
@@ -221,8 +222,8 @@ class IOCTL:
     IND_USER_GET_SEM        = _IOWR(0x0D, structure=cmd_struct)
     IND_USER_SET_SEM        = _IOWR(0x0E, structure=cmd_struct)
     IND_USER_REG_DEBUG      = _IOWR(0x0F, structure=cmd_struct)
-    IND_USER_MODIFY_LEDS    = _IOWR(0x10, structure=cmd_struct)
-    IND_USER_MODIFY_CTRL    = _IOWR(0x11, structure=cmd_struct)
+    IND_USER_MODIFY_LEDS    = _IOWR(0x10, structure=bit_flag_struct)
+    IND_USER_MODIFY_CTRL    = _IOWR(0x11, structure=bit_flag_struct)
     IND_USER_READ_MAXMIN    = _IOWR(0x12, structure=maxmin_struct)
 
 
@@ -252,12 +253,22 @@ def fpga_reset(dev_hand=None):
         print("EXCEPTION: resetting ADC DMA engine.")
         raise
 
-def leds_modify(on, off, dev_hand=None):
+def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
+
+    #print("DEBUG: leds_modify: on=0x{:08X}, off=0x{:08X}, toggle=0x{:08X}".format(on, off, toggle))
+
+    if (on & off):
+        raise ValueError("'on' and 'off' arguments have conflicting bit(s) set (on=0x{:08X} off=0x{:08X} bits=0x{:08X})".format(on, off, (on & off)))
+    elif (on & toggle):
+        raise ValueError("'on' and 'toggle' arguments have conflicting bit(s) set (on=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(on, toggle, (on & toggle)))
+    elif (off & toggle):
+        raise ValueError("'off' and 'toggle' arguments have conflicting bit(s) set (off=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(off, toggle, (off & toggle)))
 
     bits = bit_flag_struct()
     bits.set = on & LED.All
     bits.clear = off & LED.All
+    bits.toggle = toggle & LED.All
 
     if not dev_hand:
         dev_hand = get_device_handle()
@@ -269,13 +280,20 @@ def leds_modify(on, off, dev_hand=None):
         print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
         raise
 
-
-def ctrl_modify(set, clear, dev_hand=None):
+def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
     '''Modify control register by setting and clearing bits.'''
 
+    if (set & clear):
+        raise ValueError("'set' and 'clear' arguments have conflicting bit(s) set (set=0x{:08X} clear=0x{:08X} bits=0x{:08X})".format(set, clear, (set & clear)))
+    elif (set & toggle):
+        raise ValueError("'set' and 'toggle' arguments have conflicting bit(s) set (set=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(set, toggle, (set & toggle)))
+    elif (clear & toggle):
+        raise ValueError("'clear' and 'toggle' arguments have conflicting bit(s) set (clear=0x{:08X} toggle=0x{:08X} bits=0x{:08X})".format(clear, toggle, (clear & toggle)))
+
     bits = bit_flag_struct()
-    bits.set = set & LED.All
-    bits.clear = clear & LED.All
+    bits.set = set & Control.All
+    bits.clear = clear & Control.All
+    bits.toggle = toggle & Control.All
 
     if not dev_hand:
         dev_hand = get_device_handle()
@@ -294,19 +312,16 @@ def modem_power_pulse(duration, dev_hand=None):
         dev_hand = get_device_handle()
 
     ## Assert power key signal.
-    #on = Control.Modem_Reset | Control.Modem_Power
     on = Control.Modem_Power
-    off = 0
-    ctrl_modify(set=on, clear=off, dev_hand=dev_hand)
+    ctrl_modify(set=on, dev_hand=dev_hand)
 
     ## duration = 100-600ms => turn on.
     ## duration >= 600ms => turn off.  NB: seems to toggle power state.
     time.sleep(duration)
 
     ## Deassert power key signal.
-    on = 0
     off = Control.Modem_Power | Control.Modem_Reset
-    ctrl_modify(set=on, clear=off, dev_hand=dev_hand)
+    ctrl_modify(clear=off, dev_hand=dev_hand)
 
 def modem_power_off(dev_hand=None):
     '''Turn off modem - assert power key signal for 600ms.'''
@@ -452,10 +467,7 @@ def adc_semaphore_get(dev_hand=None):
     if not dev_hand:
         dev_hand = get_device_handle()
 
-    #struct.unpack('h', fcntl.ioctl(0, termios.TIOCGPGRP, "  "))[0]
-    #buf = array.array('l', [0])
     try:
-        #fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, buf, 1)
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, "1234")
         value = struct.unpack('l', a)[0]
     except:
@@ -490,6 +502,91 @@ def adc_output_mode_twos_complement(dev_hand=None):
     except:
         print("EXCEPTION: ADC Set Semaphore.")
         raise
+
+##----------------------------------------------------------------------------
+
+def running_led_off(dev_hand):
+
+    led = LED.Running
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def running_led_on(dev_hand):
+
+    led = LED.Running
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def running_led_toggle(dev_hand):
+
+    led = LED.Running
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def pps_ok_led_off(dev_hand):
+
+    led = LED.PPS_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def pps_ok_led_on(dev_hand):
+
+    led = LED.PPS_OK
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def pps_ok_led_toggle(dev_hand):
+
+    led = LED.PPS_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def modem_led_off(dev_hand):
+
+    led = LED.Modem_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def modem_led_on(dev_hand):
+
+    led = LED.Modem_OK
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def modem_led_toggle(dev_hand):
+
+    led = LED.Modem_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def weather_led_off(dev_hand):
+
+    led = LED.Weather_Station_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def weather_led_on(dev_hand):
+
+    led = LED.Weather_Station_OK
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def weather_led_toggle(dev_hand):
+
+    led = LED.Weather_Station_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def spare_led_off(dev_hand):
+
+    led = LED.Spare
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def spare_led_on(dev_hand):
+
+    led = LED.Spare
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def spare_led_toggle(dev_hand):
+
+    led = LED.Spare
+    leds_modify(toggle=led, dev_hand=dev_hand)
 
 
 ##===========================================================================
@@ -560,28 +657,11 @@ def main():
             print("DEBUG: on    = 0x{:0X}".format(on))
             print("DEBUG: off   = 0x{:0X}".format(off))
 
-        ctrl_modify(on, off, dev_hand=dev_hand)
+        ctrl_modify(set=on, clear=off, dev_hand=dev_hand)
 
         time.sleep(0.1)
 
     dev_hand.close()
-
-
-##===========================================================================
-##  other reference stuff.
-##===========================================================================
-
-#ctypes snippets/examples.
-#Args = operation_args()
-#Args.field1 = data1;
-#Args.field2 = data2;
-#
-#devicehandle = open('/dev/my_usb', 'rw')
-#
-## try:
-#fcntl.ioctl(devicehandle, operation, Args)
-## exception block to check error
-
 
 ##===========================================================================
 ##  Check if running this module, rather than importing it.

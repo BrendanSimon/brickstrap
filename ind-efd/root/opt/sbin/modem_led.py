@@ -16,25 +16,7 @@ import argh
 ## could make this a runtime option.
 DEBUG = False
 
-##============================================================================
-
-def modem_led_set(state):
-    """Set the modem LED."""
-
-    led = ind.LED.Modem_OK
-
-    on = 0
-    off = 0
-
-    if state:
-        ## Led on
-        on = led
-    else:
-        ## Led off
-        off = led
-
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(on=on, off=off, dev_hand=dev_hand)
+LED = ind.LED.Modem_OK
 
 ##============================================================================
 ## Commands
@@ -42,13 +24,22 @@ def modem_led_set(state):
 
 def off():
     """Turn off the modem LED."""
-    modem_led_set(False)
+    with ind.get_device_handle() as dev_hand:
+        ind.leds_modify(off=LED, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
 def on():
     """Turn on the modem LED."""
-    modem_led_set(True)
+    with ind.get_device_handle() as dev_hand:
+        ind.leds_modify(on=LED, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def toggle():
+    """Toggle on the modem LED."""
+    with ind.get_device_handle() as dev_hand:
+        ind.leds_modify(toggle=LED, dev_hand=dev_hand)
 
 ##============================================================================
 
@@ -57,11 +48,8 @@ def main():
 
     ## assembling commands.
     parser = argh.ArghParser()
-    commands = [ off, on ]
+    commands = [ off, on, toggle ]
     parser.add_commands(commands)
-
-    #with ind.get_device_handle() as dev_hand:
-    dev_hand = ind.get_device_handle()
 
     ## dispatching commands.
     parser.dispatch()

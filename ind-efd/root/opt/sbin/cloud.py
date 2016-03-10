@@ -24,6 +24,8 @@ import Queue as queue
 
 from cStringIO import StringIO
 
+import ind
+
 ##============================================================================
 
 class Cloud_Thread(threading.Thread):
@@ -42,6 +44,8 @@ class Cloud_Thread(threading.Thread):
             except Exception as exc:
                 print(repr(exc))
                 print(traceback.format_exc())
+
+        self.cloud.cleanup()
 
     def cleanup(self):
         print('INFO: Cloud_Thread: Cleaning up ...')
@@ -62,12 +66,18 @@ class Cloud(object):
         self.config = config
         self.app_state = app_state
         self.cloud_queue = cloud_queue
+        self.ind_dev_hand = None
 
         self.init()
 
     ##------------------------------------------------------------------------
 
     def init(self):
+
+        self.cleanup()
+
+        self.ind_dev_hand = ind.get_device_handle()
+
         self.measurement_ack = ''
         self.last_measurements_log_path = ''
         self.last_measurements_log_data = ''
@@ -87,6 +97,14 @@ class Cloud(object):
         hdr_sio.close()
 
         self.web_server_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    ##------------------------------------------------------------------------
+
+    def cleanup(self):
+
+        if self.ind_dev_hand:
+            self.ind_dev_hand.close()
+            self.ind_dev_hand = None
 
     ##------------------------------------------------------------------------
 
@@ -125,11 +143,24 @@ class Cloud(object):
 
     ##------------------------------------------------------------------------
 
+    def spare_led_off(self):
+        ind.spare_led_off(dev_hand=self.ind_dev_hand)
+
+    def spare_led_on(self):
+        ind.spare_led_on(dev_hand=self.ind_dev_hand)
+
+    def spare_led_toggle(self):
+        ind.spare_led_toggle(dev_hand=self.ind_dev_hand)
+
+    ##------------------------------------------------------------------------
+
     def wait_and_process(self):
         '''wait for data and process it.'''
 
         #csv_data = []
         csv_data = [self.measurements_log_csv_header]
+
+        self.spare_led_off()
 
         ## Block on receive queue for first time in the receive queue.
         try:
@@ -140,6 +171,8 @@ class Cloud(object):
         else:
             #print("DEBUG: appending first csv_data.")
             csv_data.append(item)
+
+        self.spare_led_on()
 
         ## Remove any remaining items in the queue without blocking
         ## max limit of 10 items.

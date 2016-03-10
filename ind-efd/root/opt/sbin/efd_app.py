@@ -1193,18 +1193,19 @@ class EFD_App(object):
 
     ##------------------------------------------------------------------------
 
-    def running_led_on(self):
+    def running_led_off(self):
+        ind.running_led_off(dev_hand=self.dev_hand)
 
-        on = ind.LED.Running
-        off = 0
-        ind.leds_modify(on=on, off=off, dev_hand=self.dev_hand)
+    def running_led_on(self):
+        ind.running_led_on(dev_hand=self.dev_hand)
+
+    def running_led_toggle(self):
+        ind.running_led_toggle(dev_hand=self.dev_hand)
 
     ##------------------------------------------------------------------------
 
     def main_loop(self):
         '''Run main loop of EFD_App.'''
-
-        self.running_led_on()
 
         self.gps_poller.start()
 
@@ -1219,7 +1220,9 @@ class EFD_App(object):
         self.adc_start()
 
         while True:
+            self.running_led_off()
             self.get_sample_data()          ## wait for data to be available.
+            self.running_led_on()
 
             select_datetime_utc = arrow.utcnow()
             select_datetime_local = select_datetime_utc.to('local')
