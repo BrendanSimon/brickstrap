@@ -138,8 +138,7 @@ class Cloud(object):
                 print("DEBUG: requests.post: data = {}".format(data))
                 print("DEBUG: -------------------------------------------")
                 print("DEBUG: post measurements data: r = {!r}".format(r))
-                print("DEBUG: post measurements r.status_code = {}".format(r.status_code
-))
+                print("DEBUG: post measurements r.status_code = {}".format(r.status_code))
                 print("DEBUG: post measurements r.headers = {}".format(r.headers))
                 print("DEBUG: post measurements r.text = {}".format(r.text))
                 print("DEBUG: *******************************************")
