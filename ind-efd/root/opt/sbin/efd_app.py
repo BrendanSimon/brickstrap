@@ -422,7 +422,8 @@ class Measurements_Log(object):
         try:
             self.cloud_queue.put(item=self.csv_data, block=False)
         except queue.Full:
-            print("EXCEPTION: could not queue measurement data to cloud thread.")
+            print("EXCEPTION: could not queue measurement data to cloud thread. qsize={}".format(self.cloud_queue.qsize()))
+            sys.stdout.flush()
 
 ##============================================================================
 
@@ -1278,6 +1279,8 @@ class EFD_App(object):
         self.adc_start()
 
         while True:
+            sys.stdout.flush()
+
             self.running_led_off()
             self.get_sample_data()          ## wait for data to be available.
             self.running_led_on()

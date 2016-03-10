@@ -11,7 +11,7 @@ This module posts data to a service in the "cloud".
 '''
 
 
-#import sys
+import sys
 #from collections import namedtuple
 import traceback
 import threading
@@ -45,6 +45,8 @@ class Cloud_Thread(threading.Thread):
                 print(repr(exc))
                 print(traceback.format_exc())
 
+            sys.stdout.flush()
+
         self.cloud.cleanup()
 
     def cleanup(self):
@@ -56,8 +58,6 @@ class Cloud_Thread(threading.Thread):
 ##============================================================================
 
 class Cloud(object):
-
-    #select_timeout = 1
 
     ##------------------------------------------------------------------------
 
@@ -115,7 +115,7 @@ class Cloud(object):
         '''Post measurements data to the cloud service.'''
 
         try:
-            r = requests.get(self.config.web_server_ping)
+            r = requests.get(self.config.web_server_ping, timeout=5)
         except Exception as exc:
             print(repr(exc))
             print(traceback.format_exc())
@@ -126,10 +126,11 @@ class Cloud(object):
         '''Post measurements data to the cloud service.'''
 
         try:
-            r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data)
+            r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data, timeout=30)
         except Exception as exc:
             print(repr(exc))
-            print(traceback.format_exc())
+            #print(traceback.format_exc())
+            raise
         else:
             if 0:
                 print("DEBUG: *******************************************")
@@ -160,6 +161,7 @@ class Cloud(object):
     def wait_and_process(self):
         '''wait for data and process it.'''
 
+        ## Get next item in the queue (wait if necessary) if number of records to post is not at limit.
         if len(self.csv_data) < self.config.max_records_per_post:
             self.spare_led_off()
 
@@ -172,6 +174,8 @@ class Cloud(object):
             else:
                 #print("DEBUG: appending next csv_data.")
                 self.csv_data.append(item)
+                #print("DEBUG: inform queue that next item has been processed.")
+                self.cloud_queue.task_done()
 
             self.spare_led_on()
 
@@ -184,9 +188,12 @@ class Cloud(object):
                 else:
                     #print("DEBUG: appending extra csv_data.")
                     self.csv_data.append(item)
+                    #print("DEBUG: inform queue that extra item has been processed.")
+                    self.cloud_queue.task_done()
 
         ## concatenate csv row header and data into a single string.
         post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
+        #print("DEBUG: len(csv_data)={}".format(len(self.csv_data)))
         #print("DEBUG: post_data={}".format(post_data))
 
         try:
@@ -194,27 +201,15 @@ class Cloud(object):
         except Exception as exc:
             print(repr(exc))
             print(traceback.format_exc())
+            ## the sleep ensures other threads can run if posting fails immediately.
+            print("DEBUG: sleep 2 seconds")
+            time.sleep(2)
         else:
-            ## inform queue that items have been processed.
-            for i in range(len(self.csv_data)):
-                #print("DEBUG: cloud_queue.task_done()")
-                self.cloud_queue.task_done()
+            #print("INFO: Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
             ## reset to allow more csv data to accumulate from the queue.
             self.csv_data = []
 
         return
-
-        ##
-        ## FIXME: app_state was being used (abused) for inter-thread comms.
-        ## FIXME: should delete these old app_state entries as they are no longer used.
-        ## FIXME: this should be done during app initialisation.
-        ##
-        #m_log_path = self.app_state['measurements_log_path']
-        #m_log_data = self.app_state['measurements_log_data']
-        #m_log_datetime = self.app_state['measurements_log_datetime']
-        #m_log_datetime = self.app_state['capture_datetime_utc']
-        #capture_datetime_utc = self.app_state['capture_datetime_utc']
-        #capture_datetime_local = self.app_state['capture_datetime_local']
 
 ##============================================================================
 
@@ -284,7 +279,8 @@ def main():
             time.sleep(delay)
             count = data_count[data_index]
             data_index += 1
-            if data_index >= len(data_count): data_index = 0
+            if data_index >= len(data_count):
+                data_index = 0
             print("Queueing {} csv rows".format(count))
             for i in range(count):
                 try:
