@@ -11,8 +11,7 @@ This module posts data to a service in the "cloud".
 '''
 
 
-#import sys
-#from collections import namedtuple
+import sys
 import traceback
 import threading
 import time
@@ -45,6 +44,8 @@ class Cloud_Thread(threading.Thread):
                 print(repr(exc))
                 print(traceback.format_exc())
 
+            sys.stdout.flush()
+
         self.cloud.cleanup()
 
     def cleanup(self):
@@ -56,8 +57,6 @@ class Cloud_Thread(threading.Thread):
 ##============================================================================
 
 class Cloud(object):
-
-    #select_timeout = 1
 
     ##------------------------------------------------------------------------
 
@@ -96,6 +95,9 @@ class Cloud(object):
         self.measurements_log_csv_header = hdr_sio.getvalue()
         hdr_sio.close()
 
+        ## list of csv data records to post.
+        self.csv_data = []
+
         self.web_server_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
     ##------------------------------------------------------------------------
@@ -112,7 +114,7 @@ class Cloud(object):
         '''Post measurements data to the cloud service.'''
 
         try:
-            r = requests.get(self.config.web_server_ping)
+            r = requests.get(self.config.web_server_ping, timeout=5)
         except Exception as exc:
             print(repr(exc))
             print(traceback.format_exc())
@@ -123,10 +125,11 @@ class Cloud(object):
         '''Post measurements data to the cloud service.'''
 
         try:
-            r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data)
+            r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data, timeout=30)
         except Exception as exc:
             print(repr(exc))
-            print(traceback.format_exc())
+            #print(traceback.format_exc())
+            raise
         else:
             if 0:
                 print("DEBUG: *******************************************")
@@ -157,36 +160,51 @@ class Cloud(object):
     def wait_and_process(self):
         '''wait for data and process it.'''
 
-        #csv_data = []
-        csv_data = [self.measurements_log_csv_header]
+        ## Get next item in the queue (wait if necessary) if number of records to post is not at limit.
+        if len(self.csv_data) < self.config.max_records_per_post:
+            self.spare_led_off()
 
-        self.spare_led_off()
-
-        ## Block on receive queue for first time in the receive queue.
-        try:
-            item = self.cloud_queue.get(block=True, timeout=2)
-        except queue.Empty as exc:
-            print(repr(exc))
-            return
-        else:
-            #print("DEBUG: appending first csv_data.")
-            csv_data.append(item)
-
-        self.spare_led_on()
-
-        ## Remove any remaining items in the queue without blocking
-        ## max limit of 10 items.
-        for i in range(10):
+            ## Block on receive queue for first time in the receive queue.
             try:
-                item = self.cloud_queue.get(block=False)
-            except queue.Empty:
-                break
-            else:
-                #print("DEBUG: appending extra csv_data.")
-                csv_data.append(item)
+                item = self.cloud_queue.get(block=True, timeout=2)
+            except queue.Empty as exc:
+                print(repr(exc))
+                return
 
-        ## concatenate csv row data to form a single string.
-        post_data = ''.join(csv_data)
+            #print("DEBUG: appending next csv_data.")
+            self.csv_data.append(item)
+
+            try:
+                #print("DEBUG: inform queue that next item has been processed.")
+                self.cloud_queue.task_done()
+            except Exception as exc:
+                print("EXCEPTION: issue task_done() to cloud queue after getting next item !!")
+                print(repr(exc))
+                sys.stdout.flush()
+
+            self.spare_led_on()
+
+            ## Remove any remaining items in the queue, up to post limit, without blocking.
+            while len(self.csv_data) < self.config.max_records_per_post:
+                try:
+                    item = self.cloud_queue.get(block=False)
+                except queue.Empty:
+                    break
+
+                #print("DEBUG: appending extra csv_data.")
+                self.csv_data.append(item)
+
+                try:
+                    #print("DEBUG: inform queue that extra item has been processed.")
+                    self.cloud_queue.task_done()
+                except Exception as exc:
+                    print("EXCEPTION: issue task_done() to cloud queue after getting extra item !!")
+                    print(repr(exc))
+                    sys.stdout.flush()
+
+        ## concatenate csv row header and data into a single string.
+        post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
+        #print("DEBUG: len(csv_data)={}".format(len(self.csv_data)))
         #print("DEBUG: post_data={}".format(post_data))
 
         try:
@@ -194,24 +212,15 @@ class Cloud(object):
         except Exception as exc:
             print(repr(exc))
             print(traceback.format_exc())
-
-        for i in range(len(csv_data)-1):
-            #print("DEBUG: cloud_queue.task_done()")
-            self.cloud_queue.task_done()      ## inform queue that item has been processed.
+            ## the sleep ensures other threads can run if posting fails immediately.
+            print("DEBUG: sleep 2 seconds")
+            time.sleep(2)
+        else:
+            #print("INFO: Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
+            ## reset to allow more csv data to accumulate from the queue.
+            self.csv_data = []
 
         return
-
-        ##
-        ## FIXME: app_state was being used (abused) for inter-thread comms.
-        ## FIXME: should delete these old app_state entries as they are no longer used.
-        ## FIXME: this should be done during app initialisation.
-        ##
-        #m_log_path = self.app_state['measurements_log_path']
-        #m_log_data = self.app_state['measurements_log_data']
-        #m_log_datetime = self.app_state['measurements_log_datetime']
-        #m_log_datetime = self.app_state['capture_datetime_utc']
-        #capture_datetime_utc = self.app_state['capture_datetime_utc']
-        #capture_datetime_local = self.app_state['capture_datetime_local']
 
 ##============================================================================
 
@@ -222,7 +231,9 @@ def main():
 
     class Config:
         web_server_ping = 'http://portal.efdweb.com/api/Ping/0/'
+
         web_server_measurements_log = 'http://portal.efdweb.com/api/AddEFDLog/0/'
+
         measurements_log_field_names = [
             'datetime_utc', 'datetime_local',
             'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
@@ -232,7 +243,10 @@ def main():
             'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
             't2_blu', 'w2_blu',
             'temperature', 'humidity', 'rain_intensity',
+            'alert',
             ]
+
+        max_cloud_queue_size = 10
 
     config = Config()
 
@@ -265,7 +279,7 @@ def main():
 
     csv_str = '2016-01-12 15:04:12+00:00,2016-01-13 02:04:12+11:00,-0.00034332275390625,-0.0017547607421875,0.001766072,5.7265854614087719e-09,29205329.549096104,0.0016021728515625,-0.003662109375,0.00355964,5.7265854614087719e-09,31948299.751001682,-0.00034332275390625,-0.00171661376953125,0.001133052,5.7266116565935494e-09,29143762.475214832,20.2C,56.4P,0\n'
 
-    cloud_queue = queue.Queue()
+    cloud_queue = queue.Queue(maxsize=config.max_cloud_queue_size)
 
     cloud_thread = Cloud_Thread(config=config, app_state=None, cloud_queue=cloud_queue)
     cloud = cloud_thread.cloud
@@ -281,7 +295,8 @@ def main():
             time.sleep(delay)
             count = data_count[data_index]
             data_index += 1
-            if data_index >= len(data_count): data_index = 0
+            if data_index >= len(data_count):
+                data_index = 0
             print("Queueing {} csv rows".format(count))
             for i in range(count):
                 try:
@@ -309,4 +324,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
