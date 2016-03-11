@@ -17,7 +17,6 @@ import os.path
 import numpy as np
 import math
 import time
-#import datetime
 import arrow
 import select
 import Queue as queue       ## Python 3 renames Queue module as queue.
@@ -209,8 +208,11 @@ class Config(object):
         'temperature', 'humidity', 'rain_intensity',
         ]
 
-    max_cloud_queue_size = 600          ## max of 600 seconds (10 minutes) data can be queued.
-    max_records_per_post = 60       ## max of 60 seconds (1 minute) of data per post to web portal.
+    ## max of 60 records (1 minute) of data per post to web portal.
+    max_records_per_post = 60
+
+    ## max of 600 records (10 minutes) of data can be queued.
+    max_cloud_queue_size = 600
 
     def __init__(self):
         self.read_settings_file()
@@ -387,10 +389,6 @@ class Measurements_Log(object):
 
         self.day_saved = dt.day
 
-        ## Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
-        #measurements['datetime_utc'] = utc_dt.isoformat(sep=' ')
-        #measurements['datetime_local'] = loc_dt.isoformat(sep=' ')
-
         ## format csv output to a string (not a file) so the same output
         ## can be efficiently saved to a file and post to web server.
         row_sio= StringIO()
@@ -405,13 +403,10 @@ class Measurements_Log(object):
         path_filename = os.path.join(self.path, self.filename)
         new_file = not os.path.exists(path_filename)
         with open(path_filename, 'a') as csvfile:
-            #writer = csv.DictWriter(csvfile, fieldnames=self.field_names, extrasaction='ignore')
             if new_file:
                 ## write header to new file.
-                #writer.writeheader()
                 csvfile.write(self.csv_header)
             ## write measurements to file.
-            #writer.writerow(measurements)
             csvfile.write(self.csv_data)
 
         ##

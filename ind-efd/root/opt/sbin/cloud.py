@@ -12,7 +12,6 @@ This module posts data to a service in the "cloud".
 
 
 import sys
-#from collections import namedtuple
 import traceback
 import threading
 import time
@@ -171,11 +170,17 @@ class Cloud(object):
             except queue.Empty as exc:
                 print(repr(exc))
                 return
-            else:
-                #print("DEBUG: appending next csv_data.")
-                self.csv_data.append(item)
+
+            #print("DEBUG: appending next csv_data.")
+            self.csv_data.append(item)
+
+            try:
                 #print("DEBUG: inform queue that next item has been processed.")
                 self.cloud_queue.task_done()
+            except Exception as exc:
+                print("EXCEPTION: issue task_done() to cloud queue after getting next item !!")
+                print(repr(exc))
+                sys.stdout.flush()
 
             self.spare_led_on()
 
@@ -185,11 +190,17 @@ class Cloud(object):
                     item = self.cloud_queue.get(block=False)
                 except queue.Empty:
                     break
-                else:
-                    #print("DEBUG: appending extra csv_data.")
-                    self.csv_data.append(item)
+
+                #print("DEBUG: appending extra csv_data.")
+                self.csv_data.append(item)
+
+                try:
                     #print("DEBUG: inform queue that extra item has been processed.")
                     self.cloud_queue.task_done()
+                except Exception as exc:
+                    print("EXCEPTION: issue task_done() to cloud queue after getting extra item !!")
+                    print(repr(exc))
+                    sys.stdout.flush()
 
         ## concatenate csv row header and data into a single string.
         post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
@@ -220,7 +231,9 @@ def main():
 
     class Config:
         web_server_ping = 'http://portal.efdweb.com/api/Ping/0/'
+
         web_server_measurements_log = 'http://portal.efdweb.com/api/AddEFDLog/0/'
+
         measurements_log_field_names = [
             'datetime_utc', 'datetime_local',
             'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
@@ -230,7 +243,10 @@ def main():
             'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
             't2_blu', 'w2_blu',
             'temperature', 'humidity', 'rain_intensity',
+            'alert',
             ]
+
+        max_cloud_queue_size = 10
 
     config = Config()
 
@@ -263,7 +279,7 @@ def main():
 
     csv_str = '2016-01-12 15:04:12+00:00,2016-01-13 02:04:12+11:00,-0.00034332275390625,-0.0017547607421875,0.001766072,5.7265854614087719e-09,29205329.549096104,0.0016021728515625,-0.003662109375,0.00355964,5.7265854614087719e-09,31948299.751001682,-0.00034332275390625,-0.00171661376953125,0.001133052,5.7266116565935494e-09,29143762.475214832,20.2C,56.4P,0\n'
 
-    cloud_queue = queue.Queue()
+    cloud_queue = queue.Queue(maxsize=config.max_cloud_queue_size)
 
     cloud_thread = Cloud_Thread(config=config, app_state=None, cloud_queue=cloud_queue)
     cloud = cloud_thread.cloud
@@ -308,4 +324,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
