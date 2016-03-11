@@ -206,6 +206,7 @@ class Config(object):
         'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
         't2_blu', 'w2_blu',
         'temperature', 'humidity', 'rain_intensity',
+        'alert',
         ]
 
     ## max of 60 records (1 minute) of data per post to web portal.
@@ -982,20 +983,20 @@ class EFD_App(object):
         w2_wht = m.get('w2_wht', 0.0)
         w2_blu = m.get('w2_blu', 0.0)
 
-        max_volt = max( (max_volt_red, max_volt_wht, max_volt_blu) )
+        alert = m.get('alert', '')
 
-        flag_red = '*' if max_volt_red == max_volt else ' '
-        flag_wht = '*' if max_volt_wht == max_volt else ' '
-        flag_blu = '*' if max_volt_blu == max_volt else ' '
+        alert_red = '*' if alert == 'R' else ' '
+        alert_wht = '*' if alert == 'W' else ' '
+        alert_blu = '*' if alert == 'B' else ' '
 
         sms_message = '\n'.join([
             "EFD PD Event",
             "Unit: {}".format(config.serial_number),
             "Site: {}".format(config.site_name),
             "Time (L): {}".format(m.get('datetime_local','')),
-            "RED: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_red, min_volt_red, t2_red, w2_red, flag_red),
-            "WHT: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_wht, min_volt_wht, t2_wht, w2_wht, flag_wht),
-            "BLU: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_blu, min_volt_blu, t2_blu, w2_blu, flag_blu),
+            "RED: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_red, min_volt_red, t2_red, w2_red, alert_red),
+            "WHT: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_wht, min_volt_wht, t2_wht, w2_wht, alert_wht),
+            "BLU: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_blu, min_volt_blu, t2_blu, w2_blu, alert_blu),
             "Temp: {}".format(m.get('temperature')),
             "Humidity: {}".format(m.get('humidity')),
             "Rain-Int: {}".format(m.get('rain_intensity')),
@@ -1012,6 +1013,7 @@ class EFD_App(object):
             ## Call script to send SMS.
             cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
             print("DEBUG: send_sms: cmd = {}".format(cmd))
+            ## FIXME: check return/exception for os.system(cmd)
             os.system(cmd)
 
     ##------------------------------------------------------------------------
@@ -1342,10 +1344,35 @@ class EFD_App(object):
                 print
 
             ##
+            ## Peak Threshold Detection.
+            ##
+            trigger_phase = None
+            trigger_alert = '-'
+
+            max_volt = max( (self.peak_max_red.voltage, self.peak_max_wht.voltage, self.peak_max_blu.voltage) )
+
+            if max_volt >= self.config.pd_event_trigger_voltage:
+                if config.pd_event_reporting_interval:
+                    delta_dt = self.capture_datetime_utc - self.last_pd_event_report_datetime_utc
+                    if delta_dt.total_seconds() >= config.pd_event_reporting_interval:
+                        if self.peak_max_red.voltage == max_volt:
+                            trigger_phase = self.red_phase
+                            trigger_alert = 'R'
+                        elif self.peak_max_wht.voltage == max_volt:
+                            trigger_phase = self.wht_phase
+                            trigger_alert = 'W'
+                        elif self.peak_max_blu.voltage == max_volt:
+                            trigger_phase = self.blu_phase
+                            trigger_alert = 'B'
+
+            ##
             ## Update measurements dictionary.
             ##
+
+            ## Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
             self.measurements['datetime_utc']           = self.capture_datetime_utc.isoformat(sep=' ')
             self.measurements['datetime_local']         = self.capture_datetime_local.isoformat(sep=' ')
+
             self.measurements['max_volt_red']           = self.peak_max_red.voltage
             self.measurements['min_volt_red']           = self.peak_min_red.voltage
             self.measurements['max_time_offset_red']    = self.peak_max_red.time_offset
@@ -1367,9 +1394,21 @@ class EFD_App(object):
             self.measurements['temperature']            = self.ws_info.temperature
             self.measurements['humidity']               = self.ws_info.humidity
             self.measurements['rain_intensity']         = self.ws_info.rain_intensity
+            self.measurements['alert']                  = trigger_alert
 
             ## write measurements dictionary to measurements log file.
             self.measurements_log.write(measurements=self.measurements, datetime=self.capture_datetime_utc)
+
+            ## Save sample data and send SMS if a trigger event detected.
+            if trigger_phase is not None:
+                print("PD Event Detected @ {} UTC, {} LOCAL", self.capture_datetime_utc, self.capture_datetime_local)
+                self.save_data(phase=trigger_phase)
+                self.send_sms()
+                self.last_pd_event_report_datetime_utc = self.capture_datetime_utc
+
+                if self.config.show_phase_arrays_on_pd_event:
+                    self.show_phase_arrays()
+                    #self.show_all_capture_buffers()
 
             if self.config.show_measurements:
                 print('----------------------------------------')
@@ -1398,42 +1437,10 @@ class EFD_App(object):
                 print('humidity       : {}'.format(self.ws_info.humidity))
                 print('rain intensity : {}'.format(self.ws_info.rain_intensity))
                 print
+                print('trigger_alert : {}'.format(trigger_alert))
+                print
                 print('tf_map : {!r}'.format(self.tf_map))
                 print
-
-            ##
-            ## Peak Threshold Detection.
-            ## FIXME: this is ugly and not very pythonic.
-            ## FIXME: could use max() function instead.  See generate_sms_message() as an example.
-            ##
-            trigger_phase = None
-            trigger_peak = None
-            if self.peak_max_red.voltage >= self.config.pd_event_trigger_voltage:
-                trigger_peak = self.peak_max_red
-                trigger_phase = self.red_phase
-
-            if self.peak_max_wht.voltage >= self.config.pd_event_trigger_voltage:
-                if trigger_peak == None or self.peak_max_wht.voltage > trigger_peak.voltage:
-                    trigger_peak = self.peak_max_wht
-                    trigger_phase = self.wht_phase
-
-            if self.peak_max_blu.voltage >= self.config.pd_event_trigger_voltage:
-                if trigger_peak == None or self.peak_max_blu.voltage > trigger_peak.voltage:
-                    trigger_peak = self.peak_max_blu
-                    trigger_phase = self.blu_phase
-
-            if trigger_phase is not None:
-                ## DEBUG TRIGGER
-                if config.pd_event_reporting_interval:
-                    delta_dt = self.capture_datetime_utc - self.last_pd_event_report_datetime_utc
-                    if delta_dt.total_seconds() >= config.pd_event_reporting_interval:
-                        print("PD Event Detected @ {} UTC, {} LOCAL", self.capture_datetime_utc, self.capture_datetime_local)
-                        self.save_data(phase=trigger_phase)
-                        self.send_sms()
-                        self.last_pd_event_report_datetime_utc = self.capture_datetime_utc
-                if self.config.show_phase_arrays_on_pd_event:
-                    self.show_phase_arrays()
-                    #self.show_all_capture_buffers()
 
             ##
             ## Show capture data / phase arrays

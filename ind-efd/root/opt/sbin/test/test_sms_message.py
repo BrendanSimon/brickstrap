@@ -44,6 +44,7 @@ test_measurements = {
     'max_time_offset_blu'   : 0.0029754638671875,
     'min_time_offset_blu'   : 0.104449696,
     't2_blu'                : 5.6962919002124462e-09,
+    ## commented out to test if a key is not present in the dict.
     #'w2_blu'                : 142273351310783.03,
     'temperature'           : '20.2C',
     'humidity'              : '73.2P',
@@ -93,4 +94,3 @@ def test_main():
 
 if __name__ == '__main__':
     test_main()
-
