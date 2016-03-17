@@ -10,4 +10,5 @@ ca-certificates
 cron
 watchdog
 logrotate
+dosfstools
 
