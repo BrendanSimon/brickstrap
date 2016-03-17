@@ -26,6 +26,7 @@ function add-user()
 function add-admin()
 {
     local username=$1
+    local groups="sudo,root,adm,utmp"
 
     #check-user-exists ${username}
 
@@ -36,7 +37,7 @@ function add-admin()
     fi
 
     echo "Add '${username}' to sudo group."
-    $CHROOTCMD usermod -a -G sudo ${username}
+    $CHROOTCMD usermod -a -G ${groups} ${username}
 }
 
 #$CHROOTCMD adduser --disabled-password --gecos \"\" brendan
