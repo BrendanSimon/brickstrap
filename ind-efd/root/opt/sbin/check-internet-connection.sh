@@ -12,18 +12,22 @@
 ## call the modem-power-enable.sh script.
 ##
 
+## Read user settings file.
+source /mnt/data/etc/settings
+
 ##
 ## FIXME: get ping server info from user settings file.
 ##
 
-## Google nameserver.
-#ping_server="8.8.8.8"
+##
+## Ping servers.
+## -------------
+## 8.8.8.8      => Google nameserver.
+## 203.14.0.250 => Telstra ntp server (tic.ntp.telstra.net).
+## 203.14.0.251 => Telstra ntp server (toc.ntp.telstra.net).
+##
 
-## Telstra ntp server (tic.ntp.telstra.net).
-#ping_server="203.14.0.250"
-
-## Telstra ntp server (toc.ntp.telstra.net).
-ping_server="203.14.0.251"
+ping_server="${PING_SERVER:-203.14.0.251}"
 
 while true ; do
     echo "Pinging ${ping_server}"

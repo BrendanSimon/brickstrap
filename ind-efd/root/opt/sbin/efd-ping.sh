@@ -1,9 +1,10 @@
 #!/bin/bash
 
+##
 ## Use curl to do an EFD Ping to the cloud service.
+##
 
 ## Read user settings file.
-#source ~/tmp/settings
 source /mnt/data/etc/settings
 
 web_server="http://portal.efdweb.com"
