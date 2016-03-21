@@ -82,11 +82,14 @@ class Cloud(object):
         self.last_measurements_log_data = ''
         self.measurements_log_file = None
         self.measurements_log_mmap = None
+        self.last_post_time = time.time()
 
         ## initialise to earliest possible datetime value.
         self.last_measurements_log_datetime_utc = arrow.Arrow(year=1, month=1, day=1)
 
+        ##
         ## initialise csv header string.
+        ##
         ## FIXME: this is duplicated from efd_app.py
         hdr_sio = StringIO()
         hdr_sio.write("data=")
@@ -159,19 +162,47 @@ class Cloud(object):
     def wait_and_process(self):
         '''wait for data and process it.'''
 
+        ##
+        ## Batch up max_records_per_post into a single post to reduce data usage costs.
+        ##
+        ## A single csv record per post is approx 602 bytes (250 csv header + CRLF + 350 csv record).
+        ## The total bytes transferred is approximately 1456 (IP bytes) or 1594 (Ethernet bytes)
+        ## per single csv record post (over 9 packets) => almost 4GB per month !!
+        ##
+        ## Batching 60 csv records into a single http post will improve efficiency and should
+        ## bring the data usage to approximately 1GB per month.
+        ## Estimate: 600 (Eth/IP bytes) + 252 (csv_header) + 302*60 (csv record) + 34*60 (reply)
+        ##        => 895MB per month (approx 1GB per month)
+        ##
+        ## Telstra billing shows data usage has reduced to approximately 1.4-1.6MB/hour (~1.2GB/31days),
+        ## down from 8MB/hour (~6GB/31days).
+        ##
+
+        new_data = False
+
+        ##
         ## Get next item in the queue (wait if necessary) if number of records to post is not at limit.
-        if len(self.csv_data) < self.config.max_records_per_post:
+        ##
+        while len(self.csv_data) < self.config.max_records_per_post:
+
             self.spare_led_off()
 
+            ##
             ## Block on receive queue for first time in the receive queue.
+            ##
             try:
                 item = self.cloud_queue.get(block=True, timeout=2)
             except queue.Empty as exc:
                 print(repr(exc))
-                return
+                break
+
+            self.spare_led_on()
 
             #print("DEBUG: appending next csv_data.")
             self.csv_data.append(item)
+            #print("DEBUG: appended next csv_data (len={})".format(len(self.csv_data)))
+
+            new_data = True
 
             try:
                 #print("DEBUG: inform queue that next item has been processed.")
@@ -181,42 +212,47 @@ class Cloud(object):
                 print(repr(exc))
                 sys.stdout.flush()
 
-            self.spare_led_on()
+        ##
+        ## Check if there is enough data to post.
+        ##
+        if len(self.csv_data) < self.config.max_records_per_post:
+            ## Not enough data to post.
+            print("DEBUG: Not enough data records to post ({}).".format(len(self.csv_data)))
+            return
 
-            ## Remove any remaining items in the queue, up to post limit, without blocking.
-            while len(self.csv_data) < self.config.max_records_per_post:
-                try:
-                    item = self.cloud_queue.get(block=False)
-                except queue.Empty:
-                    break
+        ##
+        ## Always post data if new data was added, otherwise check if time to repost last data.
+        ##
+        now = time.time()
+        if not new_data:
+            time_diff = now - self.last_post_time
+            #print("DEBUG: now={}, last_post_time={}, time_diff={}".format(now, self.last_post_time, time_diff))
+            if time_diff < self.config.measurments_post_retry_time_interval:
+                ## Not time to retry last post.
+                print("DEBUG: Not time to retry last post.")
+                time.sleep(1)
+                return
 
-                #print("DEBUG: appending extra csv_data.")
-                self.csv_data.append(item)
+        self.last_post_time = now
 
-                try:
-                    #print("DEBUG: inform queue that extra item has been processed.")
-                    self.cloud_queue.task_done()
-                except Exception as exc:
-                    print("EXCEPTION: issue task_done() to cloud queue after getting extra item !!")
-                    print(repr(exc))
-                    sys.stdout.flush()
-
+        ##
         ## concatenate csv row header and data into a single string.
+        ##
         post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
-        #print("DEBUG: len(csv_data)={}".format(len(self.csv_data)))
+        print("DEBUG: Posting data: len(csv_data)={}".format(len(self.csv_data)))
         #print("DEBUG: post_data={}".format(post_data))
 
+        ##
+        ## post the data to the web server.
+        ##
         try:
             self.post_measurements_data(data=post_data)
         except Exception as exc:
             print(repr(exc))
             print(traceback.format_exc())
-            ## the sleep ensures other threads can run if posting fails immediately.
-            print("DEBUG: sleep 2 seconds")
-            time.sleep(2)
         else:
             #print("INFO: Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
-            ## reset to allow more csv data to accumulate from the queue.
+            ## clear list to allow more csv data to accumulate from the queue.
             self.csv_data = []
 
         return

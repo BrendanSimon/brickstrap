@@ -209,6 +209,9 @@ class Config(object):
         'alert',
         ]
 
+    ## retry time interval (minimum) between reposting EFD measurements to web portal.
+    measurments_post_retry_time_interval = 10
+
     ## max of 60 records (1 minute) of data per post to web portal.
     max_records_per_post = 60
 
