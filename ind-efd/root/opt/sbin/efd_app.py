@@ -152,8 +152,11 @@ class Config(object):
 
     delay_count = total_count - capture_count
 
-    initialise_capture_memory = False
-    show_intialised_capture_buffers = False
+    #initialise_capture_memory = False
+    initialise_capture_memory = True
+    initialise_capture_memory_magic_value = 0x6141
+    #show_intialised_capture_buffers = False
+    show_intialised_capture_buffers = True
     show_intialised_phase_arrays = False
 
     show_capture_debug = False
@@ -300,6 +303,7 @@ class Config(object):
         print("delay_count = {}".format(self.delay_count))
 
         print("initialise_capture_memory = {}".format(self.initialise_capture_memory))
+        print("initialise_capture_memory_magic_value = {}".format(self.initialise_capture_memory_magic_value))
         print("show_intialised_capture_buffers = {}".format(self.show_intialised_capture_buffers))
         print("show_intialised_phase_arrays = {}".format(self.show_intialised_phase_arrays))
 
@@ -440,6 +444,9 @@ class EFD_App(object):
         self.dev_name = ind.dev_name
         self.dev_hand = None
         self.adc_capture_array = None
+        self.adc_capture_array_0 = None
+        self.adc_capture_array_1 = None
+        self.adc_capture_array_test_indices = []
 
         self.red_phase_0 = None
         self.wht_phase_0 = None
@@ -596,9 +603,23 @@ class EFD_App(object):
         self.adc_stop()
 
         self.adc_capture_array = self.adc_numpy_array()
+        half_index = len(self.adc_capture_array)
+        self.adc_capture_array_0 = self.adc_capture_array[:half_index]
+        self.adc_capture_array_1 = self.adc_capture_array[half_index:]
+
+        ##
+        ## test capture array values at the following indices for correct magic value.
+        ## - one past last valid capture value of first array => zero + capture count
+        ## - last index of first capture array => half index of full array - 1
+        ## - one past last valid capture value of second array => half index + capture count
+        ## - last index of second capture array => -1
+        ##
+        cc = self.config.capture_count
+        self.adc_capture_array_test_indices = [ cc, (half_index - 1), (half_index + cc), -1 ]
+
         if self.config.initialise_capture_memory:
             print("Initialise capture array : filling with 0x6141")
-            self.adc_capture_array.fill(0x6141)
+            self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
 
         if self.config.show_intialised_capture_buffers:
             self.show_all_capture_buffers()
@@ -651,6 +672,13 @@ class EFD_App(object):
         self.adc_capture_buffer_offset_half = mem_size // 2
 
         return np_array
+
+    def adc_capture_array_tests(self):
+        magic = self.config.initialise_capture_memory_magic_value
+        for index in self.adc_capture_array_test_indices:
+            value = self.adc_capture_array[index]
+            if value != magic:
+                print("ERROR: Buffer overrun.  adc_capture_array[0x{index:0X}]=0x{value:0X} does not match magic=0x{magic:0X} !!".format(index=index, value=value, magic=magic))
 
     def fpga_reset(self):
         print("DEBUG: FPGA Resetting ...")
@@ -1321,6 +1349,9 @@ class EFD_App(object):
             self.adc_capture_buffer_next()  ## use next capture bufer for ping-pong
 
             self.get_capture_datetime()
+
+            if self.config.initialise_capture_memory:
+                self.adc_capture_array_tests()
 
             if self.config.peak_detection:
                 self.peak_detection()
