@@ -144,25 +144,25 @@ class cmd_struct(ctypes.Structure):
 
 class maxmin_struct(ctypes.Structure):
     _fields_ = [
-        ('max_ch0_data',    ctypes.c_int16),        ## __u32 max_ch0_data
-        ('_unused_1_',      ctypes.c_int16),        ## __u32 max_ch2_data
+        ('max_ch0_data',    ctypes.c_int16),        ## __i16 max_ch0_data
+        ('_unused_1_',      ctypes.c_int16),        ## __i16 max_ch2_data
         ('max_ch0_addr',    ctypes.c_uint32),       ## __u32 max_ch0_addr
-        ('min_ch0_data',    ctypes.c_int16),        ## __u32 min_ch0_data
-        ('_unused_2_',      ctypes.c_int16),        ## __u32 max_ch2_data
+        ('min_ch0_data',    ctypes.c_int16),        ## __i16 min_ch0_data
+        ('_unused_2_',      ctypes.c_int16),        ## __i16 max_ch2_data
         ('min_ch0_addr',    ctypes.c_uint32),       ## __u32 min_ch0_addr
 
-        ('max_ch1_data',    ctypes.c_int16),        ## __u32 max_ch1_data
-        ('_unused_3_',      ctypes.c_int16),        ## __u32 max_ch2_data
+        ('max_ch1_data',    ctypes.c_int16),        ## __i16 max_ch1_data
+        ('_unused_3_',      ctypes.c_int16),        ## __i16 max_ch2_data
         ('max_ch1_addr',    ctypes.c_uint32),       ## __u32 max_ch1_addr
-        ('min_ch1_data',    ctypes.c_int16),        ## __u32 min_ch1_data
-        ('_unused_4_',      ctypes.c_int16),        ## __u32 max_ch2_data
+        ('min_ch1_data',    ctypes.c_int16),        ## __i16 min_ch1_data
+        ('_unused_4_',      ctypes.c_int16),        ## __i16 max_ch2_data
         ('min_ch1_addr',    ctypes.c_uint32),       ## __u32 min_ch1_addr
 
-        ('max_ch2_data',    ctypes.c_int16),        ## __u32 max_ch2_data
-        ('_unused_5_',      ctypes.c_int16),        ## __u32 max_ch2_data
+        ('max_ch2_data',    ctypes.c_int16),        ## __i16 max_ch2_data
+        ('_unused_5_',      ctypes.c_int16),        ## __i16 max_ch2_data
         ('max_ch2_addr',    ctypes.c_uint32),       ## __u32 max_ch2_addr
-        ('min_ch2_data',    ctypes.c_int16),        ## __u32 min_ch2_data
-        ('_unused_6_',      ctypes.c_int16),        ## __u32 min_ch2_data
+        ('min_ch2_data',    ctypes.c_int16),        ## __i16 min_ch2_data
+        ('_unused_6_',      ctypes.c_int16),        ## __i16 min_ch2_data
         ('min_ch2_addr',    ctypes.c_uint32),       ## __u32 min_ch2_addr
     ]
 
@@ -369,7 +369,7 @@ def adc_dma_reset(dev_hand=None):
         print("EXCEPTION: resetting ADC DMA engine.")
         raise
 
-def adc_capture_address(dev_hand=None, address=0):
+def adc_capture_address(address=0, dev_hand=None):
     '''Set capture offset address.  Use for ping-pong capture.  Should be either 0 or half the buffer size.'''
     if not dev_hand:
         dev_hand = get_device_handle()
@@ -442,7 +442,7 @@ def adc_capture_maxmin_get(dev_hand=None):
         ## set mutable flag to true to place data in maxmin object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN, maxmin, True)
     except:
-        print("EXCEPTION: ADC Capture Max Mix Get.")
+        print("EXCEPTION: ADC Capture MaxMin Get.")
         raise
 
     return maxmin
