@@ -25,6 +25,7 @@ import gps
 import csv
 import requests
 import shelve
+import traceback
 
 from cStringIO import StringIO
 from collections import namedtuple
@@ -469,8 +470,9 @@ class EFD_App(object):
         self.capture_datetime_local = None
 
         ## TF_Map is a namedtuple.
-        #self.tf_map = TF_Map(t0=None, T=None, T2=None, F=None, F2=None)
-        self.tf_map = tf_mapping.Null_TF_Map
+        self.tf_map_red = tf_mapping.Null_TF_Map
+        self.tf_map_wht = tf_mapping.Null_TF_Map
+        self.tf_map_blu = tf_mapping.Null_TF_Map
 
         ## Setup thread to retrieve GPS information.
         self.gps_poller = GPS_Poller_Thread()
@@ -1334,10 +1336,26 @@ class EFD_App(object):
                 print
 
             if self.config.tf_mapping:
+                ##
                 ## perform TF Mapping calculations for all phases.
-                self.tf_map_red = self.tf_map_calculate(phase=self.red_phase, index=self.peak_max_red.index)
-                self.tf_map_wht = self.tf_map_calculate(phase=self.wht_phase, index=self.peak_max_wht.index)
-                self.tf_map_blu = self.tf_map_calculate(phase=self.blu_phase, index=self.peak_max_blu.index)
+                ##
+                try:
+                    self.tf_map_red = self.tf_map_calculate(phase=self.red_phase, index=self.peak_max_red.index)
+                except Exception:
+                    self.tf_map_red = tf_mapping.Null_TF_Map
+                    print(traceback.format_exc())
+
+                try:
+                    self.tf_map_wht = self.tf_map_calculate(phase=self.wht_phase, index=self.peak_max_wht.index)
+                except Exception:
+                    self.tf_map_wht = tf_mapping.Null_TF_Map
+                    print(traceback.format_exc())
+
+                try:
+                    self.tf_map_blu = self.tf_map_calculate(phase=self.blu_phase, index=self.peak_max_blu.index)
+                except Exception:
+                    self.tf_map_blu = tf_mapping.Null_TF_Map
+                    print(traceback.format_exc())
 
             if self.config.tf_mapping_debug:
                 print("DEBUG: TF Mapping")
@@ -1442,7 +1460,9 @@ class EFD_App(object):
                 print
                 print('trigger_alert : {}'.format(trigger_alert))
                 print
-                print('tf_map : {!r}'.format(self.tf_map))
+                print('tf_map_red : {!r}'.format(self.tf_map_red))
+                print('tf_map_wht : {!r}'.format(self.tf_map_wht))
+                print('tf_map_blu : {!r}'.format(self.tf_map_blu))
                 print
 
             ##
