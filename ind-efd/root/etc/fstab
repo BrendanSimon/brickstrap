@@ -1,5 +1,17 @@
-#<file system>  <mount point>   <type> <options>                           <dump> <pass>
-/dev/mmcblk0p1  /boot/flash     vfat   defaults,errors=remount-ro,noatime  0      2
-/dev/mmcblk0p4  /mnt/data       ext4   defaults,errors=remount-ro,noatime  0      2
-/dev/mmcblk0p2  /               ext4   defaults,errors=remount-ro,noatime  0      1
-proc            /proc           proc   defaults                            0      0
+##-------------------------------------------------------------------------------------------------------------------
+##<file system> <mount point>   <type> <options>                                                        <dump> <pass>
+##-------------------------------------------------------------------------------------------------------------------
+
+## Boot partition is a small FAT filesystem which contains U-Boot.
+/dev/mmcblk0p1  /boot/flash     vfat   defaults,errors=remount-ro,noatime,noauto,dmask=027,fmask=137    0      0
+
+## The root filesystem can be on /dev/mmcblk0p2 or /dev/mmcblk0p3.
+## Use `rootfs` to specify the root device passed in kernel bootargs.
+rootfs          /               ext4   defaults,errors=remount-ro,noatime                               0      1
+
+## The Data partition used to store system data (measurement logs, etc).
+/dev/mmcblk0p4  /mnt/data       ext4   defaults,errors=remount-ro,noatime                               0      2
+
+## Kernel proc filesystem.
+proc            /proc           proc   defaults                                                         0      0
+
