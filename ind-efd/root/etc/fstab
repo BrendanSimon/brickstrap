@@ -3,7 +3,7 @@
 ##-------------------------------------------------------------------------------------------------------------------
 
 ## Boot partition is a small FAT filesystem which contains U-Boot.
-/dev/mmcblk0p1  /boot/flash     vfat   defaults,errors=remount-ro,noatime,noauto,dmask=027,fmask=137    0      0
+/dev/mmcblk0p1  /boot/flash     vfat   defaults,errors=remount-ro,noatime,dmask=027,fmask=137,ro    0      0
 
 ## The root filesystem can be on /dev/mmcblk0p2 or /dev/mmcblk0p3.
 ## Use `rootfs` to specify the root device passed in kernel bootargs.
