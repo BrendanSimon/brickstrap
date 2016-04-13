@@ -52,6 +52,7 @@ class Config(IntEnum):
     Debug_Select_Ch_1       = 1 << 8
     Debug_Select_Ch_2       = 1 << 9
     Debug_Select_Ch_Off     = 1 << 10
+    Unsigned_Data           = 0
     Signed_Data             = 1 << 12
 
     Mode_Normal             = 0
@@ -68,10 +69,11 @@ class Config(IntEnum):
     Mode_Ch_2               = Debug_Select_Active | Debug_Select_Ch_2
     Mode_Ch_Off             = Debug_Select_Active | Debug_Select_Ch_Off
 
-    Mode_Signed             = Signed_Data
-
-    Mode_Start_Unsigned     = Mode_Normal
-    Mode_Start_Signed       = Mode_Normal | Mode_Signed
+    Mode_Start_Unsigned     = Mode_Normal | Unsigned_Data
+    Mode_Start_Signed       = Mode_Normal | Signed_Data
+    Mode_Manual_Unsigned    = Mode_PPS_Trigger | Unsigned_Data
+    Mode_Manual_Signed      = Mode_PPS_Trigger | Signed_Data
+    Mode_Manual_Trigger     = Mode_PPS_Trigger
     Mode_Stop               = Mode_System_Halt
 
     Peak_Start_Disable      = 0x00FFFFFF
@@ -420,10 +422,16 @@ def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable
 
     #status = status_get(dev_hand=dev_hand)
 
-def adc_capture_start(address, capture_count, delay_count, signed=True, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
+def adc_capture_start(address, capture_count, delay_count, capture_mode='auto', signed=True, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
     '''Start ADC Capture.'''
 
-    mode_start = Config.Mode_Start_Signed if signed else Config.Mode_Start_Unsigned
+    if capture_mode == 'manual':
+        mode_start = Config.Mode_Manual_Signed if signed else Config.Mode_Manual_Unsigned
+    elif capture_mode == 'auto':
+        mode_start = Config.Mode_Start_Signed if signed else Config.Mode_Start_Unsigned
+    else:
+        msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
+        raise ValueError(msg)
 
     adc_capture_set_mode(address=address, mode=mode_start, interrupt_enable=True, capture_count=capture_count, delay_count=delay_count, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=dev_hand)
 
@@ -431,6 +439,16 @@ def adc_capture_stop(dev_hand=None):
     '''Stop ADC Capture.'''
 
     adc_capture_set_mode(address=0, mode=Config.Mode_Stop, interrupt_enable=False, dev_hand=dev_hand)
+
+def adc_trigger(dev_hand=None):
+    '''Manually Trigger ADC Capture.'''
+
+    arg = Config.Mode_Manual_Trigger
+    try:
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_TRIG_PPS, arg)
+    except:
+        print("EXCEPTION: ADC Trigger.")
+        raise
 
 def adc_capture_maxmin_get(dev_hand=None):
     '''Get the maximum and minimum sample values and indices of each channel.'''
