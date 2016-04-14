@@ -12,6 +12,7 @@ data acquired via a high speed A2D converter.
 Default parameters are 250 MS/s 16-bit data.
 '''
 
+import argh
 import sys
 import os.path
 import numpy as np
@@ -581,7 +582,7 @@ class EFD_App(object):
         self.adc_stop()
 
         self.adc_capture_array = self.adc_numpy_array()
-        half_index = len(self.adc_capture_array)
+        half_index = len(self.adc_capture_array) // 2
         self.adc_capture_array_0 = self.adc_capture_array[:half_index]
         self.adc_capture_array_1 = self.adc_capture_array[half_index:]
 
@@ -592,8 +593,8 @@ class EFD_App(object):
         ## - one past last valid capture value of second array => half index + capture count
         ## - last index of second capture array => -1
         ##
-        cc = self.config.capture_count
-        self.adc_capture_array_test_indices = [ cc, (half_index - 1), (half_index + cc), -1 ]
+        ccx = self.config.capture_count * self.config.num_channels
+        self.adc_capture_array_test_indices = [ ccx, (half_index - 1), (half_index + ccx), -1 ]
 
         if self.config.initialise_capture_memory:
             print("Initialise capture array : filling with 0x6141")
