@@ -56,6 +56,9 @@ $CHROOTBINDCMD systemctl disable smbd.service
 # we really don't want this running - it causes a long timeout on boot
 $CHROOTBINDCMD systemctl mask samba-ad-dc.service
 
+# disable ddclient from running by default.
+$CHROOTBINDCMD systemctl disable ddclient.service
+
 ## make python apps executable.
 $CHROOTCMD chmod ug+x /opt/sbin/efd_app.py
 $CHROOTCMD chmod ug+x /opt/sbin/blinky.py
