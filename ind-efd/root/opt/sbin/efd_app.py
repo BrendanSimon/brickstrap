@@ -96,7 +96,7 @@ class Config(object):
     ## Default values.  Can be overridden by settings file or command line.
     ##
 
-    version_str = '0.8.1'
+    version_str = '0.9'
 
     serial_number = '0'
 
@@ -118,45 +118,25 @@ class Config(object):
 
     ## 0x8000 if using offset-binary, 0 if using signed-binary.
     sample_offset = 0
-    #sample_offset = 0x8000
 
     voltage_range_pp = 2.5
-    #voltage_range_pp = 2.0
-    #voltage_range_pp = 1.0
 
-    #pd_event_trigger_voltage = 0.4
     pd_event_trigger_voltage = 0.10
 
-    #capture_count = 10*1000*1000
-    #capture_count = 4*1000*1000
-    #capture_count = 2*1000*1000
-    #capture_count = 1*1000*1000
-    ## FIXME: There is bug in FGPA preventing capturing 10M samples (x3 channels).
-    ## FIXME: there is bug in FPGA which prevents back-to-back DMA transfers.
-    ## FIXME: we are limited to 8MB => 1,398,100 samples (x3 channels).
-    #capture_count = 1398100
+    capture_count = 10*1000*1000
 
-    ## FIXME: back-to-back DMA transfers are now working, but only 4 transactions.
-    ## FIXME: we are now limited to 20MB => 3,495,252 samples (x3 channels).
-    #capture_count = 3495252
-
-    ## FIXME: back-to-back DMA transfers are now working, but only 4 transactions.
-    ## FIXME: dma transaction size is now optimise to allow
-    ## we are now limited to just under 40MB => 6,990,500 samples (x3 channels).
-    ## I couldn't get 6,900,000 working, but 6,800,000 worked ok.
-    #capture_count = 5000000
-    capture_count = 6800000
+    ## Capture Mode
+    ## 'auto'   : PPS triggered.
+    ## 'manual' : oneshot software triggered.
+    capture_mode = 'auto'
 
     total_count = sample_frequency * 50 // 1000         ## total of 50ms between start of channel sampling.
-    #total_count = sample_frequency * 100 // 1000        ## total of 100ms between start of channel sampling.
 
     delay_count = total_count - capture_count
 
-    #initialise_capture_memory = False
     initialise_capture_memory = True
     initialise_capture_memory_magic_value = 0x6141
-    #show_intialised_capture_buffers = False
-    show_intialised_capture_buffers = True
+    show_intialised_capture_buffers = False
     show_intialised_phase_arrays = False
 
     show_capture_debug = False
@@ -179,8 +159,8 @@ class Config(object):
     peak_detect_fpga = True
     peak_detect_fpga_debug = False
 
-    peak_detect_fpga_fix = True
-    peak_detect_fpga_fix_debug = True
+    peak_detect_fpga_fix = False
+    peak_detect_fpga_fix_debug = False
 
     peak_detection = True
     peak_detection_debug = False
@@ -191,9 +171,7 @@ class Config(object):
     show_measurements = False
     show_measurements_post = False
 
-    #page_size = 1024
     page_size = 32
-    #page_size = 16
 
     page_width = 8
 
@@ -1522,16 +1500,16 @@ class EFD_App(object):
 ## Make config object global.
 config = Config()
 
-def main():
+def app_main(capture_count=0, pps_mode=True):
     """Main entry if running this module directly."""
 
-    ## FIXME: should use argparse module !!
-    try:
-        capture_count = int(sys.argv[1],0)
+    if capture_count:
         config.set_capture_count(capture_count)
-    except:
-        print("EXCEPTION: no argument supplied for capture_count.  Defaulting to {}".format(config.capture_count))
-        #raise
+        print("INFO: capture_count set to {}".format(config.capture_count))
+
+    if not pps_mode:
+        config.set_capture_mode('manual')
+        print("INFO: capture_mode set to {}".format(config.capture_mode))
 
     config.show_all()
 
@@ -1552,6 +1530,11 @@ def main():
 
 ##============================================================================
 
-if __name__ == "__main__":
-    main()
+def argh_main():
 
+    argh.dispatch_command(app_main)
+
+##============================================================================
+
+if __name__ == "__main__":
+    argh_main()
