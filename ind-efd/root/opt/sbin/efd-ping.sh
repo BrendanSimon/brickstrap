@@ -13,7 +13,5 @@ serial_number="${SERIAL_NUMBER:-0}"
 
 url="${web_server_ping}/${serial_number}/"
 
-echo "url = ${url}"
-
-curl -i -X GET ${url}
+curl --silent --request GET ${url} > /dev/null
 
