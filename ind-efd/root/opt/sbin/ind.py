@@ -168,6 +168,13 @@ class maxmin_struct(ctypes.Structure):
         ('min_ch2_addr',    ctypes.c_uint32),       ## __u32 min_ch2_addr
     ]
 
+class FPGA_Version(ctypes.Structure):
+    _fields_ = [
+        ('_unused_0_',      ctypes.c_uint16),       ## __u16 unused
+        ('major',           ctypes.c_uint8),        ## __u8 major version number
+        ('minor',           ctypes.c_uint8),        ## __u8 minor version number
+    ]
+
 class bit_flag_struct(ctypes.Structure):
     _fields_ = [
         ('set',             ctypes.c_uint),         ## __u32 set
@@ -227,7 +234,7 @@ class IOCTL:
     IND_USER_MODIFY_LEDS    = _IOWR(0x10, structure=bit_flag_struct)
     IND_USER_MODIFY_CTRL    = _IOWR(0x11, structure=bit_flag_struct)
     IND_USER_READ_MAXMIN    = _IOWR(0x12, structure=maxmin_struct)
-
+    IND_USER_FPGA_VERSION   = _IOWR(0x13, structure=FPGA_Version)
 
 ##===========================================================================
 ##  Library functions.
@@ -520,6 +527,22 @@ def adc_output_mode_twos_complement(dev_hand=None):
     except:
         print("EXCEPTION: ADC Set Semaphore.")
         raise
+
+def fpga_version_get(dev_hand=None):
+    '''Get the FPGA Version information.'''
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    fpga_version = FPGA_Version()
+    try:
+        ## set mutable flag to true to place data in the object.
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_FPGA_VERSION, fpga_version, True)
+    except:
+        print("EXCEPTION: FPGA Version Get.")
+        raise
+
+    return fpga_version
 
 ##----------------------------------------------------------------------------
 

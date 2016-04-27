@@ -449,7 +449,7 @@ class EFD_App(object):
         self.adc_capture_buffer_offset = 0
         self.adc_capture_buffer_offset_half = None     ## should be set to 64MB (128MB / 2)
 
-        self.gps_poller = None      ## will be assinged a thread, that polls gpsd info.
+        self.gps_poller = None      ## will be assigned a thread, that polls gpsd info.
         self.gpsd = None            ## will be assigned the gpsd data object.
 
         self.capture_datetime_utc = None
@@ -559,10 +559,8 @@ class EFD_App(object):
         '''Initialise EFD_App application.'''
         #print(self.__doc__)
 
-        print("Python System Version = {}".format(sys.version))
-        print
+        print("INFO: Python System Version = {}".format(sys.version))
 
-        #self.path = '/mnt/data/log/measurements'
         self.sample_levels = (1 << self.config.sample_bits)
         self.time_resolution = 1.0 / self.config.sample_frequency
         self.voltage_factor = self.config.voltage_range_pp / self.sample_levels
@@ -578,6 +576,9 @@ class EFD_App(object):
         #self.fpga_reset()
 
         #self.adc_dma_reset()
+
+        fpga_version = self.fpga_version_get()
+        print("IND FPGA Version = {}.{}".format(fpga_version.major, fpga_version.minor))
 
         self.adc_stop()
 
@@ -663,6 +664,11 @@ class EFD_App(object):
         print("DEBUG: FPGA Resetting ...")
         ind.fpga_reset(dev_hand=self.dev_hand)
         print("DEBUG: FPGA Reset.")
+
+    def fpga_version_get(self):
+        print("DEBUG: FPGA Version Get()")
+        fpga_version = ind.fpga_version_get(dev_hand=self.dev_hand)
+        return fpga_version
 
     def adc_dma_reset(self):
         print("DEBUG: ADC DMA Resetting ...")
