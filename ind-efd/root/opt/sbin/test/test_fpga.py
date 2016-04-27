@@ -23,6 +23,8 @@ import select
 
 from collections import namedtuple
 
+from efd_config import Config
+
 import ind
 
 ##============================================================================
@@ -45,172 +47,6 @@ def sample_max(data):
     val = data[idx]
     sample = Sample(index=idx, value=val)
     return sample
-
-##============================================================================
-
-class Config(object):
-
-    ##
-    ## Default values.  Can be overridden by settings file or command line.
-    ##
-
-    version_str = '0.9'
-
-    num_channels = 3
-
-    ## 16-bits
-    sample_bits = 16
-
-    ## Sample Frequency 250 MS/s
-    sample_frequency = 250 * 1000 * 1000
-
-    ## 0x8000 if using offset-binary, 0 if using signed-binary.
-    sample_offset = 0
-    #sample_offset = 0x8000
-
-    voltage_range_pp = 2.5
-    #voltage_range_pp = 2.0
-    #voltage_range_pp = 1.0
-
-    capture_count = 10*1000*1000
-
-    ## Capture Mode
-    ## 'auto'   : PPS triggered.
-    ## 'manual' : oneshot software triggered.
-    capture_mode = 'auto'
-
-    total_count = sample_frequency * 50 // 1000         ## total of 50ms between start of channel sampling.
-
-    delay_count = total_count - capture_count
-
-    initialise_capture_memory = True
-    initialise_capture_memory_magic_value = 0x6141
-    show_intialised_capture_buffers = True
-    show_intialised_phase_arrays = False
-
-    show_capture_debug = False
-
-    capture_index_offset_red = 0
-    capture_index_offset_wht = total_count
-    capture_index_offset_blu = total_count * 2
-
-    show_phase_arrays = False
-    show_phase_arrays_on_pd_event = False
-    show_capture_buffers = False
-
-    peak_detect_numpy_capture_count_limit = 1*1000*1000
-    peak_detect_numpy = True
-    peak_detect_numpy_debug = False
-
-    peak_detect_fpga = True
-    peak_detect_fpga_debug = False
-
-    peak_detect_fpga_fix = False
-    peak_detect_fpga_fix_debug = False
-
-    peak_detection = True
-    peak_detection_debug = False
-
-    page_size = 32
-
-    page_width = 8
-
-    data_dir = os.path.join('/mnt', 'data')
-
-    state_filename = os.path.join(data_dir, 'efd_app.state')
-
-    def __init__(self):
-        #self.read_settings_file()
-
-        self.set_capture_count()
-        #self.set_capture_mode()
-
-    def set_capture_count(self, capture_count=None):
-        if capture_count:
-            self.capture_count = capture_count
-
-        self.delay_count = self.total_count - self.capture_count
-
-        print("INFO: capture_count set to {}".format(self.capture_count))
-        print("INFO: delay_count set to {}".format(self.delay_count))
-        print("INFO: total_count is {}".format(self.total_count))
-
-    def capture_data_polarity_is_signed(self):
-        return self.sample_offset == 0
-
-    def set_capture_mode(self, capture_mode='auto'):
-        if capture_mode not in ['auto', 'manual']:
-            msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
-            raise ValueError(msg)
-
-        self.capture_mode = capture_mode
-        print("INFO: capture_mode set to {}".format(self.capture_mode))
-
-        if capture_mode == 'manual':
-            self.peak_detect_numpy_capture_count_limit = self.capture_count
-        else:
-            peak_detect_numpy_capture_count_limit = 1*1000*1000
-        print("INFO: peak_detect_numpy_capture_count_limit set to {}".format(self.peak_detect_numpy_capture_count_limit))
-
-        if self.capture_count > self.peak_detect_numpy_capture_count_limit:
-            self.peak_detect_numpy = False
-            print("INFO: skipping numpy peak detection as capture_count ({}) too high (> {})".format(self.capture_count, self.peak_detect_numpy_capture_count_limit))
-
-    def show_all(self):
-        print("-------------------------------------------------------------")
-        print("Config values")
-        print("-------------")
-
-        print("version_str = {}".format(self.version_str))
-
-        print("num_channels = {}".format(self.num_channels))
-
-        print("sample_bits = {}".format(self.sample_bits))
-
-        print("sample_frequency = {}".format(self.sample_frequency))
-
-        print("sample_offset = {}".format(self.sample_offset))
-
-        print("voltage_range_pp = {}".format(self.voltage_range_pp))
-
-        print("capture_count = {}".format(self.capture_count))
-        print("total_count = {}".format(self.total_count))
-        print("delay_count = {}".format(self.delay_count))
-
-        print("initialise_capture_memory = {}".format(self.initialise_capture_memory))
-        print("initialise_capture_memory_magic_value = {}".format(self.initialise_capture_memory_magic_value))
-        print("show_intialised_capture_buffers = {}".format(self.show_intialised_capture_buffers))
-        print("show_intialised_phase_arrays = {}".format(self.show_intialised_phase_arrays))
-
-        print("show_capture_debug = {}".format(self.show_capture_debug))
-
-        print("capture_index_offset_red = {}".format(self.capture_index_offset_red))
-        print("capture_index_offset_wht = {}".format(self.capture_index_offset_wht))
-        print("capture_index_offset_blu = {}".format(self.capture_index_offset_blu))
-
-        print("show_phase_arrays = {}".format(self.show_phase_arrays))
-        print("show_phase_arrays_on_pd_event = {}".format(self.show_phase_arrays_on_pd_event))
-        print("show_capture_buffers = {}".format(self.show_capture_buffers))
-
-        print("peak_detect_numpy_capture_count_limit = {}".format(self.peak_detect_numpy_capture_count_limit))
-        print("peak_detect_numpy = {}".format(self.peak_detect_numpy))
-        print("peak_detect_numpy_debug = {}".format(self.peak_detect_numpy_debug))
-
-        print("peak_detect_fpga = {}".format(self.peak_detect_fpga))
-        print("peak_detect_fpga_debug = {}".format(self.peak_detect_fpga_debug))
-
-        print("peak_detect_fpga_fix = {}".format(self.peak_detect_fpga_fix))
-        print("peak_detect_fpga_fix_debug = {}".format(self.peak_detect_fpga_fix_debug))
-
-        print("peak_detection = {}".format(self.peak_detection))
-        print("peak_detection_debug = {}".format(self.peak_detection_debug))
-
-        print("page_size = {}".format(self.page_size))
-        print("page_width = {}".format(self.page_width))
-
-        print("data_dir = {}".format(self.data_dir))
-
-        print("-------------------------------------------------------------")
 
 ##============================================================================
 
@@ -1186,12 +1022,28 @@ class Read_Capture_Buffers_App(object):
             ## FIXME: DEBUG: exit after one cycle.
             #break
 
-##----------------------------------------------------------------------------
-
 ##############################################################################
 
 ## Make config object global.
 config = Config()
+
+##
+## set config defaults for test_fpga app.
+##
+config.peak_detect_numpy_capture_count_limit = 1*1000*1000
+config.peak_detect_numpy = True
+config.peak_detect_numpy_debug = False
+
+config.peak_detect_fpga = True
+config.peak_detect_fpga_debug = False
+
+config.peak_detect_fpga_fix = False
+config.peak_detect_fpga_fix_debug = False
+
+config.peak_detection = True
+config.peak_detection_debug = False
+
+##############################################################################
 
 def app_main(capture_count=0, pps_mode=True):
     """Main entry if running this module directly."""
