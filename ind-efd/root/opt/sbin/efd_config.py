@@ -25,6 +25,8 @@ class Config(object):
 
     serial_number = '0'
 
+    site_name = 'Site {sn}'.format(sn=serial_number)
+
     pd_event_reporting_interval = 5 * 60            ## report PD events every 5 minutes (minimum interval)
     reporting_sms_phone_numbers = []                ## empty list of phone numbers.
 
@@ -125,6 +127,8 @@ class Config(object):
     ## max of 600 records (10 minutes) of data can be queued.
     max_cloud_queue_size = 600
 
+    ##========================================================================
+
     def __init__(self):
         self.read_settings_file()
 
@@ -134,19 +138,36 @@ class Config(object):
 
     def read_settings_file(self):
         ## Using 'import' is quick and dirty method to read in settings from a file.
-        ## It relies on settings.py being avaiable in the python path to load the 'module'
+        ## It relies on settings.py being available in the python path to load the 'module'
         ## Currently a symlink is used from settings.py in app directory to the settings file.
         import settings
-        self.set_serial_number(settings.SERIAL_NUMBER)
-        self.site_name                              = settings.SITE_NAME
-        self.reporting_sms_phone_numbers            = list(settings.REPORTING_SMS_PHONE_NUMBERS)
-        self.pd_event_trigger_voltage               = float(settings.PD_EVENT_TRIGGER_VOLTAGE)
-        self.pd_event_reporting_interval            = int(settings.PD_EVENT_REPORTING_INTERVAL)
 
-    def set_serial_number(self, serial_number):
-        self.serial_number                  = serial_number
-        self.web_server_ping                = '{ws}/api/Ping/{sn}/'.format(ws=self.web_server, sn=serial_number)
-        self.web_server_measurements_log    = '{ws}/api/AddEFDLog/{sn}/'.format(ws=self.web_server, sn=serial_number)
+        self.serial_number                          =        getattr(settings, 'SERIAL_NUMBER',                      self.serial_number)
+        self.site_name                              =        getattr(settings, 'SITE_NAME',                          self.site_name)
+        self.reporting_sms_phone_numbers            = list(  getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',        self.reporting_sms_phone_numbers) )
+        self.pd_event_trigger_voltage               = float( getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',           self.pd_event_trigger_voltage) )
+        self.pd_event_reporting_interval            = int(   getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',        self.pd_event_reporting_interval) )
+        self.web_server                             =        getattr(settings, 'WEB_SERVER',                         self.web_server)
+
+        self.set_web_uris()
+
+    ##========================================================================
+
+    def set_web_uris(self):
+
+        if self.web_server:
+            self.web_server_ping                = '{ws}/api/Ping/{sn}/'.format(ws=self.web_server, sn=self.serial_number)
+            self.web_server_measurements_log    = '{ws}/api/AddEFDLog/{sn}/'.format(ws=self.web_server, sn=self.serial_number)
+
+    ##========================================================================
+
+    def set_web_server(self, web_server=None):
+
+        if web_server:
+            self.web_server = web_server
+            self.set_web_uris()
+
+    ##========================================================================
 
     def set_capture_count(self, capture_count=None):
         if capture_count:
@@ -191,6 +212,8 @@ class Config(object):
         if self.capture_count > self.peak_detect_numpy_capture_count_limit:
             self.peak_detect_numpy = False
             print("INFO: skipping numpy peak detection as capture_count ({}) too high (> {})".format(self.capture_count, self.peak_detect_numpy_capture_count_limit))
+
+    ##========================================================================
 
     def show_all(self):
         print("-------------------------------------------------------------")
@@ -282,11 +305,15 @@ def app_main(capture_count=0, pps_mode=True):
 
     if capture_count:
         config.set_capture_count(capture_count)
-        print("INFO: capture_count set to {}".format(config.capture_count))
+        print("INFO: `capture_count` set to {}".format(config.capture_count))
 
     if not pps_mode:
         config.set_capture_mode('manual')
-        print("INFO: capture_mode set to {}".format(config.capture_mode))
+        print("INFO: `capture_mode` set to {}".format(config.capture_mode))
+
+    if web_server:
+        config.set_web_server(web_server)
+        print("INFO: `web_server' set to {}".format(config.web_server))
 
     config.show_all()
 

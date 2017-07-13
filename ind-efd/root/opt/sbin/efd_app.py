@@ -1170,7 +1170,7 @@ class EFD_App(object):
 ## Make config object global.
 config = Config()
 
-def app_main(capture_count=0, pps_mode=True):
+def app_main(capture_count=0, pps_mode=True, web_server=None):
     """Main entry if running this module directly."""
 
     if capture_count:
@@ -1179,7 +1179,11 @@ def app_main(capture_count=0, pps_mode=True):
 
     if not pps_mode:
         config.set_capture_mode('manual')
-        print("INFO: capture_mode set to {}".format(config.capture_mode))
+        print("INFO: `capture_mode` set to {}".format(config.capture_mode))
+
+    if web_server:
+        config.set_web_server(web_server)
+        print("INFO: `web_server` set to {}".format(config.web_server))
 
     config.show_all()
 
