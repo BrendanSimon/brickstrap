@@ -1,4 +1,5 @@
 SUITE="jessie"
 ARCH="armhf"
-DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://ftp.au.debian.org/debian"}
+DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://mirror.aarnet.edu.au/debian"}
+#DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://debian.mirror.serversaustralia.com.au/debian"}
 IMAGE_FILE_SIZE=${IMAGE_FILE_SIZE:-"1800M"}
