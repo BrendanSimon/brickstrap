@@ -377,12 +377,24 @@ class EFD_App(object):
         ind.adc_semaphore_set(value=value, dev_hand=self.dev_hand)
 
     def adc_semaphore_wait(self):
-        print("ADC Semaphore Wait")
+        #print("ADC Semaphore Wait")
+        delay = 0.01
+        count_max = 1 / delay
+        count = 0
         while True:
             sem = self.adc_semaphore_get()
             if sem:
+                time.sleep(1)
                 break
-            time.sleep(0.01)
+            time.sleep(delay)
+            count += 1
+            if count > count_max:
+                print("DEBUG: TIMEOUT: adc_semaphore_wait()")
+                status = ind.status_get(dev_hand=self.dev_hand)
+                sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
+                print("DEBUG: status = 0x{:08X}".format(status))
+                print("DEBUG: semaphore = 0x{:08X}".format(sem))
+                break;
 
     def adc_select_wait(self):
         #print("ADC Select Wait")
@@ -419,10 +431,17 @@ class EFD_App(object):
             epoll.unregister(fileno)
             epoll.close()
 
+    def adc_trigger(self):
+        #print("ADC Manual Trigger")
+        ind.adc_trigger(dev_hand=self.dev_hand)
+
     def adc_data_ready_wait(self):
         #print("ADC Data Ready Wait")
-        self.adc_select_wait()
-        #self.adc_semaphore_wait()
+        if self.config.capture_mode == 'manual':
+            self.adc_trigger()
+            self.adc_semaphore_wait()
+        else:
+            self.adc_select_wait()
 
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
