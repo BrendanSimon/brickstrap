@@ -296,7 +296,7 @@ class Config(object):
 
 ##############################################################################
 
-def app_main(capture_count=0, pps_mode=True):
+def app_main(capture_count=0, pps_mode=True, web_server=None):
     """Main entry if running this module directly."""
 
     print(__name__)
