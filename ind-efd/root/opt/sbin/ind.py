@@ -106,6 +106,22 @@ class Status(IntEnum):
     Battery_Low             = 1 << 12
     AC_Power                = 1 << 13
 
+    Not_OS_Running          = 1 << 16       ## unused -- could be used as feedback?
+    Not_Restart_Req         = 1 << 17       ## PM MCU has requested a restart
+    Not_Shutdown_Req        = 1 << 18       ## PM MCU has requested a shutdown
+    Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
+
+    Spare_1                 = 1 << 20       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+    Spare_2                 = 1 << 21       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+    Spare_3                 = 1 << 22       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+    Spare_4                 = 1 << 23       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+
+    All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error               \
+                            | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test                  \
+                            | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable                  \
+                            | Battery_Low | AC_Power                                                \
+                            | Not_OS_Running | Not_Restart_Req | Not_Shutdown_Req | Not_Spare_MCU   \
+                            | Spare_1 | Spare_2 | Spare_3 | Spare_4
 
 ##
 ## Control Register Constants
@@ -115,7 +131,19 @@ class Control(IntEnum):
     Modem_Power             = 1 << 1
     EN_Select               = 1 << 2        ## What is this ??
 
-    All                     = Modem_Reset | Modem_Power | EN_Select
+    Not_OS_Running          = 1 << 16       ## output low to inidcate to PM MCU that we aer up and running ok
+    Not_Restart_Req         = 1 << 17
+    Not_Shutdown_Req        = 1 << 18
+    Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
+
+    Spare_1                 = 1 << 20       ## spare signal to IND3 RF board (assume output for now !!)
+    Spare_2                 = 1 << 21       ## spare signal to IND3 RF board (assume output for now !!)
+    Spare_3                 = 1 << 22       ## spare signal to IND3 RF board (assume output for now !!)
+    Spare_4                 = 1 << 23       ## spare signal to IND3 RF board (assume output for now !!)
+
+    All                     = Modem_Reset | Modem_Power | EN_Select                                 \
+                            | Not_OS_Running | Not_Restart_Req | Not_Shutdown_Req | Not_Spare_MCU   \
+                            | Spare_1 | Spare_2 | Spare_3 | Spare_4
 
 
 ##
@@ -528,6 +556,8 @@ def adc_output_mode_twos_complement(dev_hand=None):
         print("EXCEPTION: ADC Set Semaphore.")
         raise
 
+##----------------------------------------------------------------------------
+
 def fpga_version_get(dev_hand=None):
     '''Get the FPGA Version information.'''
 
@@ -543,6 +573,60 @@ def fpga_version_get(dev_hand=None):
         raise
 
     return fpga_version
+
+##----------------------------------------------------------------------------
+
+def power_restart_requested(status=None, dev_hand=None):
+    """
+    Check if Restart Request is asserted from Power Management MCU.
+    status [IN] -- is a raw status value.  If None, status will be fetched.
+    """
+    if status == None:
+        status = status_get(dev_hand)
+
+    value = (status & Status.Not_Restart_Request) == 0
+    return value
+
+def power_shutdown_requested(status=None, dev_hand=None):
+    """
+    Check if Shutdown Request is asserted from Power Management MCU.
+    status [IN] -- is a raw status value.  If None, status will be fetched.
+    """
+    if status == None:
+        status = status_get(dev_hand)
+
+    value = (status & Status.Not_Shutdown_Request) == 0
+    return value
+
+##----------------------------------------------------------------------------
+
+def power_os_running_off(dev_hand=None):
+    """Deassert `not_os_running` (high) signal."""
+
+    mask = Control.Not_OS_Running
+    ctrl_modify(set=mask, dev_hand=dev_hand)
+
+def power_os_running_on(dev_hand=None):
+    """Assert `not_os_running` (low) signal."""
+
+    mask = Control.Not_OS_Running
+    ctrl_modify(clear=mask, dev_hand=dev_hand)
+
+def power_os_running_toggle(dev_hand=None):
+    """Toggle `not_os_running` signal."""
+
+    mask = Control.Not_OS_Running
+    ctrl_modify(toggle=mask, dev_hand=dev_hand)
+
+def power_os_running_set(running=None, dev_hand=None):
+    """
+    Assert or Deassert `not_os_running` signal.
+    """
+
+    if running == True:
+        power_os_running_on(dev_hand=dev_hand)
+    elif running == False:
+        power_os_running_off(dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
