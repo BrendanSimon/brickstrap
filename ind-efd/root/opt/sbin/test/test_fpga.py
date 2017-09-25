@@ -23,8 +23,9 @@ import select
 
 from collections import namedtuple
 
-from efd_config import Config
+sys.path.append('..')
 
+from efd_config import Config
 import ind
 
 ##============================================================================
@@ -219,7 +220,7 @@ class Read_Capture_Buffers_App(object):
         dtype_size = dtype.itemsize
         mem_size = len(mem)
         length = mem_size // dtype_size
-        print("DEBUG: dtype_size={!r} len(mem)={!r} length={!r}".format(dtype_size, mem_size, length))
+        print("DEBUG: dtype={!r} dtype_size={!r} len(mem)={!r} length={!r}".format(dtype, dtype_size, mem_size, length))
         shape = (length,)
         np_array = np.ndarray(shape=shape, dtype=dtype, buffer=mem)
 
@@ -361,9 +362,12 @@ class Read_Capture_Buffers_App(object):
 
     def adc_semaphore_wait(self):
         print("ADC Semaphore Wait")
+        sem = self.adc_semaphore_get()
+        print("DEBUG: semaphore = 0x{:08X}".format(sem))
         while True:
             sem = self.adc_semaphore_get()
             if sem:
+                print("DEBUG: semaphore = 0x{:08X}".format(sem))
                 break
             time.sleep(0.01)
 
@@ -376,6 +380,7 @@ class Read_Capture_Buffers_App(object):
         while True:
             r = select.select([self.dev_hand], [], [], 1)
             if r[0]:
+                print("DEBUG: adc_select_wait(): select() returned ok")
                 break
             print("DEBUG: TIMEOUT: adc_select_wait()")
             status = ind.status_get(dev_hand=self.dev_hand)
@@ -407,7 +412,7 @@ class Read_Capture_Buffers_App(object):
         ind.adc_trigger(dev_hand=self.dev_hand)
 
     def adc_data_ready_wait(self):
-        #print("ADC Data Ready Wait")
+        print("ADC Data Ready Wait")
         if self.config.capture_mode == 'manual':
             self.adc_trigger()
             self.adc_semaphore_wait()
@@ -1042,6 +1047,10 @@ config.peak_detect_fpga_fix_debug = False
 
 config.peak_detection = True
 config.peak_detection_debug = False
+
+config.show_capture_buffers = True
+
+#config.sample_offset = 0x8000       ## 0x8000 => unsigned samples
 
 ##############################################################################
 
