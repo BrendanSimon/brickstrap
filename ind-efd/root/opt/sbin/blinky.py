@@ -6,7 +6,7 @@
 ##
 ##############################################################################
 
-'''IND Driver Module.'''
+"""Utility to blink/cycle through the status LEDs."""
 
 import time
 import ind
@@ -14,12 +14,13 @@ import ind
 ## could make this a runtime option.
 DEBUG = False
 
-def main():
-    '''Main entry if running this module from command line.'''
+def blinky():
+    """Cycle through all the LEDs."""
 
     led_seq = [ ind.LED.PPS_OK, ind.LED.Running, ind.LED.Modem_OK, ind.LED.Alert, ind.LED.Weather_Station_OK, ind.LED.Spare ]
     ## append leds in reverse order, omitting end LEDs.
-    led_seq += led_seq[1:-1][::-1]
+#     led_seq += led_seq[1:-1][::-1]
+    led_seq += list(reversed(led_seq[1:-1]))
 
     dev_name = ind.dev_name
     print("DEBUG: opening device name '{}'".format(dev_name))
@@ -33,6 +34,18 @@ def main():
 
                 time.sleep(0.1)
 
+##============================================================================
+
+def main():
+    """main test function."""
+
+    argh.dispatch_command(blinky)
+
+##============================================================================
+
 if __name__ == "__main__":
+    """Main entry if running this module from command line."""
     main()
+
+##============================================================================
 

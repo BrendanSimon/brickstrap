@@ -6,17 +6,13 @@
 ##
 ##############################################################################
 
-'''IND Driver Module.'''
+'''Utility to manipulate the Modem/3G OK status LED.'''
 
-import sys
-import time
 import ind
 import argh
 
 ## could make this a runtime option.
 DEBUG = False
-
-LED = ind.LED.Modem_OK
 
 ##============================================================================
 ## Commands
@@ -24,22 +20,19 @@ LED = ind.LED.Modem_OK
 
 def off():
     """Turn off the modem LED."""
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(off=LED, dev_hand=dev_hand)
+    ind.modem_led_off()
 
 ##----------------------------------------------------------------------------
 
 def on():
     """Turn on the modem LED."""
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(on=LED, dev_hand=dev_hand)
+    ind.modem_led_on()
 
 ##----------------------------------------------------------------------------
 
 def toggle():
     """Toggle on the modem LED."""
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(toggle=LED, dev_hand=dev_hand)
+    ind.modem_led_toggle()
 
 ##============================================================================
 
