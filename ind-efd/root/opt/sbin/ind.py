@@ -103,25 +103,46 @@ class Status(IntEnum):
     DMA_Reset               = 1 << 9
     DMA_Debug               = 1 << 10
     Interrupt_Enable        = 1 << 11
-    Battery_Low             = 1 << 12
-    AC_Power                = 1 << 13
 
-    Not_OS_Running          = 1 << 16       ## unused -- could be used as feedback?
-    Not_Restart_Req         = 1 << 17       ## PM MCU has requested a restart
-    Not_Shutdown_Req        = 1 << 18       ## PM MCU has requested a shutdown
-    Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
+## IND1 (are they used?)
+#     Battery_Low             = 1 << 12
+#     AC_Power                = 1 << 13
 
-    Spare_1                 = 1 << 20       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
-    Spare_2                 = 1 << 21       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
-    Spare_3                 = 1 << 22       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
-    Spare_4                 = 1 << 23       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+## IND2 BJS assignments
+#     Not_OS_Running          = 1 << 16       ## unused -- could be used as feedback?
+#     Not_Restart_Req         = 1 << 17       ## PM MCU has requested a restart
+#     Not_Shutdown_Req        = 1 << 18       ## PM MCU has requested a shutdown
+#     Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
+#
+#     Spare_1                 = 1 << 20       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+#     Spare_2                 = 1 << 21       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+#     Spare_3                 = 1 << 22       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+#     Spare_4                 = 1 << 23       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
+#
+#     All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error               \
+#                             | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test                  \
+#                             | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable                  \
+#                             | Battery_Low | AC_Power                                                \
+#                             | Not_OS_Running | Not_Restart_Req | Not_Shutdown_Req | Not_Spare_MCU   \
+#                             | Spare_1 | Spare_2 | Spare_3 | Spare_4
+
+## IND2 Kutu assignments
+## FIXME: these are probably wrong !!
+    Modem_OK                = 1 << 12
+    Weather_Station_OK      = 1 << 13
+    Battery_OK              = 1 << 14
+    Power_OK                = 1 << 15
+    PPS_OK                  = 1 << 16
+    Not_Restart_Request     = 1 << 17
+    Not_Shutdown_Request    = 1 << 18
 
     All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error               \
                             | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test                  \
                             | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable                  \
-                            | Battery_Low | AC_Power                                                \
-                            | Not_OS_Running | Not_Restart_Req | Not_Shutdown_Req | Not_Spare_MCU   \
-                            | Spare_1 | Spare_2 | Spare_3 | Spare_4
+                            | Modem_OK | Weather_Station_OK                                         \
+                            | Battery_OK | Power_OK                                                 \
+                            | PPS_OK                                                                \
+                            | Not_Restart_Request | Not_Shutdown_Request                            \
 
 ##
 ## Control Register Constants
@@ -131,7 +152,14 @@ class Control(IntEnum):
     Modem_Power             = 1 << 1
     EN_Select               = 1 << 2        ## What is this ??
 
-    Not_OS_Running          = 1 << 16       ## output low to inidcate to PM MCU that we aer up and running ok
+## IND2 Kutu assignments (FIXME) !!
+    Running                 = 1 << 3
+    Alert                   = 1 << 4
+    Not_OS_Running          = 1 << 5        ## output low to inidcate to PM MCU that we aer up and running ok
+
+
+## IND2 BJS assignments (FIXME) !!
+#     Not_OS_Running          = 1 << 16       ## output low to inidcate to PM MCU that we aer up and running ok
     Not_Restart_Req         = 1 << 17
     Not_Shutdown_Req        = 1 << 18
     Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
@@ -141,8 +169,10 @@ class Control(IntEnum):
     Spare_3                 = 1 << 22       ## spare signal to IND3 RF board (assume output for now !!)
     Spare_4                 = 1 << 23       ## spare signal to IND3 RF board (assume output for now !!)
 
-    All                     = Modem_Reset | Modem_Power | EN_Select                                 \
-                            | Not_OS_Running | Not_Restart_Req | Not_Shutdown_Req | Not_Spare_MCU   \
+    All                     = Modem_Reset | Modem_Power | EN_Select     \
+                            | Running | Alert                           \
+                            | Not_OS_Running | Not_Restart_Req          \
+                            | Not_Shutdown_Req | Not_Spare_MCU          \
                             | Spare_1 | Spare_2 | Spare_3 | Spare_4
 
 
@@ -150,16 +180,48 @@ class Control(IntEnum):
 ## IOCTL LED Constants
 ##
 class LED(IntEnum):
-    Running                 = 1 << 0
-    Alert                   = 1 << 1
-    Spare                   = 1 << 2
-    PPS_OK                  = 1 << 3
-    Modem_OK                = 1 << 4
-    Weather_Station_OK      = 1 << 5
-    #AC_Power_OK             = 1 << 6
-    #Battery_OK              = 1 << 7
+## IND1 assignments
+#     Running                 = 1 << 0
+#     Alert                   = 1 << 1
+#     Spare                   = 1 << 2
+#     PPS_OK                  = 1 << 3
+#     Modem_OK                = 1 << 4
+#     Weather_Station_OK      = 1 << 5
+#     #Power_OK                = 1 << 6
+#     #Battery_OK              = 1 << 7
+#
+#     All                     = Running | Alert | Spare | PPS_OK | Modem_OK | Weather_Station_OK
 
-    All                     = Running | Alert | Spare | PPS_OK | Modem_OK | Weather_Station_OK
+## IND2 Kutu assignments
+#     Running                 = 0             ##FIXME: currently in Control reg !!
+#     Alert                   = 0             ##FIXME: currently in Control reg !!
+
+    Debug0                  = 1 << 0
+    Debug1                  = 1 << 1
+    Debug2                  = 1 << 2
+    Debug3                  = 1 << 3
+
+    Spare0                  = 1 << 4
+    Spare1                  = 1 << 5
+    Spare2                  = 1 << 6
+    Spare3                  = 1 << 7
+    Spare4                  = 1 << 8
+    Spare5                  = 1 << 9
+    Spare6                  = 1 << 10
+    Spare7                  = 1 << 11
+
+    Modem_OK                = 1 << 12
+    Weather_Station_OK      = 1 << 13
+    Battery_OK              = 1 << 14
+    Power_OK                = 1 << 15
+    PPS_OK                  = 1 << 16
+
+    All                     = Debug0 | Debug1 | Debug2 | Debug3 \
+                            | Spare0 | Spare1 | Spare2 | Spare3 \
+                            | Spare4 | Spare5 | Spare6 | Spare7 \
+                            | Modem_OK | Weather_Station_OK     \
+                            | Battery_OK | Power_OK             \
+                            | PPS_OK                            \
 
 class cmd_struct(ctypes.Structure):
     _fields_ = [
@@ -618,99 +680,230 @@ def power_os_running_toggle(dev_hand=None):
     mask = Control.Not_OS_Running
     ctrl_modify(toggle=mask, dev_hand=dev_hand)
 
-def power_os_running_set(running=None, dev_hand=None):
+def power_os_running_set(value=None, dev_hand=None):
     """
     Assert or Deassert `not_os_running` signal.
     """
 
-    if running == True:
+    if value == True:
         power_os_running_on(dev_hand=dev_hand)
-    elif running == False:
+    elif value == False:
         power_os_running_off(dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
-def running_led_off(dev_hand):
+def running_led_off(dev_hand=None):
 
-    led = LED.Running
-    leds_modify(off=led, dev_hand=dev_hand)
+## IND1
+#     led = LED.Running
+#     leds_modify(off=led, dev_hand=dev_hand)
+## IND2
+    led = Control.Running
+    ctrl_modify(clear=led, dev_hand=dev_hand)
 
-def running_led_on(dev_hand):
+def running_led_on(dev_hand=None):
 
-    led = LED.Running
-    leds_modify(on=led, dev_hand=dev_hand)
+## IND1
+#     led = LED.Running
+#     leds_modify(on=led, dev_hand=dev_hand)
+## IND2
+    led = Control.Running
+    ctrl_modify(set=led, dev_hand=dev_hand)
 
-def running_led_toggle(dev_hand):
+def running_led_toggle(dev_hand=None):
 
-    led = LED.Running
-    leds_modify(toggle=led, dev_hand=dev_hand)
+## IND1
+#     led = LED.Running
+#     leds_modify(toggle=led, dev_hand=dev_hand)
+## IND2
+    led = Control.Running
+    ctrl_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
-def pps_ok_led_off(dev_hand):
+def alert_led_off(dev_hand=None):
+
+## IND1
+#     led = LED.Alert
+#     leds_modify(off=led, dev_hand=dev_hand)
+## IND2
+    led = Control.Alert
+    ctrl_modify(clear=led, dev_hand=dev_hand)
+
+def alert_led_on(dev_hand=None):
+
+## IND1
+#     led = LED.Alert
+#     leds_modify(on=led, dev_hand=dev_hand)
+## IND2
+    led = Control.Alert
+    ctrl_modify(set=led, dev_hand=dev_hand)
+
+def alert_led_toggle(dev_hand=None):
+
+## IND1
+#     led = LED.Alert
+#     leds_modify(toggle=led, dev_hand=dev_hand)
+## IND2
+    led = Control.Alert
+    ctrl_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def pps_ok_led_off(dev_hand=None):
 
     led = LED.PPS_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
-def pps_ok_led_on(dev_hand):
+def pps_ok_led_on(dev_hand=None):
 
     led = LED.PPS_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
-def pps_ok_led_toggle(dev_hand):
+def pps_ok_led_toggle(dev_hand=None):
 
     led = LED.PPS_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
-def modem_led_off(dev_hand):
+def modem_led_off(dev_hand=None):
 
     led = LED.Modem_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
-def modem_led_on(dev_hand):
+def modem_led_on(dev_hand=None):
 
     led = LED.Modem_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
-def modem_led_toggle(dev_hand):
+def modem_led_toggle(dev_hand=None):
 
     led = LED.Modem_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
-def weather_led_off(dev_hand):
+def weather_led_off(dev_hand=None):
 
     led = LED.Weather_Station_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
-def weather_led_on(dev_hand):
+def weather_led_on(dev_hand=None):
 
     led = LED.Weather_Station_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
-def weather_led_toggle(dev_hand):
+def weather_led_toggle(dev_hand=None):
 
     led = LED.Weather_Station_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
-def spare_led_off(dev_hand):
+def power_led_off(dev_hand=None):
 
-    led = LED.Spare
+## IND1:
+#     led = LED.Power_OK
+## IND2:
+    led = LED.Power_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
-def spare_led_on(dev_hand):
+def power_led_on(dev_hand=None):
 
-    led = LED.Spare
+## IND1:
+#     led = LED.Power_OK
+## IND2:
+    led = LED.Power_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
-def spare_led_toggle(dev_hand):
+def power_led_toggle(dev_hand=None):
 
-    led = LED.Spare
+## IND1:
+#     led = LED.Power_OK
+## IND2:
+    led = LED.Power_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def battery_led_off(dev_hand=None):
+
+## IND1:
+#     led = LED.Battery_OK
+## IND2:
+    led = LED.Battery_OK
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def battery_led_on(dev_hand=None):
+
+## IND1:
+#     led = LED.Battery_OK
+## IND2:
+    led = LED.Battery_OK
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def battery_led_toggle(dev_hand=None):
+
+## IND1:
+#     led = LED.Battery_OK
+## IND2:
+    led = LED.Battery_OK
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def spare_led_off(dev_hand=None):
+
+## IND1:
+#     led = LED.Spare
+## IND2:
+    led = LED.Spare1
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def spare_led_on(dev_hand=None):
+
+## IND1:
+#     led = LED.Spare
+## IND2:
+    led = LED.Spare1
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def spare_led_toggle(dev_hand=None):
+
+## IND1:
+#     led = LED.Spare
+## IND2:
+    led = LED.Spare1
+    leds_modify(toggle=led, dev_hand=dev_hand)
+
+##----------------------------------------------------------------------------
+
+def debug_led_off(dev_hand=None):
+
+## IND1:
+#     led = LED.Spare
+## IND2:
+    led = LED.Debug1
+    led = 0xFFFFFFFF
+    leds_modify(off=led, dev_hand=dev_hand)
+
+def debug_led_on(dev_hand=None):
+
+## IND1:
+#     led = LED.Spare
+## IND2:
+    led = LED.Debug1
+    led = 0xFFFFFFFF
+    leds_modify(on=led, dev_hand=dev_hand)
+
+def debug_led_toggle(dev_hand=None):
+
+## IND1:
+#     led = LED.Spare
+## IND2:
+    led = LED.Debug1
+    led = 0xFFFFFFFF
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 
@@ -752,7 +945,7 @@ def main():
         print("EXCEPTION: opening device name '{}'".format(dev_name))
         raise
 
-    #led_seq = [ LED.Battery_OK, LED.AC_Power_OK, LED.PPS_OK, LED.Running,
+    #led_seq = [ LED.Battery_OK, LED.Power_OK, LED.PPS_OK, LED.Running,
     led_seq = [ LED.PPS_OK, LED.Running, LED.Modem_OK, LED.Alert, LED.Weather_Station_OK, LED.Spare ]
     led_seq += led_seq[1:-1][::-1]
     for count, led in enumerate(led_seq * 10):
