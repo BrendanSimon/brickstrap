@@ -136,13 +136,13 @@ class Status(IntEnum):
     Not_Restart_Request     = 1 << 17
     Not_Shutdown_Request    = 1 << 18
 
-    All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error               \
-                            | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test                  \
-                            | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable                  \
-                            | Modem_OK | Weather_Station_OK                                         \
-                            | Battery_OK | Power_OK                                                 \
-                            | PPS_OK                                                                \
-                            | Not_Restart_Request | Not_Shutdown_Request                            \
+    All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error   \
+                            | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test      \
+                            | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable      \
+                            | Modem_OK | Weather_Station_OK                             \
+                            | Battery_OK | Power_OK                                     \
+                            | PPS_OK                                                    \
+                            | Not_Restart_Request | Not_Shutdown_Request
 
 ##
 ## Control Register Constants
@@ -574,7 +574,7 @@ def status_get(dev_hand=None):
         print("EXCEPTION: Get Status.")
         raise
 
-    print("DEBUG: status_get: status = 0x{:08x}".format(value))
+    #print("DEBUG: status_get: status = 0x{:08x}".format(value))
     return value
 
 def adc_semaphore_get(dev_hand=None):
