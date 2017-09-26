@@ -34,8 +34,12 @@ def led_cycle(count, delay, dev_hand=None):
 def main():
     with open("/dev/IND") as dev_hand:
         led_cycle(count=8, delay=0.1, dev_hand=dev_hand)
+
+        ind.leds_modify(off=0xfffffff, dev_hand=dev_hand)
         ind.alert_led_on(dev_hand=dev_hand)
+
         ind.power_os_running_off(dev_hand=dev_hand)
+
         print("Deasserted nOS_RUNNING pin")
 
 ##============================================================================
