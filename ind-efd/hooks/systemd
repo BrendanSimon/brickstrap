@@ -65,9 +65,16 @@ $CHROOTCMD chmod ug+x /opt/sbin/blinky.py
 $CHROOTCMD chmod ug+x /opt/sbin/modem.py
 $CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
 $CHROOTCMD chmod ug+x /opt/sbin/weather.py
+
 ## Enable efd service -- automatically run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd.service
 
 ## Enable sepl modem service -- automatically run at boot via systemd.
 $CHROOTBINDCMD systemctl enable sepl-modem.service
+
+## Enable sepl modem service -- automatically run at boot via systemd.
+$CHROOTBINDCMD systemctl enable sepl-power-supervisor.service
+
+## Enable sepl modem service -- automatically run at boot via systemd.
+$CHROOTBINDCMD systemctl enable sepl-shutdown-final.service
 

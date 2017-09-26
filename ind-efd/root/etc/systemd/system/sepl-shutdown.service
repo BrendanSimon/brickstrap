@@ -1,0 +1,37 @@
+##============================================================================
+##
+##  systemd service to run a script late in the shutdown process.
+##
+##  The script will likely manage some I/O lines to interact with an external
+##  power supply supervisor, and set/clear some LEDs.
+##
+##  Since a script is run, the filesystem needs to be mounted.
+##  i.e. there is a dependency on the `umount.target`.
+##  e.g. Before=umount.target
+##  This is implicit if `DefaultDependencies=yes` (default)
+##
+##  The script could run even later (e.g. `Before=final.target`), but the
+##  script would have to manually mount (read-only) the filesystem and
+##  umount it when finished.
+##
+##  Copyright (C) 2017-2017 Successful Endeavours Pty Ltd
+##
+##============================================================================
+
+[Unit]
+Description=Deassert nOS_RUNNING pin after shutdown.
+#DefaultDependencies=no
+#Conflicts=reboot.target
+#Before=unmount.target
+#Before=shutdown.target reboot.target halt.target kexec.target
+#Before=final.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStop=/opt/sbin/sepl_shutdown_final.py
+
+[Install]
+#WantedBy=shutdown.target reboot.target halt.target kexec.target
+WantedBy=basic.target
+
