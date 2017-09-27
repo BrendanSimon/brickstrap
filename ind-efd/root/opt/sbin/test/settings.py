@@ -17,5 +17,5 @@ REPORTING_SMS_PHONE_NUMBERS="+61470000000",
 ## Server to ping to check internet connection is ok.
 PING_SERVER="203.14.0.251"
 
-WEB_SERVER="http://efd.sepl.com.au"
+#WEB_SERVER="http://efd.sepl.com.au"
 
