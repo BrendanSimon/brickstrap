@@ -116,6 +116,7 @@ class Config(object):
         't2_blu', 'w2_blu',
         'temperature', 'humidity', 'rain_intensity',
         'alert',
+        'adc_clock_count_per_pps',
         ]
 
     ## retry time interval (minimum) between reposting EFD measurements to web portal.

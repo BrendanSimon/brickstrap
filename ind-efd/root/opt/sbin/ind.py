@@ -305,26 +305,27 @@ def _IOWR(id, structure):
 class IOCTL:
     ## FIXME: not all operations are IOWR !!
     ## FIXME: change cmd_struct to appropriate struct for operation.
-    IND_USER_RESET          = _IOWR(0x00, structure=cmd_struct)
-    IND_USER_DMA_RESET      = _IOWR(0x01, structure=cmd_struct)
-    IND_USER_SET_MODE       = _IOWR(0x02, structure=cmd_struct)
-    IND_USER_SET_ADDRESS    = _IOWR(0x03, structure=cmd_struct)
-    IND_USER_DMA_TEST       = _IOWR(0x04, structure=cmd_struct)
-    IND_USER_TRIG_PPS       = _IOWR(0x05, structure=cmd_struct)
-    IND_USER_SPI_WRITE      = _IOWR(0x06, structure=cmd_struct)
-    IND_USER_STATUS         = _IOWR(0x07, structure=cmd_struct)
-    IND_USER_SET_LEDS       = _IOWR(0x08, structure=cmd_struct)
-    IND_USER_CLEAR_LEDS     = _IOWR(0x09, structure=cmd_struct)
-    IND_USER_SET_CTRL       = _IOWR(0x0A, structure=cmd_struct)
-    IND_USER_CLEAR_CTRL     = _IOWR(0x0B, structure=cmd_struct)
-    IND_USER_SET_INTERRUPT  = _IOWR(0x0C, structure=cmd_struct)
-    IND_USER_GET_SEM        = _IOWR(0x0D, structure=cmd_struct)
-    IND_USER_SET_SEM        = _IOWR(0x0E, structure=cmd_struct)
-    IND_USER_REG_DEBUG      = _IOWR(0x0F, structure=cmd_struct)
-    IND_USER_MODIFY_LEDS    = _IOWR(0x10, structure=bit_flag_struct)
-    IND_USER_MODIFY_CTRL    = _IOWR(0x11, structure=bit_flag_struct)
-    IND_USER_READ_MAXMIN    = _IOWR(0x12, structure=maxmin_struct)
-    IND_USER_FPGA_VERSION   = _IOWR(0x13, structure=FPGA_Version)
+    IND_USER_RESET                      = _IOWR(0x00, structure=cmd_struct)
+    IND_USER_DMA_RESET                  = _IOWR(0x01, structure=cmd_struct)
+    IND_USER_SET_MODE                   = _IOWR(0x02, structure=cmd_struct)
+    IND_USER_SET_ADDRESS                = _IOWR(0x03, structure=cmd_struct)
+    IND_USER_DMA_TEST                   = _IOWR(0x04, structure=cmd_struct)
+    IND_USER_TRIG_PPS                   = _IOWR(0x05, structure=cmd_struct)
+    IND_USER_SPI_WRITE                  = _IOWR(0x06, structure=cmd_struct)
+    IND_USER_STATUS                     = _IOWR(0x07, structure=cmd_struct)
+    IND_USER_SET_LEDS                   = _IOWR(0x08, structure=cmd_struct)
+    IND_USER_CLEAR_LEDS                 = _IOWR(0x09, structure=cmd_struct)
+    IND_USER_SET_CTRL                   = _IOWR(0x0A, structure=cmd_struct)
+    IND_USER_CLEAR_CTRL                 = _IOWR(0x0B, structure=cmd_struct)
+    IND_USER_SET_INTERRUPT              = _IOWR(0x0C, structure=cmd_struct)
+    IND_USER_GET_SEM                    = _IOWR(0x0D, structure=cmd_struct)
+    IND_USER_SET_SEM                    = _IOWR(0x0E, structure=cmd_struct)
+    IND_USER_REG_DEBUG                  = _IOWR(0x0F, structure=cmd_struct)
+    IND_USER_MODIFY_LEDS                = _IOWR(0x10, structure=bit_flag_struct)
+    IND_USER_MODIFY_CTRL                = _IOWR(0x11, structure=bit_flag_struct)
+    IND_USER_READ_MAXMIN                = _IOWR(0x12, structure=maxmin_struct)
+    IND_USER_FPGA_VERSION               = _IOWR(0x13, structure=FPGA_Version)
+    IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint)
 
 ##===========================================================================
 ##  Library functions.
@@ -635,6 +636,23 @@ def fpga_version_get(dev_hand=None):
         raise
 
     return fpga_version
+
+##----------------------------------------------------------------------------
+
+def adc_clock_count_per_pps_get(dev_hand=None):
+    """Get the ADC Clock Count Per PPS reading."""
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    try:
+        a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_CLOCK_COUNT_PER_PPS, "1234")
+        value = struct.unpack('l', a)[0]
+    except:
+        print("EXCEPTION: Get ADC Clock Counter Per PPS.")
+        raise
+
+    return value
 
 ##----------------------------------------------------------------------------
 

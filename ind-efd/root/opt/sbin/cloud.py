@@ -279,6 +279,7 @@ def main():
             't2_blu', 'w2_blu',
             'temperature', 'humidity', 'rain_intensity',
             'alert',
+            'adc_clock_count_per_pps',
             ]
 
         max_cloud_queue_size = 10

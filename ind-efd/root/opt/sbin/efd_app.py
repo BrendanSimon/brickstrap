@@ -1033,6 +1033,8 @@ class EFD_App(object):
                 print("DEBUG: BLU: min_idx={:6} min_val={:6}".format(self.peak_min_blu.index, self.peak_min_blu.value))
                 print
 
+            adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
+
             if self.config.tf_mapping:
                 ##
                 ## perform TF Mapping calculations for all phases.
@@ -1089,31 +1091,32 @@ class EFD_App(object):
             ##
 
             ## Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
-            self.measurements['datetime_utc']           = self.capture_datetime_utc.isoformat(sep=' ')
-            self.measurements['datetime_local']         = self.capture_datetime_local.isoformat(sep=' ')
+            self.measurements['datetime_utc']               = self.capture_datetime_utc.isoformat(sep=' ')
+            self.measurements['datetime_local']             = self.capture_datetime_local.isoformat(sep=' ')
 
-            self.measurements['max_volt_red']           = self.peak_max_red.voltage
-            self.measurements['min_volt_red']           = self.peak_min_red.voltage
-            self.measurements['max_time_offset_red']    = self.peak_max_red.time_offset
-            self.measurements['min_time_offset_red']    = self.peak_min_red.time_offset
-            self.measurements['t2_red']                 = self.tf_map_red.T2
-            self.measurements['w2_red']                 = self.tf_map_red.F2
-            self.measurements['max_volt_wht']           = self.peak_max_wht.voltage
-            self.measurements['min_volt_wht']           = self.peak_min_wht.voltage
-            self.measurements['max_time_offset_wht']    = self.peak_max_wht.time_offset
-            self.measurements['min_time_offset_wht']    = self.peak_min_wht.time_offset
-            self.measurements['t2_wht']                 = self.tf_map_wht.T2
-            self.measurements['w2_wht']                 = self.tf_map_wht.F2
-            self.measurements['max_volt_blu']           = self.peak_max_blu.voltage
-            self.measurements['min_volt_blu']           = self.peak_min_blu.voltage
-            self.measurements['max_time_offset_blu']    = self.peak_max_blu.time_offset
-            self.measurements['min_time_offset_blu']    = self.peak_min_blu.time_offset
-            self.measurements['t2_blu']                 = self.tf_map_blu.T2
-            self.measurements['w2_blu']                 = self.tf_map_blu.F2
-            self.measurements['temperature']            = self.ws_info.temperature
-            self.measurements['humidity']               = self.ws_info.humidity
-            self.measurements['rain_intensity']         = self.ws_info.rain_intensity
-            self.measurements['alert']                  = trigger_alert
+            self.measurements['max_volt_red']               = self.peak_max_red.voltage
+            self.measurements['min_volt_red']               = self.peak_min_red.voltage
+            self.measurements['max_time_offset_red']        = self.peak_max_red.time_offset
+            self.measurements['min_time_offset_red']        = self.peak_min_red.time_offset
+            self.measurements['t2_red']                     = self.tf_map_red.T2
+            self.measurements['w2_red']                     = self.tf_map_red.F2
+            self.measurements['max_volt_wht']               = self.peak_max_wht.voltage
+            self.measurements['min_volt_wht']               = self.peak_min_wht.voltage
+            self.measurements['max_time_offset_wht']        = self.peak_max_wht.time_offset
+            self.measurements['min_time_offset_wht']        = self.peak_min_wht.time_offset
+            self.measurements['t2_wht']                     = self.tf_map_wht.T2
+            self.measurements['w2_wht']                     = self.tf_map_wht.F2
+            self.measurements['max_volt_blu']               = self.peak_max_blu.voltage
+            self.measurements['min_volt_blu']               = self.peak_min_blu.voltage
+            self.measurements['max_time_offset_blu']        = self.peak_max_blu.time_offset
+            self.measurements['min_time_offset_blu']        = self.peak_min_blu.time_offset
+            self.measurements['t2_blu']                     = self.tf_map_blu.T2
+            self.measurements['w2_blu']                     = self.tf_map_blu.F2
+            self.measurements['temperature']                = self.ws_info.temperature
+            self.measurements['humidity']                   = self.ws_info.humidity
+            self.measurements['rain_intensity']             = self.ws_info.rain_intensity
+            self.measurements['alert']                      = trigger_alert
+            self.measurements['adc_clock_count_per_pps']    = adc_clock_count_per_pps
 
             ## write measurements dictionary to measurements log file.
             self.measurements_log.write(measurements=self.measurements, datetime=self.capture_datetime_utc)
@@ -1158,6 +1161,8 @@ class EFD_App(object):
                 print
                 print('trigger_alert : {}'.format(trigger_alert))
                 print
+                print('adc_clock_count_per_pps : {}'.format(adc_clock_count_per_pps))
+                print
                 print('tf_map_red : {!r}'.format(self.tf_map_red))
                 print('tf_map_wht : {!r}'.format(self.tf_map_wht))
                 print('tf_map_blu : {!r}'.format(self.tf_map_blu))
@@ -1189,7 +1194,7 @@ class EFD_App(object):
 ## Make config object global.
 config = Config()
 
-def app_main(capture_count=0, pps_mode=True, web_server=None):
+def app_main(capture_count=0, pps_mode=True, web_server=None, show_measurements=False):
     """Main entry if running this module directly."""
 
     if capture_count:
@@ -1203,6 +1208,8 @@ def app_main(capture_count=0, pps_mode=True, web_server=None):
     if web_server:
         config.set_web_server(web_server)
         print("INFO: `web_server` set to {}".format(config.web_server))
+
+    config.show_measurements = show_measurements
 
     config.show_all()
 
