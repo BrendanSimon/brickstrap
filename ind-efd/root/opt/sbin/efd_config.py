@@ -128,6 +128,9 @@ class Config(object):
     ## max of 600 records (10 minutes) of data can be queued.
     max_cloud_queue_size = 600
 
+    ## Default to UTC timezone, if not set in user settings file.
+    timezone = 'utc'
+
     ##========================================================================
 
     def __init__(self):
@@ -143,12 +146,13 @@ class Config(object):
         ## Currently a symlink is used from settings.py in app directory to the settings file.
         import settings
 
-        self.serial_number                          =        getattr(settings, 'SERIAL_NUMBER',                      self.serial_number)
-        self.site_name                              =        getattr(settings, 'SITE_NAME',                          self.site_name)
-        self.reporting_sms_phone_numbers            = list(  getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',        self.reporting_sms_phone_numbers) )
-        self.pd_event_trigger_voltage               = float( getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',           self.pd_event_trigger_voltage) )
-        self.pd_event_reporting_interval            = int(   getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',        self.pd_event_reporting_interval) )
-        self.web_server                             =        getattr(settings, 'WEB_SERVER',                         self.web_server)
+        self.serial_number                  =        getattr(settings, 'SERIAL_NUMBER',                 self.serial_number)
+        self.site_name                      =        getattr(settings, 'SITE_NAME',                     self.site_name)
+        self.reporting_sms_phone_numbers    = list(  getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',   self.reporting_sms_phone_numbers) )
+        self.pd_event_trigger_voltage       = float( getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',      self.pd_event_trigger_voltage) )
+        self.pd_event_reporting_interval    = int(   getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',   self.pd_event_reporting_interval) )
+        self.web_server                     =        getattr(settings, 'WEB_SERVER',                    self.web_server)
+        self.timezone                       =        getattr(settings, 'TIMEZONE',                      self.timezone)
 
         self.set_web_uris()
 
@@ -292,6 +296,14 @@ class Config(object):
 
         print("data_dir = {}".format(self.data_dir))
         print("state_filename = {}".format(self.state_filename))
+
+        print("measurements_log_field_names = {}".format(self.measurements_log_field_names))
+
+        print("measurments_post_retry_time_interval = {}".format(self.measurments_post_retry_time_interval))
+        print("max_records_per_post = {}".format(self.max_records_per_post))
+        print("max_cloud_queue_size = {}".format(self.max_cloud_queue_size))
+
+        print("timezone = {}".format(self.timezone))
 
         print("-------------------------------------------------------------")
 

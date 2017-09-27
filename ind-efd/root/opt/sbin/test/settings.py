@@ -19,3 +19,5 @@ PING_SERVER="203.14.0.251"
 
 #WEB_SERVER="http://efd.sepl.com.au"
 
+TIMEZONE="Australia/Melbourne"
+

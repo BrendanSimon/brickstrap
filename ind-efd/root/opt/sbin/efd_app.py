@@ -457,7 +457,7 @@ class EFD_App(object):
         '''Get the datetime stamp .'''
         utc_dt = arrow.utcnow().floor('second')
         self.capture_datetime_utc = utc_dt
-        self.capture_datetime_local = utc_dt.to('local')
+        self.capture_datetime_local = utc_dt.to(self.config.timezone)
 
         self.app_state['capture_datetime_utc'] = self.capture_datetime_utc
         self.app_state['capture_datetime_local'] = self.capture_datetime_local
@@ -983,7 +983,7 @@ class EFD_App(object):
             self.running_led_on()
 
             select_datetime_utc = arrow.utcnow()
-            select_datetime_local = select_datetime_utc.to('local')
+            select_datetime_local = select_datetime_utc.to(self.config.timezone)
 
             ## NOTE: stdout ends up in /var/log/syslog when app run via systemd !!
             if 0:
