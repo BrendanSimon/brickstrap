@@ -872,6 +872,12 @@ class Read_Capture_Buffers_App(object):
             self.adc_start()
 
         capture_count = self.config.capture_count
+        self.adc_clock_count_now = 0
+        self.adc_clock_count_min = 1000*1000*1000  ## a number > 250MHz + 50ppm
+        self.adc_clock_count_max = 0
+        self.adc_clock_count_valid_delta = int(self.config.sample_frequency * 0.01)
+        self.adc_clock_count_valid_min = self.config.sample_frequency - self.adc_clock_count_valid_delta
+        self.adc_clock_count_valid_max = self.config.sample_frequency + self.adc_clock_count_valid_delta
         errors = 0
 
         while True:
@@ -1023,6 +1029,26 @@ class Read_Capture_Buffers_App(object):
 
             if self.config.show_capture_buffers:
                 self.show_all_capture_buffers()
+
+            ##
+            ## Show ADC Clock Count Per PPS.
+            ##
+            if 1:
+                self.adc_clock_count_now = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
+                ## Check if in valid range.
+                if self.adc_clock_count_valid_min <= self.adc_clock_count_now <= self.adc_clock_count_valid_max:
+                    if self.adc_clock_count_now < self.adc_clock_count_min:
+                        self.adc_clock_count_min = self.adc_clock_count_now
+                    if self.adc_clock_count_now > self.adc_clock_count_max:
+                        self.adc_clock_count_max = self.adc_clock_count_now
+            
+                delta = self.adc_clock_count_now - self.config.sample_frequency
+                print("DEBUG: adc_clock_count_per_pps_now = {:10}, delta = {:6}".format(self.adc_clock_count_now, delta))
+                delta = self.adc_clock_count_min - self.config.sample_frequency
+                print("DEBUG: adc_clock_count_per_pps_min = {:10}, delta = {:6}".format(self.adc_clock_count_min, delta))
+                delta = self.adc_clock_count_max - self.config.sample_frequency
+                print("DEBUG: adc_clock_count_per_pps_max = {:10}, delta = {:6}".format(self.adc_clock_count_max, delta))
+                print
 
             ## FIXME: DEBUG: exit after one cycle.
             #break
