@@ -37,7 +37,9 @@ class Sensors(object):
     '''Manage EFD sensors (via lmsensors).'''
 
     def __init__(self):
-        self.batt_scale = (100.0 + 18.0) / 18.0
+        #self.batt_scale = (100.0 + 18.0) / 18.0
+        self.batt_scale = (680.0 + 110.0) / 110.0
+        self.supp_scale = (680.0 + 110.0) / 110.0
         self.init()
 
     def cleanup(self):
@@ -47,25 +49,34 @@ class Sensors(object):
         '''Runtime intialisation method.'''
         self.box_temperature_sensor = None
         self.battery_sensor = None
+        self.supply_sensor = None
         
         self.cleanup()
         sensors.init()
         
         #! Search for EFD sensors
         for chip in sensors.iter_detected_chips():
+            #print("DEBUG: chip = {!r}".format(chip))
             for feature in chip:
+                #print("DEBUG: feature = {!r}".format(feature))
                 chip_str = str(chip)
-                if chip_str.startswith("lm75") and feature.label == "temp1":
+                if chip_str.startswith("lm75") and chip.addr == 0x48 and feature.name == "temp1":
                     self.box_temperature_sensor = Sensor(feature)
-                elif chip_str.startswith("mcp3021") and feature.label == "in0":
+                elif chip_str.startswith("mcp3021") and chip.addr == 0x4d and feature.name == "in0":
                     self.battery_sensor = Sensor(feature, scale=self.batt_scale)
+                elif chip_str.startswith("mcp3021") and chip.addr == 0x4e and feature.name == "in0":
+                    self.supply_sensor = Sensor(feature, scale=self.supp_scale)
         
     def battery_voltage(self):
         return self.battery_sensor.read()
         
+    def supply_voltage(self):
+        return self.supply_sensor.read()
+
+    ## note: the solar variant has it's voltage terminals accross the
+    ## note: battery.  i.e. it's the same value as the battery voltage.
     def solar_voltage(self):
-        #return self.solar_sensor.read()    #!FIXME: implement solar volage when hardware design is available !!
-        return 0.0
+        return self.battery_voltage()
         
     def box_temperature(self):
         return self.box_temperature_sensor.read()
@@ -77,13 +88,15 @@ def app_main():
 
     print(__name__)
     sensors = Sensors()
-    sensors.init()
+    #sensors.init()
     
     for i in range(100):
         time.sleep(1)
-        temp = sensors.box_temperature()
-        batt = sensors.battery_voltage()
-        print("temp = {:3.1f} batt = {:4.2f}".format(temp, batt))
+        temp  = sensors.box_temperature()
+        batt  = sensors.battery_voltage()
+        supp  = sensors.supply_voltage()
+        solar = sensors.solar_voltage()
+        print("temp = {:3.1f} batt = {:4.2f} supp = {:4.2f} solar = {:4.2f}".format(temp, batt, supp, solar))
 
     sensors.cleanup()
         
