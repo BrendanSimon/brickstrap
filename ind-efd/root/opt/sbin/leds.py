@@ -8,8 +8,6 @@
 
 '''Utility to manipulate the status LEDs.'''
 
-import sys
-import time
 import ind
 import argh
 
