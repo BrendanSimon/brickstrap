@@ -11,8 +11,6 @@ This module contains a class to manage measurement logs.
 '''
 
 import argh
-#import sys
-#import os.path
 import time
 
 import sensors          #! python interface to lmsensors via ctypes.
@@ -99,3 +97,4 @@ def argh_main():
 
 if __name__ == "__main__":
     argh_main()
+
