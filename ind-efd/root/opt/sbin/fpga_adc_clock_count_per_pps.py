@@ -6,46 +6,25 @@
 ##
 ##############################################################################
 
-'''Utility to manipulate the status LEDs.'''
+'''Utility to retrieve value of the FPGA Status Register.'''
 
 import ind
 import argh
-
-## could make this a runtime option.
-DEBUG = False
 
 ##============================================================================
 ## Commands
 ##============================================================================
 
-def off(mask=0):
-    """Turn off the LEDs specified by MASK."""
-    ind.leds_modify(off=mask)
-
-##----------------------------------------------------------------------------
-
-def on(mask=0):
-    """Turn on the LEDs specified by MASK."""
-    ind.leds_modify(on=mask)
-
-##----------------------------------------------------------------------------
-
-def toggle(mask=0):
-    """Toggle on the LEDs specified by MASK."""
-    ind.leds_modify(toggle=mask)
+def fpga_adc_clock_count_per_pps_get():
+    """Get value of the status register"""
+    count = ind.adc_clock_count_per_pps_get()
+    print("fpga_adc_clock_count_per_pps = {:10} ({:#08x})".format(count, count))
 
 ##============================================================================
 
 def main():
     '''Main entry if running this module from command line.'''
-
-    ## assembling commands.
-    parser = argh.ArghParser()
-    commands = [ off, on, toggle ]
-    parser.add_commands(commands)
-
-    ## dispatching commands.
-    parser.dispatch()
+    argh.dispatch_command(fpga_adc_clock_count_per_pps_get)
 
 ##============================================================================
 

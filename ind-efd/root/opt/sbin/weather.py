@@ -49,11 +49,9 @@ import ind
 
 
 import sys
-#import os.path
 import time
 import select
 import serial
-#from collections import namedtuple
 import threading
 import re
 

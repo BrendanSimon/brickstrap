@@ -10,7 +10,6 @@
 
 #from enum import IntEnum
 
-import sys
 import time
 import argh
 
