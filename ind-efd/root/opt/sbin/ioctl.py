@@ -53,7 +53,6 @@ _IOC_DIRSHIFT   = _IOC_SIZESHIFT + _IOC_SIZEBITS
 _IOC_NONE       = 0
 _IOC_WRITE      = 1
 _IOC_READ       = 2
->>>>>>> sepl-dev
 
 #=============================================================================
 
