@@ -1,4 +1,5 @@
 #!/usr/bin/python2
+
 """
 Linux ioctl numbers made easy
 
@@ -26,6 +27,8 @@ or
 WDIOC_GETSUPPORT = _IOR(ord('W'), 0, 40)
 """
 
+#=============================================================================
+
 import struct
 import ctypes
 
@@ -51,22 +54,25 @@ _IOC_NONE       = 0
 _IOC_WRITE      = 1
 _IOC_READ       = 2
 
+#=============================================================================
 
 def _IOC(dir, type, nr, size):
     if isinstance(size, ctypes.Structure):
         size = size.size()
-        raise Exception("BJS1")
+        raise Exception("SEPL #1 !!")
     elif isinstance(size, str) or isinstance(size, unicode):
         size = struct.calcsize(size)
-        raise Exception("BJS2")
+        raise Exception("SEPL #2 !!")
     return dir  << _IOC_DIRSHIFT  | \
            type << _IOC_TYPESHIFT | \
            nr   << _IOC_NRSHIFT   | \
            size << _IOC_SIZESHIFT
 
+#=============================================================================
 
 def _IO(type, nr): return _IOC(_IOC_NONE, type, nr, 0)
 def _IOR(type, nr, size): return _IOC(_IOC_READ, type, nr, size)
 def _IOW(type, nr, size): return _IOC(_IOC_WRITE, type, nr, size)
 def _IOWR(type, nr, size): return _IOC(_IOC_READ | _IOC_WRITE, type, nr, size)
 
+#=============================================================================
