@@ -109,22 +109,14 @@ class Status(IntEnum):
 #     AC_Power                = 1 << 13
 
 ## IND2 BJS assignments
-#     Not_OS_Running          = 1 << 16       ## unused -- could be used as feedback?
 #     Not_Restart_Req         = 1 << 17       ## PM MCU has requested a restart
 #     Not_Shutdown_Req        = 1 << 18       ## PM MCU has requested a shutdown
-#     Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
-#
-#     Spare_1                 = 1 << 20       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
-#     Spare_2                 = 1 << 21       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
-#     Spare_3                 = 1 << 22       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
-#     Spare_4                 = 1 << 23       ## unused -- spare signal to IND3 RF board (assume output for now -- could be used for feedback)?
 #
 #     All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error               \
 #                             | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test                  \
 #                             | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable                  \
 #                             | Battery_Low | AC_Power                                                \
-#                             | Not_OS_Running | Not_Restart_Req | Not_Shutdown_Req | Not_Spare_MCU   \
-#                             | Spare_1 | Spare_2 | Spare_3 | Spare_4
+#                             | Not_Restart_Req | Not_Shutdown_Req
 
 ## IND2 Kutu assignments
 ## FIXME: these are probably wrong !!
@@ -155,25 +147,16 @@ class Control(IntEnum):
 ## IND2 Kutu assignments (FIXME) !!
     Running                 = 1 << 3
     Alert                   = 1 << 4
-    Not_OS_Running          = 1 << 5        ## output low to inidcate to PM MCU that we aer up and running ok
+    Not_OS_Running          = 1 << 5        ## output low to indicate to PM MCU that we are up and running ok
 
 
 ## IND2 BJS assignments (FIXME) !!
-#     Not_OS_Running          = 1 << 16       ## output low to inidcate to PM MCU that we aer up and running ok
-    Not_Restart_Req         = 1 << 17
-    Not_Shutdown_Req        = 1 << 18
+#     Not_OS_Running          = 1 << 16       ## output low to indicate to PM MCU that we are up and running ok
     Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
-
-    Spare_1                 = 1 << 20       ## spare signal to IND3 RF board (assume output for now !!)
-    Spare_2                 = 1 << 21       ## spare signal to IND3 RF board (assume output for now !!)
-    Spare_3                 = 1 << 22       ## spare signal to IND3 RF board (assume output for now !!)
-    Spare_4                 = 1 << 23       ## spare signal to IND3 RF board (assume output for now !!)
 
     All                     = Modem_Reset | Modem_Power | EN_Select     \
                             | Running | Alert                           \
-                            | Not_OS_Running | Not_Restart_Req          \
-                            | Not_Shutdown_Req | Not_Spare_MCU          \
-                            | Spare_1 | Spare_2 | Spare_3 | Spare_4
+                            | Not_OS_Running | Not_Spare_MCU
 
 
 ##
@@ -183,7 +166,7 @@ class LED(IntEnum):
 ## IND1 assignments
 #     Running                 = 1 << 0
 #     Alert                   = 1 << 1
-#     Spare                   = 1 << 2
+#     Spare_3G                = 1 << 2
 #     PPS_OK                  = 1 << 3
 #     Modem_OK                = 1 << 4
 #     Weather_Station_OK      = 1 << 5
@@ -201,14 +184,15 @@ class LED(IntEnum):
     Debug2                  = 1 << 2
     Debug3                  = 1 << 3
 
-    Spare0                  = 1 << 4
-    Spare1                  = 1 << 5
-    Spare2                  = 1 << 6
-    Spare3                  = 1 << 7
-    Spare4                  = 1 << 8
-    Spare5                  = 1 << 9
-    Spare6                  = 1 << 10
-    Spare7                  = 1 << 11
+    Spare1_3G               = 1 << 4
+#     Spare2_3G               = 1 << 2        ## set to bit 2 for backward compatibility with IND1 system.
+    Spare2_3G               = 1 << 5        ## FIXME: remove when FPGA is remapped !!
+    Spare3_3G               = 1 << 6
+    Spare4_3G               = 1 << 7
+    Spare1_RF               = 1 << 8
+    Spare2_RF               = 1 << 9
+    Spare3_RF               = 1 << 10
+    Spare4_RF               = 1 << 11
 
     Modem_OK                = 1 << 12
     Weather_Station_OK      = 1 << 13
@@ -216,12 +200,14 @@ class LED(IntEnum):
     Power_OK                = 1 << 15
     PPS_OK                  = 1 << 16
 
-    All                     = Debug0 | Debug1 | Debug2 | Debug3 \
-                            | Spare0 | Spare1 | Spare2 | Spare3 \
-                            | Spare4 | Spare5 | Spare6 | Spare7 \
-                            | Modem_OK | Weather_Station_OK     \
-                            | Battery_OK | Power_OK             \
-                            | PPS_OK                            \
+    Spare_3G                = Spare2_3G     ## IND2 Spare LED signal (on 3G board) mapped to Spare2 (FIXME: until mapped back to bit 2 !!)
+
+    All                     = Debug0 | Debug1 | Debug2 | Debug3             \
+                            | Spare1_3G | Spare2_3G | Spare3_3G | Spare4_3G \
+                            | Spare1_RF | Spare2_RF | Spare3_RF | Spare4_RF \
+                            | Modem_OK | Weather_Station_OK                 \
+                            | Battery_OK | Power_OK                         \
+                            | PPS_OK
 
 class cmd_struct(ctypes.Structure):
     _fields_ = [
@@ -873,55 +859,34 @@ def battery_led_toggle(dev_hand=None):
 
 def spare_led_off(dev_hand=None):
 
-## IND1:
-#     led = LED.Spare
-## IND2:
-    led = LED.Spare1
+    led = LED.Spare_3G
     leds_modify(off=led, dev_hand=dev_hand)
 
 def spare_led_on(dev_hand=None):
 
-## IND1:
-#     led = LED.Spare
-## IND2:
-    led = LED.Spare1
+    led = LED.Spare_3G
     leds_modify(on=led, dev_hand=dev_hand)
 
 def spare_led_toggle(dev_hand=None):
 
-## IND1:
-#     led = LED.Spare
-## IND2:
-    led = LED.Spare1
+    led = LED.Spare_3G
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
 def debug_led_off(dev_hand=None):
 
-## IND1:
-#     led = LED.Spare
-## IND2:
     led = LED.Debug1
-    led = 0xFFFFFFFF
     leds_modify(off=led, dev_hand=dev_hand)
 
 def debug_led_on(dev_hand=None):
 
-## IND1:
-#     led = LED.Spare
-## IND2:
     led = LED.Debug1
-    led = 0xFFFFFFFF
     leds_modify(on=led, dev_hand=dev_hand)
 
 def debug_led_toggle(dev_hand=None):
 
-## IND1:
-#     led = LED.Spare
-## IND2:
     led = LED.Debug1
-    led = 0xFFFFFFFF
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 
@@ -964,7 +929,7 @@ def main():
         raise
 
     #led_seq = [ LED.Battery_OK, LED.Power_OK, LED.PPS_OK, LED.Running,
-    led_seq = [ LED.PPS_OK, LED.Running, LED.Modem_OK, LED.Alert, LED.Weather_Station_OK, LED.Spare ]
+    led_seq = [ LED.PPS_OK, LED.Running, LED.Modem_OK, LED.Alert, LED.Weather_Station_OK, LED.Spare_3G ]
     led_seq += led_seq[1:-1][::-1]
     for count, led in enumerate(led_seq * 10):
         ##
