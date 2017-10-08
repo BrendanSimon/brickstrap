@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 
 ##############################################################################
-##
-##  Author:     Successful Endeavours Pty Ltd
-##
+#!
+#!  Author:     Successful Endeavours Pty Ltd
+#!
 ##############################################################################
 
 '''
@@ -14,38 +14,38 @@ Support weather stations are:
 
 import ind
 
-## =========================================
-## Weather Station Output - composite output
-## =========================================
-##
-## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-##
-## =======================================
-## Weather Station Output - default output
-## =======================================
-##
-## 0TX,Start-up
-## 0R5,Th=25.4C,Vh=0.0#,Vs=14.3V,Vr=3.491V
-## 0R2,Ta=25.0C,Ua=38.4P,Pa=1008.1H
-## 0TX,Start-up
-## 0R5,Th=25.4C,Vh=0.0#,Vs=14.3V,Vr=3.491V
-## 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
-## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
-## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
-## 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
-## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
-## 0R5,Th=25.0C,Vh=0.0#,Vs=14.4V,Vr=3.480V
-## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
-## 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
-## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
-## 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#Z
-## 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
-## 0R5,Th=25.2C,Vh=0.0#,Vs=14.4V,Vr=3.480V
-##
-## =======================================
+#! =========================================
+#! Weather Station Output - composite output
+#! =========================================
+#!
+#! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
+#! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
+#! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
+#! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
+#!
+#! =======================================
+#! Weather Station Output - default output
+#! =======================================
+#!
+#! 0TX,Start-up
+#! 0R5,Th=25.4C,Vh=0.0#,Vs=14.3V,Vr=3.491V
+#! 0R2,Ta=25.0C,Ua=38.4P,Pa=1008.1H
+#! 0TX,Start-up
+#! 0R5,Th=25.4C,Vh=0.0#,Vs=14.3V,Vr=3.491V
+#! 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
+#! 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
+#! 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
+#! 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
+#! 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
+#! 0R5,Th=25.0C,Vh=0.0#,Vs=14.4V,Vr=3.480V
+#! 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
+#! 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
+#! 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#
+#! 0R1,Dn=000#,Dm=000#,Dx=000#,Sn=0.0#,Sm=0.0#,Sx=0.0#Z
+#! 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
+#! 0R5,Th=25.2C,Vh=0.0#,Vs=14.4V,Vr=3.480V
+#!
+#! =======================================
 
 
 import sys
@@ -56,23 +56,23 @@ import threading
 import re
 
 
-## Serial port implemented in Zynq FPGA, registered as /dev/ttyS0.
+#! Serial port implemented in Zynq FPGA, registered as /dev/ttyS0.
 DEV_NAME = '/dev/ttyS0'
 BAUD_RATE = 19200
 
-##============================================================================
+#!============================================================================
 
 class Weather_Station_Thread(threading.Thread):
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def __init__(self):
         threading.Thread.__init__(self)
 
-        self.weather_station = Weather_Station() #starting the stream of info
-        self.running = True #setting the thread running to true
+        self.weather_station = Weather_Station()    #! starting the stream of info
+        self.running = True                         #! setting the thread running to true
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def run(self):
         self.weather_station.init()
@@ -80,11 +80,11 @@ class Weather_Station_Thread(threading.Thread):
         self.weather_station.configure()
 
         while self.running:
-            self.weather_station.wait_and_process() #this will continue to loop, wait for data, and process it.
+            self.weather_station.wait_and_process() #! this will continue to loop, wait for data, and process it.
 
         self.weather_station.cleanup()
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def cleanup(self):
         print('INFO: Weather_Thread: Cleaning up ...')
@@ -92,18 +92,18 @@ class Weather_Station_Thread(threading.Thread):
         self.join()
         print('INFO: Weather_Thread: Done.')
 
-##============================================================================
+#!============================================================================
 
-## regular expression to match 'Ta=' + non-whitespace-chars + (comma or whitespace-char or eol).
+#! regular expression to match 'Ta=' + non-whitespace-chars + (comma or whitespace-char or eol).
 temperature_regex = re.compile(r'Ta=(?P<temperature>\S*?)(?:,|\s|$)')
 
-## regular expression to match 'Ua=' + non-whitespace-chars + (comma or whitespace-char or eol).
+#! regular expression to match 'Ua=' + non-whitespace-chars + (comma or whitespace-char or eol).
 humidity_regex = re.compile(r'Ua=(?P<humidity>\S*?)(?:,|\s|$)')
 
-## regular expression to match 'Ri=' + non-whitespace-chars + (comma or whitespace-char or eol).
+#! regular expression to match 'Ri=' + non-whitespace-chars + (comma or whitespace-char or eol).
 rain_intensity_regex = re.compile(r'Ri=(?P<rain_intensity>\S*?)(?:,|\s|$)')
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def extract_temperature(s):
     '''return temperature field from input string, or null string.'''
@@ -117,7 +117,7 @@ def extract_temperature(s):
 
     return temperature
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def extract_humidity(s):
     '''return humidity field from input string, or null string.'''
@@ -131,7 +131,7 @@ def extract_humidity(s):
 
     return humidity
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def extract_rain_intensity(s):
     '''return rain_intensity field from input string, or null string.'''
@@ -145,7 +145,7 @@ def extract_rain_intensity(s):
 
     return rain_intensity
 
-##============================================================================
+#!============================================================================
 
 class Weather_Station(object):
 
@@ -153,7 +153,7 @@ class Weather_Station(object):
 
     serial_timeout = 0.1
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def __init__(self, ser_dev_name=DEV_NAME, baudrate=BAUD_RATE):
 
@@ -165,7 +165,7 @@ class Weather_Station(object):
 
         self.init(ser_dev_name=ser_dev_name, baudrate=baudrate)
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def init(self, ser_dev_name=DEV_NAME, baudrate=BAUD_RATE):
 
@@ -181,12 +181,12 @@ class Weather_Station(object):
 
         self.ind_dev_hand = ind.get_device_handle()
 
-        ## Measurement data.
+        #! Measurement data.
         self.temperature = '0'
         self.humidity = '0'
         self.rain_intensity = '0'
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def cleanup(self):
 
@@ -198,51 +198,51 @@ class Weather_Station(object):
             self.ser_dev_hand.close()
             self.ser_dev_hand = None
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def configure(self):
         '''Configure the weather station to report only what we need.'''
         '''  - temperature, humidity, rain intensity, every one second.'''
 
-        ## List of commands to run to configure the weather station.
+        #! List of commands to run to configure the weather station.
         config_commands = [
 
-            ##
-            ## Temperature, Humidity, Pressure settings.
-            ##
+            #!
+            #! Temperature, Humidity, Pressure settings.
+            #!
             #'0TU,R=0000000001010000,I=1,P=H,T=C,N=T\r\n',
-            ## Set temperature and humidity read interval to 1.
+            #! Set temperature and humidity read interval to 1.
             '0TU,R=0000000001010000,I=1,P=H,T=C\r\n',
 
-            ##
-            ## Wind settings.
-            ##
+            #!
+            #! Wind settings.
+            #!
             #'0WU,R=0000000000000000,I=3600,A=3,G=1,U=M,D=O,N=W,F=4\r\n',
-            ## Disable wind reporting.
+            #! Disable wind reporting.
             '0WU,R=0000000000000000,I=3600\r\n',
 
-            ##
-            ## Precipitation settings.
-            ##
+            #!
+            #! Precipitation settings.
+            #!
             #'0RU,R=0000000000100000,I=1,U=M,S=M,M=R,Z=M,X=10000,Y=100\r\n',
-            ## Set Rain Intensity read interval to 1.
+            #! Set Rain Intensity read interval to 1.
             '0RU,R=0000000000100000,I=1,M=T\r\n',
 
-            ##
-            ## Supervisory settings.
-            ##
+            #!
+            #! Supervisory settings.
+            #!
             #'0SU,R=0000000000000000,I=3600,S=Y,H=N\r\n',
-            ## Disable supervisory reporting.
+            #! Disable supervisory reporting.
             '0SU,R=0000000000000000,I=3600\r\n',
 
-            ##
-            ## Communications settings.
-            ##
+            #!
+            #! Communications settings.
+            #!
             #'0XU,A=0,M=A,T=0,C=2,I=1,B=19200,D=8,P=N,S=1,L=25,N=WXT520\r\n',
-            ## Set composite data inverval to 1 second.
+            #! Set composite data inverval to 1 second.
             '0XU,I=1\r\n',
 
-            ## Reset unit.
+            #! Reset unit.
             '0XZ\r\n',
             ]
 
@@ -251,7 +251,7 @@ class Weather_Station(object):
             self.ser_dev_hand.write(cmd)
             time.sleep(0.1)
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def weather_led_off(self):
         ind.weather_led_off(dev_hand=self.ind_dev_hand)
@@ -262,7 +262,7 @@ class Weather_Station(object):
     def weather_led_toggle(self):
         ind.weather_led_toggle(dev_hand=self.ind_dev_hand)
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def wait_and_process(self):
         '''wait for data and process it.'''
@@ -275,11 +275,11 @@ class Weather_Station(object):
 
         self.weather_led_toggle()
 
-        ## Composite data output format.
-        ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-        ## Default data output format.
-        ## 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
-        ## 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
+        #! Composite data output format.
+        #! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
+        #! Default data output format.
+        #! 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
+        #! 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
 
         #print
         #print("DEBUG: Weather Data Captured")
@@ -300,7 +300,7 @@ class Weather_Station(object):
             if rain_int:
                 self.rain_intensity = rain_int
 
-##============================================================================
+#!============================================================================
 
 def main():
     """Main entry if running this module directly."""
@@ -324,7 +324,7 @@ def main():
             print('----------------------------------------')
 
     except (KeyboardInterrupt, SystemExit):
-        ## ctrl+c key press or sys.exit() called.
+        #! ctrl+c key press or sys.exit() called.
         print("EXCEPTION: KeyboardInterrupt or SystemExit")
     finally:
         print("Nearly done ...")
@@ -332,15 +332,15 @@ def main():
 
     print "Done.\nExiting."
 
-##============================================================================
+#!============================================================================
 
 def test_case():
 
-    ## Composite data output format.
-    ## 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-    ## Default data output format.
-    ## 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
-    ## 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
+    #! Composite data output format.
+    #! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
+    #! Default data output format.
+    #! 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
+    #! 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
 
     print
     print("DEBUG: Weather Data Captured")
@@ -375,9 +375,8 @@ def test_case():
 
     #sys.exit(0)
 
-##============================================================================
+#!============================================================================
 
 if __name__ == "__main__":
     test_case()
     main()
-

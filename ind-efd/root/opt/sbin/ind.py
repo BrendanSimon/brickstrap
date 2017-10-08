@@ -11,33 +11,33 @@ import array
 import struct
 #from collections import namedtuple
 
-##
-## Defaults.
-##
+#!
+#! Defaults.
+#!
 dev_name = '/dev/IND'
 
 max_channels = 3
 max_capture_count = 10 * 1024 * 1024
-## 2 bytes per sample.  2 buffers for ping-pong acquisition.
+#! 2 bytes per sample.  2 buffers for ping-pong acquisition.
 max_capture_size = max_capture_count * max_channels * 2 * 2
 mmap_memory_size = 128 * 1024 * 1024
 #print("DEBUG: max_capture_size={}".format(max_capture_size))
 #print("DEBUG: mmap_memory_size={}".format(mmap_memory_size))
 assert(max_capture_size <= mmap_memory_size)
 
-##
-## FIXME: could refactor this module into separate modules as an ind package.
-## FIXME: eg. ind.leds, ind.modem, ind.adc, ...
-##
+#!
+#! FIXME: could refactor this module into separate modules as an ind package.
+#! FIXME: eg. ind.leds, ind.modem, ind.adc, ...
+#!
 
-##===========================================================================
-##  Interfaces to IND driver below.
-##  Should the driver interface be a separate module?
-##===========================================================================
+#!===========================================================================
+#!  Interfaces to IND driver below.
+#!  Should the driver interface be a separate module?
+#!===========================================================================
 
-##
-## Config Constants
-##
+#!
+#! Config Constants
+#!
 class Config(IntEnum):
     PPS_Generate            = 1 << 0
     Debug_DMA_Start         = 1 << 1
@@ -79,21 +79,21 @@ class Config(IntEnum):
     Peak_Start_Disable      = 0x00FFFFFF
     Peak_Stop_Disable       = 0x00FFFFFF
 
-##
-## Cmd Interrupt Constants
-##
+#!
+#! Cmd Interrupt Constants
+#!
 class Interrupt(IntEnum):
     Disable     = 0
     Enable      = 1 << 0
 
 
-##
-## Status Register Constants
-##
+#!
+#! Status Register Constants
+#!
 class Status(IntEnum):
     SPI_Busy                = 1 << 0
     S2MM_Error              = 1 << 1
-    MM2S_Read_Complete      = 1 << 2        ## What is this ??
+    MM2S_Read_Complete      = 1 << 2        #! What is this ??
     MM2S_Error              = 1 << 3
     SPI_Error               = 1 << 4
     Interrupt_Active        = 1 << 5
@@ -136,13 +136,13 @@ class Status(IntEnum):
                             | PPS_OK                                                    \
                             | Not_Restart_Request | Not_Shutdown_Request
 
-##
-## Control Register Constants
-##
+#!
+#! Control Register Constants
+#!
 class Control(IntEnum):
     Modem_Reset             = 1 << 0
     Modem_Power             = 1 << 1
-    EN_Select               = 1 << 2        ## What is this ??
+    EN_Select               = 1 << 2        #! What is this ??
 
 ## IND2 Kutu assignments (FIXME) !!
     Running                 = 1 << 3
@@ -159,9 +159,9 @@ class Control(IntEnum):
                             | Not_OS_Running | Not_Spare_MCU
 
 
-##
-## IOCTL LED Constants
-##
+#!
+#! IOCTL LED Constants
+#!
 class LED(IntEnum):
 ## IND1 assignments
 #     Running                 = 1 << 0
@@ -211,37 +211,37 @@ class LED(IntEnum):
 
 class cmd_struct(ctypes.Structure):
     _fields_ = [
-        ('config',                  ctypes.c_uint32),   ## __u32 config
-        ('interrupt',               ctypes.c_uint32),   ## __u32 interrupt
-        ('address',                 ctypes.c_uint32),   ## __u32 address
-        ('capture_count',           ctypes.c_uint32),   ## __u32 capture_count
-        ('delay_count',             ctypes.c_uint32),   ## __u32 delay_count
-        ('peak_detect_start_count', ctypes.c_uint32),   ## __u32 delay_count
-        ('peak_detect_stop_count',  ctypes.c_uint32),   ## __u32 delay_count
+        ('config',                  ctypes.c_uint32),   #! __u32 config
+        ('interrupt',               ctypes.c_uint32),   #! __u32 interrupt
+        ('address',                 ctypes.c_uint32),   #! __u32 address
+        ('capture_count',           ctypes.c_uint32),   #! __u32 capture_count
+        ('delay_count',             ctypes.c_uint32),   #! __u32 delay_count
+        ('peak_detect_start_count', ctypes.c_uint32),   #! __u32 delay_count
+        ('peak_detect_stop_count',  ctypes.c_uint32),   #! __u32 delay_count
     ]
 
 class maxmin_struct(ctypes.Structure):
     _fields_ = [
-        ('max_ch0_data',    ctypes.c_int16),        ## __i16 max_ch0_data
-        ('_unused_1_',      ctypes.c_int16),        ## __i16 max_ch2_data
-        ('max_ch0_addr',    ctypes.c_uint32),       ## __u32 max_ch0_addr
-        ('min_ch0_data',    ctypes.c_int16),        ## __i16 min_ch0_data
-        ('_unused_2_',      ctypes.c_int16),        ## __i16 max_ch2_data
-        ('min_ch0_addr',    ctypes.c_uint32),       ## __u32 min_ch0_addr
+        ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
+        ('_unused_1_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('max_ch0_addr',    ctypes.c_uint32),       #! __u32 max_ch0_addr
+        ('min_ch0_data',    ctypes.c_int16),        #! __i16 min_ch0_data
+        ('_unused_2_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('min_ch0_addr',    ctypes.c_uint32),       #! __u32 min_ch0_addr
 
-        ('max_ch1_data',    ctypes.c_int16),        ## __i16 max_ch1_data
-        ('_unused_3_',      ctypes.c_int16),        ## __i16 max_ch2_data
-        ('max_ch1_addr',    ctypes.c_uint32),       ## __u32 max_ch1_addr
-        ('min_ch1_data',    ctypes.c_int16),        ## __i16 min_ch1_data
-        ('_unused_4_',      ctypes.c_int16),        ## __i16 max_ch2_data
-        ('min_ch1_addr',    ctypes.c_uint32),       ## __u32 min_ch1_addr
+        ('max_ch1_data',    ctypes.c_int16),        #! __i16 max_ch1_data
+        ('_unused_3_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('max_ch1_addr',    ctypes.c_uint32),       #! __u32 max_ch1_addr
+        ('min_ch1_data',    ctypes.c_int16),        #! __i16 min_ch1_data
+        ('_unused_4_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('min_ch1_addr',    ctypes.c_uint32),       #! __u32 min_ch1_addr
 
-        ('max_ch2_data',    ctypes.c_int16),        ## __i16 max_ch2_data
-        ('_unused_5_',      ctypes.c_int16),        ## __i16 max_ch2_data
-        ('max_ch2_addr',    ctypes.c_uint32),       ## __u32 max_ch2_addr
-        ('min_ch2_data',    ctypes.c_int16),        ## __i16 min_ch2_data
-        ('_unused_6_',      ctypes.c_int16),        ## __i16 min_ch2_data
-        ('min_ch2_addr',    ctypes.c_uint32),       ## __u32 min_ch2_addr
+        ('max_ch2_data',    ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_5_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('max_ch2_addr',    ctypes.c_uint32),       #! __u32 max_ch2_addr
+        ('min_ch2_data',    ctypes.c_int16),        #! __i16 min_ch2_data
+        ('_unused_6_',      ctypes.c_int16),        #! __i16 min_ch2_data
+        ('min_ch2_addr',    ctypes.c_uint32),       #! __u32 min_ch2_addr
     ]
 
 class FPGA_Version(ctypes.Structure):
@@ -253,30 +253,30 @@ class FPGA_Version(ctypes.Structure):
 
 class bit_flag_struct(ctypes.Structure):
     _fields_ = [
-        ('set',             ctypes.c_uint),         ## __u32 set
-        ('clear',           ctypes.c_uint),         ## __u32 clear
-        ('toggle',          ctypes.c_uint),         ## __u32 clear
+        ('set',             ctypes.c_uint),         #! __u32 set
+        ('clear',           ctypes.c_uint),         #! __u32 clear
+        ('toggle',          ctypes.c_uint),         #! __u32 clear
     ]
 
 class spi_cmd_struct(ctypes.Structure):
     _fields_ = [
-        ('port_devices',    ctypes.c_uint * 16),    ## __u32 port_device[16]
-        ('port_addr',       ctypes.c_uint * 16),    ## __u32 port_addr[16]
-        ('port_data',       ctypes.c_uint * 16),    ## __u32 port_data[16]
-        ('num_spi_writes',  ctypes.c_uint)          ## __u32 num_spi_writes
+        ('port_devices',    ctypes.c_uint * 16),    #! __u32 port_device[16]
+        ('port_addr',       ctypes.c_uint * 16),    #! __u32 port_addr[16]
+        ('port_data',       ctypes.c_uint * 16),    #! __u32 port_data[16]
+        ('num_spi_writes',  ctypes.c_uint)          #! __u32 num_spi_writes
     ]
 
 class debug_struct(ctypes.Structure):
     _fields_ = [
-        ('cmd',     ctypes.c_uint),                 ## __u32 cmd
-        ('reg',     ctypes.c_uint),                 ## __u32 reg
-        ('data',    ctypes.c_uint),                 ## __u32 data
+        ('cmd',     ctypes.c_uint),                 #! __u32 cmd
+        ('reg',     ctypes.c_uint),                 #! __u32 reg
+        ('data',    ctypes.c_uint),                 #! __u32 data
     ]
 
 
-##
-## IOCTL Command Constants
-##
+#!
+#! IOCTL Command Constants
+#!
 
 IOCTL_BASE = ord('t')
 
@@ -289,8 +289,8 @@ def _IOWR(id, structure):
 # Can't use enum with Python2, if value has top bit set.
 #class IOCTL(IntEnum):
 class IOCTL:
-    ## FIXME: not all operations are IOWR !!
-    ## FIXME: change cmd_struct to appropriate struct for operation.
+    #! FIXME: not all operations are IOWR !!
+    #! FIXME: change cmd_struct to appropriate struct for operation.
     IND_USER_RESET                      = _IOWR(0x00, structure=cmd_struct)
     IND_USER_DMA_RESET                  = _IOWR(0x01, structure=cmd_struct)
     IND_USER_SET_MODE                   = _IOWR(0x02, structure=cmd_struct)
@@ -313,9 +313,9 @@ class IOCTL:
     IND_USER_FPGA_VERSION               = _IOWR(0x13, structure=FPGA_Version)
     IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint)
 
-##===========================================================================
-##  Library functions.
-##===========================================================================
+#!===========================================================================
+#!  Library functions.
+#!===========================================================================
 
 def get_device_handle():
     try:
@@ -397,15 +397,15 @@ def modem_power_pulse(duration, dev_hand=None):
     if not dev_hand:
         dev_hand = get_device_handle()
 
-    ## Assert power key signal.
+    #! Assert power key signal.
     on = Control.Modem_Power
     ctrl_modify(set=on, dev_hand=dev_hand)
 
-    ## duration = 100-600ms => turn on.
-    ## duration >= 600ms => turn off.  NB: seems to toggle power state.
+    #! duration = 100-600ms => turn on.
+    #! duration >= 600ms => turn off.  NB: seems to toggle power state.
     time.sleep(duration)
 
-    ## Deassert power key signal.
+    #! Deassert power key signal.
     off = Control.Modem_Power | Control.Modem_Reset
     ctrl_modify(clear=off, dev_hand=dev_hand)
 
@@ -414,16 +414,16 @@ def modem_power_off(dev_hand=None):
     '''NOTE: this seems to toggle the power state of the modem,'''
     '''rather than turn it off.'''
 
-    ## duration = 100-600ms => turn on modem.
-    ## duration >= 600ms => turn off modem.  NB. seems to toggle power state.
+    #! duration = 100-600ms => turn on modem.
+    #! duration >= 600ms => turn off modem.  NB. seems to toggle power state.
     duration = 0.7
     modem_power_pulse(duration=duration, dev_hand=dev_hand)
 
 def modem_power_on(dev_hand=None):
     '''Turn on modem - asserts power key signal for 100ms.'''
 
-    ## duration = 100-600ms => turn on modem.
-    ## duration >= 600ms => turn off modem.  NB. seems to toggle power state.
+    #! duration = 100-600ms => turn on modem.
+    #! duration >= 600ms => turn off modem.  NB. seems to toggle power state.
     duration = 0.2
     modem_power_pulse(duration=duration, dev_hand=dev_hand)
 
@@ -541,7 +541,7 @@ def adc_capture_maxmin_get(dev_hand=None):
 
     maxmin = maxmin_struct()
     try:
-        ## set mutable flag to true to place data in maxmin object.
+        #! set mutable flag to true to place data in maxmin object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN, maxmin, True)
     except:
         print("EXCEPTION: ADC Capture MaxMin Get.")
@@ -595,8 +595,8 @@ def adc_output_mode_twos_complement(dev_hand=None):
         dev_hand = get_device_handle()
 
     spi_cmd = spi_cmd_struct()
-    spi_cmd.port_addr[0] = 0x14         ## output mode register.
-    spi_cmd.port_data[0] = 0x08 | 0x01  ## default, two's complement.
+    spi_cmd.port_addr[0] = 0x14         #! output mode register.
+    spi_cmd.port_data[0] = 0x08 | 0x01  #! default, two's complement.
     spi_cmd.num_spi_writes = 1
 
     try:
@@ -605,7 +605,7 @@ def adc_output_mode_twos_complement(dev_hand=None):
         print("EXCEPTION: ADC Set Semaphore.")
         raise
 
-##----------------------------------------------------------------------------
+#!===========================================================================
 
 def fpga_version_get(dev_hand=None):
     '''Get the FPGA Version information.'''
@@ -664,7 +664,7 @@ def power_shutdown_requested(status=None, dev_hand=None):
     value = (status & Status.Not_Shutdown_Request) == 0
     return value
 
-##----------------------------------------------------------------------------
+#!===========================================================================
 
 def power_os_running_off(dev_hand=None):
     """Deassert `not_os_running` (high) signal."""
@@ -769,7 +769,7 @@ def pps_ok_led_toggle(dev_hand=None):
     led = LED.PPS_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!===========================================================================
 
 def modem_led_off(dev_hand=None):
 
@@ -786,7 +786,7 @@ def modem_led_toggle(dev_hand=None):
     led = LED.Modem_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!===========================================================================
 
 def weather_led_off(dev_hand=None):
 
@@ -803,7 +803,7 @@ def weather_led_toggle(dev_hand=None):
     led = LED.Weather_Station_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!===========================================================================
 
 def power_led_off(dev_hand=None):
 
@@ -890,9 +890,9 @@ def debug_led_toggle(dev_hand=None):
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 
-##===========================================================================
-##  module test.
-##===========================================================================
+#!===========================================================================
+#!  module test.
+#!===========================================================================
 
 def main():
     '''Main entry if this module is executed from the command line.'''
@@ -933,7 +933,7 @@ def main():
     led_seq += led_seq[1:-1][::-1]
     for count, led in enumerate(led_seq * 10):
         ##
-        ## Cycle LEDs.
+        #! Cycle LEDs.
         ##
         on = led & LED.All
         off = ~on & LED.All
@@ -945,7 +945,7 @@ def main():
         leds_modify(on, off, dev_hand=dev_hand)
 
         ##
-        ## Cycle Modem control.
+        #! Cycle Modem control.
         ##
         on = 0
         c = (count >> 2) & Control.All
@@ -964,9 +964,9 @@ def main():
 
     dev_hand.close()
 
-##===========================================================================
-##  Check if running this module, rather than importing it.
-##===========================================================================
+#!===========================================================================
+#!  Check if running this module, rather than importing it.
+#!===========================================================================
 
 if __name__ == "__main__":
     main()
