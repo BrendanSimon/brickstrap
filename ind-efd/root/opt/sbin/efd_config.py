@@ -21,7 +21,7 @@ class Config(object):
     #! Default values.  Can be overridden by settings file or command line.
     #!
 
-    version_str = '0.9.1+BB#89'
+    version_str = '0.10.0-dev'
 
     serial_number = '0'
 
