@@ -116,11 +116,12 @@ class Cloud(object):
     def post_ping(self):
         '''Post measurements data to the cloud service.'''
 
-        try:
-            r = requests.get(self.config.web_server_ping, timeout=5)
-        except Exception as exc:
-            print(repr(exc))
-            print(traceback.format_exc())
+        for uri in self.config.efd_ping_uris:
+            try:
+                r = requests.get(uri, timeout=5)
+            except Exception as exc:
+                print(repr(exc))
+                print(traceback.format_exc())
 
     #!------------------------------------------------------------------------
 
@@ -265,7 +266,8 @@ def main():
     #!--------------------------------
 
     class Config:
-        web_server_ping = 'http://portal.efdweb.com/api/Ping/0/'
+        efd_ping_servers = ['http://portal.efdweb.com']
+        efd_ping_uris = ['http://portal.efdweb.com/api/Ping/0/']
 
         web_server_measurements_log = 'http://portal.efdweb.com/api/AddEFDLog/0/'
 

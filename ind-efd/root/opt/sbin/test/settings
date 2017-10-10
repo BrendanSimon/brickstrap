@@ -2,27 +2,31 @@
 #! Settings file for efd_app
 #!============================================================================
 
-SERIAL_NUMBER="0"
+SERIAL_NUMBER="EFD-0000"
 
-SITE_NAME="Unit-Test"
+SITE_NAME="EFD-0000"
+
+HOSTNAME="EFD-0000"
 
 PD_EVENT_TRIGGER_VOLTAGE=0.1
 
 PD_EVENT_REPORTING_INTERVAL=300
 
 #REPORTING_SMS_PHONE_NUMBERS=""
-#REPORTING_SMS_PHONE_NUMBERS="+61417000000", "+61417000000"
+#REPORTING_SMS_PHONE_NUMBERS="+61417000000","+61417000000"
 REPORTING_SMS_PHONE_NUMBERS="+61470000000",
 
 #! Server to ping to check internet connection is ok.
 PING_SERVER="203.14.0.251"
 
-#WEB_SERVER="http://efd.sepl.com.au"
+WEB_SERVER="http://www.efd-portal.com.au:81"
+
+#EFD_PING_SERVERS="http://www.efd-portal.com.au:81 http://portal.efdweb.com"
+EFD_PING_SERVERS="http://portal.efdweb.com"
 
 TIMEZONE="Australia/Melbourne"
 
-#! Set the web server address for posting data.
-#WEB_SERVER="http://portal.efdweb.com"
+ETH0_MAC_ADDRESS="00:0a:35:EF:00:00"
 
 #! Append gps, battery voltage, solar voltage and box temperature to measurements log.
 #! NOTE: this is for testing the new web server that IND are developing !!
@@ -30,3 +34,4 @@ TIMEZONE="Australia/Melbourne"
 APPEND_GPS_DATA_TO_MEASUREMENTS_LOG=1
 
 #!============================================================================
+

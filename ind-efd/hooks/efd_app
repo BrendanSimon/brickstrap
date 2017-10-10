@@ -14,5 +14,7 @@
 ##  i.e. /opt/bin/settings.py -> /mnt/data/etc/settings
 ##
 
-ln -sf /mnt/data/etc/settings ${ROOTDIR}/opt/sbin/settings.py
+ln -sf /mnt/data/etc/settings ${ROOTDIR}/opt/sbin/settings
+ln -sf settings ${ROOTDIR}/opt/sbin/settings.py
+ln -sf settings ${ROOTDIR}/opt/sbin/test/settings.py
 

@@ -30,9 +30,10 @@ class Config(object):
     pd_event_reporting_interval = 5 * 60            #! report PD events every 5 minutes (minimum interval)
     reporting_sms_phone_numbers = []                #! empty list of phone numbers.
 
-    web_server = 'http://portal.efdweb.com'
+    efd_ping_servers = ['http://portal.efdweb.com']
+    efd_ping_api = 'api/Ping'
 
-    web_server_ping = '{ws}/api/Ping/{sn}/'.format(ws=web_server, sn=serial_number)
+    web_server = 'http://portal.efdweb.com'
     web_server_measurements_log = '{ws}/api/AddEFDLog/{sn}/'.format(ws=web_server, sn=serial_number)
 
     num_channels = 3
@@ -139,7 +140,7 @@ class Config(object):
     def __init__(self):
         self.read_settings_file()
 
-
+        self.set_efd_ping_uris()
         self.set_web_uris()
 
     ##========================================================================
@@ -155,6 +156,7 @@ class Config(object):
         self.reporting_sms_phone_numbers            = list(  getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',        self.reporting_sms_phone_numbers) )
         self.pd_event_trigger_voltage               = float( getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',           self.pd_event_trigger_voltage) )
         self.pd_event_reporting_interval            = int(   getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',        self.pd_event_reporting_interval) )
+        self.efd_ping_servers                       = list(  getattr(settings, 'EFD_PING_SERVERS',                   self.efd_ping_servers) )
         self.web_server                             =        getattr(settings, 'WEB_SERVER',                         self.web_server)
         self.timezone                               =        getattr(settings, 'TIMEZONE',                           self.timezone)
         self.append_gps_data_to_measurements_log    = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
@@ -162,15 +164,24 @@ class Config(object):
         self.set_capture_count()
         self.set_fft_size()
         #self.set_serial_number()
+        self.set_efd_ping_uris()
         self.set_web_uris()
         self.set_measurements_log_field_names()
+
+    #!========================================================================
+
+    def set_efd_ping_uris(self):
+
+        self.efd_ping_uris.append = []
+        for server in self.efd_ping_servers:
+            uri = '{eps}/{epa}/{sn}/'.format(eps=server, epa=self.efd_ping_api, sn=self.serial_number)
+            self.efd_ping_uris.append(uri)
 
     #!========================================================================
 
     def set_web_uris(self):
 
         if self.web_server:
-            self.web_server_ping                = '{ws}/api/Ping/{sn}/'.format(ws=self.web_server, sn=self.serial_number)
             self.web_server_measurements_log    = '{ws}/api/AddEFDLog/{sn}/'.format(ws=self.web_server, sn=self.serial_number)
 
     #!========================================================================
@@ -278,9 +289,10 @@ class Config(object):
         print("serial_number = {}".format(self.serial_number))
         print("site_name = {}".format(self.site_name))
 
-        print("web_server = {}".format(self.web_server))
+        print("efd_ping_servers = {}".format(self.efd_ping_servers))
+        print("efd_ping_uris = {}".format(self.efd_ping_uris))
 
-        print("web_server_ping = {}".format(self.web_server_ping))
+        print("web_server = {}".format(self.web_server))
         print("web_server_measurements_log = {}".format(self.web_server_measurements_log))
 
         print("num_channels = {}".format(self.num_channels))
