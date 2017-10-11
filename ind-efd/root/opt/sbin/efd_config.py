@@ -73,7 +73,7 @@ class Config(object):
     capture_index_offset_wht = total_count
     capture_index_offset_blu = total_count * 2
 
-    fft_size = 1 << 16      #! 65,536 fft points
+    fft_size = 1 << 8      #! 256 bins.  Was 1 << 16 (65,536)
     fft_size_half = fft_size >> 1
 
     show_phase_arrays = False
@@ -160,6 +160,7 @@ class Config(object):
         self.web_server                             =        getattr(settings, 'WEB_SERVER',                         self.web_server)
         self.timezone                               =        getattr(settings, 'TIMEZONE',                           self.timezone)
         self.append_gps_data_to_measurements_log    = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
+        self.fft_size                               = int(   getattr(settings, 'FFT_SIZE',                           self.fft_size) )
 
         self.set_capture_count()
         self.set_fft_size()

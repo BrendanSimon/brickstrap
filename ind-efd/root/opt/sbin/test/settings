@@ -26,6 +26,8 @@ EFD_PING_SERVERS="http://portal.efdweb.com"
 
 TIMEZONE="Australia/Melbourne"
 
+#FFT_SIZE=1024
+
 ETH0_MAC_ADDRESS="00:0a:35:EF:00:00"
 
 #! Append gps, battery voltage, solar voltage and box temperature to measurements log.
