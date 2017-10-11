@@ -172,7 +172,7 @@ class Config(object):
 
     def set_efd_ping_uris(self):
 
-        self.efd_ping_uris.append = []
+        self.efd_ping_uris = []
         for server in self.efd_ping_servers:
             uri = '{eps}/{epa}/{sn}/'.format(eps=server, epa=self.efd_ping_api, sn=self.serial_number)
             self.efd_ping_uris.append(uri)
