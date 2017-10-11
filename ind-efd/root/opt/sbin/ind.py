@@ -430,7 +430,7 @@ def fpga_reset(dev_hand=None):
 def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
 
-    print("DEBUG: leds_modify: on=0x{:08X}, off=0x{:08X}, toggle=0x{:08X}".format(on, off, toggle))
+    #print("DEBUG: leds_modify: on=0x{:08X}, off=0x{:08X}, toggle=0x{:08X}".format(on, off, toggle))
 
     if (on & off):
         raise ValueError("'on' and 'off' arguments have conflicting bit(s) set (on=0x{:08X} off=0x{:08X} bits=0x{:08X})".format(on, off, (on & off)))
@@ -448,7 +448,7 @@ def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
         dev_hand = get_device_handle()
 
     try:
-        print("DEBUG: modifying LEDS '{!r}'".format(bits))
+        #print("DEBUG: modifying LEDS '{!r}'".format(bits))
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_MODIFY_LEDS, bits)
     except:
         print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
