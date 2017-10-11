@@ -5,8 +5,7 @@
 ##
 
 ## Read user settings file.
-#source /mnt/data/etc/settings
-source settings
+source /mnt/data/etc/settings
 
 efd_ping_servers="${EFD_PING_SERVERS:-http://portal.efdweb.com}"
 
