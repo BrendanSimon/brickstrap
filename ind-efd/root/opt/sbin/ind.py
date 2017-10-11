@@ -55,13 +55,22 @@ class Config(IntEnum):
     ADC_Test_Data           = 1 << 5
     PPS_Debug_Mode          = 1 << 6
     DMA_Debug_Mode          = 1 << 7
-    Debug_Select_Active     = 1 << 11
     Debug_Select_Ch_0       = 0
     Debug_Select_Ch_1       = 1 << 8
-    Debug_Select_Ch_2       = 1 << 9
-    Debug_Select_Ch_Off     = 1 << 10
+    Debug_Select_Ch_2       = 2 << 8
+    Debug_Select_Ch_Off     = 3 << 8
+    Debug_Select_Active     = 1 << 11
     Unsigned_Data           = 0
     Signed_Data             = 1 << 12
+
+    All                     = PPS_Generate \
+                            | Debug_DMA_Start | DMA_Halt | DMA_Reset \
+                            | FPGA_Reset | ADC_Test_Data \
+                            | PPS_Debug_Mode | DMA_Debug_Mode \
+                            | Debug_Select_Ch_0 | Debug_Select_Ch_1 \
+                            | Debug_Select_Ch_2 | Debug_Select_Ch_Off \
+                            | Debug_Select_Active \
+                            | Unsigned_Data | Signed_Data
 
     Mode_Normal             = 0
     Mode_DMA_Debug          = DMA_Debug_Mode
@@ -232,14 +241,14 @@ class LED_1(IntEnum):
     Debug2                  = 1 << 30
     Debug3                  = 1 << 30   ## FIXME !!
 
-    Spare                   = Spare_3G | Spare2_3G     ## Use both bits so works with IND1 and IND2 boards.
-
     All                     = Running | Alert | Spare_3G | PPS_OK           \
                             | Modem_OK | Weather_Station_OK                 \
                             | Battery_OK | Power_OK                         \
                             | Spare1_3G | Spare2_3G | Spare3_3G | Spare4_3G \
                             | Spare1_RF | Spare2_RF | Spare3_RF | Spare4_RF \
                             | Debug0 | Debug1 | Debug2 | Debug3             \
+
+    Spare                   = Spare_3G | Spare2_3G     ## Use both bits so works with IND1 and IND2 boards.
 
 class LED_2(IntEnum):
 ## IND2 Kutu assignments
@@ -267,14 +276,14 @@ class LED_2(IntEnum):
     Power_OK                = 1 << 15
     PPS_OK                  = 1 << 16
 
-    Spare                   = Spare2_3G
-
     All                     = Debug0 | Debug1 | Debug2 | Debug3             \
                             | Spare1_3G | Spare2_3G | Spare3_3G | Spare4_3G \
                             | Spare1_RF | Spare2_RF | Spare3_RF | Spare4_RF \
                             | Modem_OK | Weather_Station_OK                 \
                             | Battery_OK | Power_OK                         \
                             | PPS_OK
+
+    Spare                   = Spare2_3G
 
 
 #=============================================================================
