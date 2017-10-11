@@ -1,5 +1,11 @@
 """IND Driver Module."""
 
+## Set to the FPGA register mapping variant.
+## Should only need original API version, once IND2 FPGA is made
+## to conform with the original IND1 API.
+IND_FPGA_API = 1
+#IND_FPGA_API = 2
+
 from enum import IntEnum
 
 import ioctl
@@ -35,9 +41,11 @@ assert(max_capture_size <= mmap_memory_size)
 #!  Should the driver interface be a separate module?
 #!===========================================================================
 
+#=============================================================================
 #!
 #! Config Constants
 #!
+#=============================================================================
 class Config(IntEnum):
     PPS_Generate            = 1 << 0
     Debug_DMA_Start         = 1 << 1
@@ -79,18 +87,23 @@ class Config(IntEnum):
     Peak_Start_Disable      = 0x00FFFFFF
     Peak_Stop_Disable       = 0x00FFFFFF
 
+
+#=============================================================================
 #!
 #! Cmd Interrupt Constants
 #!
+#=============================================================================
 class Interrupt(IntEnum):
     Disable     = 0
     Enable      = 1 << 0
 
-
+#=============================================================================
 #!
 #! Status Register Constants
 #!
-class Status(IntEnum):
+#=============================================================================
+
+class Status_1(IntEnum):
     SPI_Busy                = 1 << 0
     S2MM_Error              = 1 << 1
     MM2S_Read_Complete      = 1 << 2        #! What is this ??
@@ -104,19 +117,30 @@ class Status(IntEnum):
     DMA_Debug               = 1 << 10
     Interrupt_Enable        = 1 << 11
 
-## IND1 (are they used?)
-#     Battery_Low             = 1 << 12
-#     AC_Power                = 1 << 13
+    Battery_Low             = 1 << 12
+    AC_Power                = 1 << 13
+    Not_Restart_Request     = 1 << 14       ## PM MCU has requested a restart
+    Not_Shutdown_Request    = 1 << 15       ## PM MCU has requested a shutdown
 
-## IND2 BJS assignments
-#     Not_Restart_Req         = 1 << 17       ## PM MCU has requested a restart
-#     Not_Shutdown_Req        = 1 << 18       ## PM MCU has requested a shutdown
-#
-#     All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error               \
-#                             | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test                  \
-#                             | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable                  \
-#                             | Battery_Low | AC_Power                                                \
-#                             | Not_Restart_Req | Not_Shutdown_Req
+    All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error   \
+                            | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test      \
+                            | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable      \
+                            | Battery_Low | AC_Power                                    \
+                            | Not_Restart_Request | Not_Shutdown_Request
+
+class Status_2(IntEnum):
+    SPI_Busy                = 1 << 0
+    S2MM_Error              = 1 << 1
+    MM2S_Read_Complete      = 1 << 2        #! What is this ??
+    MM2S_Error              = 1 << 3
+    SPI_Error               = 1 << 4
+    Interrupt_Active        = 1 << 5
+    FPGA_Reset              = 1 << 6
+    ADC_Test                = 1 << 7
+    PPS_Debug               = 1 << 8
+    DMA_Reset               = 1 << 9
+    DMA_Debug               = 1 << 10
+    Interrupt_Enable        = 1 << 11
 
 ## IND2 Kutu assignments
 ## FIXME: these are probably wrong !!
@@ -125,8 +149,12 @@ class Status(IntEnum):
     Battery_OK              = 1 << 14
     Power_OK                = 1 << 15
     PPS_OK                  = 1 << 16
+
     Not_Restart_Request     = 1 << 17
     Not_Shutdown_Request    = 1 << 18
+
+    Battery_Low             = 1 << 19       ## FIXME: not sure if this is correct !!
+    AC_Power                = 1 << 20       ## FIXME: not sure if this is correct !!
 
     All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error   \
                             | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test      \
@@ -136,45 +164,84 @@ class Status(IntEnum):
                             | PPS_OK                                                    \
                             | Not_Restart_Request | Not_Shutdown_Request
 
+#=============================================================================
 #!
 #! Control Register Constants
 #!
-class Control(IntEnum):
+#=============================================================================
+
+class Control_1(IntEnum):
     Modem_Reset             = 1 << 0
     Modem_Power             = 1 << 1
     EN_Select               = 1 << 2        #! What is this ??
+
+    Not_OS_Running          = 1 << 3        ## output low to indicate to PM MCU that we are up and running ok
+    Not_Spare_MCU           = 1 << 4        ## a spare signal to PM MCU (could be input or output)?
+
+    All                     = Modem_Reset | Modem_Power | EN_Select     \
+                            | Not_OS_Running | Not_Spare_MCU
+
+class Control_2(IntEnum):
+    Modem_Reset             = 1 << 0
+    Modem_Power             = 1 << 1
+    EN_Select               = 1 << 2        #! What is this ??
+
+    Not_OS_Running          = 1 << 3        ## output low to indicate to PM MCU that we are up and running ok
+    Not_Spare_MCU           = 1 << 4        ## a spare signal to PM MCU (could be input or output)?
+
+    All                     = Modem_Reset | Modem_Power | EN_Select     \
+                            | Not_OS_Running | Not_Spare_MCU
 
 ## IND2 Kutu assignments (FIXME) !!
     Running                 = 1 << 3
     Alert                   = 1 << 4
     Not_OS_Running          = 1 << 5        ## output low to indicate to PM MCU that we are up and running ok
 
-
-## IND2 BJS assignments (FIXME) !!
-#     Not_OS_Running          = 1 << 16       ## output low to indicate to PM MCU that we are up and running ok
-    Not_Spare_MCU           = 1 << 19       ## a spare signal to PM MCU (could be input or output)?
-
     All                     = Modem_Reset | Modem_Power | EN_Select     \
                             | Running | Alert                           \
                             | Not_OS_Running | Not_Spare_MCU
 
-
+#=============================================================================
 #!
 #! IOCTL LED Constants
 #!
-class LED(IntEnum):
-## IND1 assignments
-#     Running                 = 1 << 0
-#     Alert                   = 1 << 1
-#     Spare_3G                = 1 << 2
-#     PPS_OK                  = 1 << 3
-#     Modem_OK                = 1 << 4
-#     Weather_Station_OK      = 1 << 5
-#     #Power_OK                = 1 << 6
-#     #Battery_OK              = 1 << 7
-#
-#     All                     = Running | Alert | Spare | PPS_OK | Modem_OK | Weather_Station_OK
+#=============================================================================
 
+class LED_1(IntEnum):
+## IND1 assignments
+    Running                 = 1 << 0
+    Alert                   = 1 << 1
+    Spare_3G                = 1 << 2        ## IND1 Spare LED on 3G board.
+    PPS_OK                  = 1 << 3
+    Modem_OK                = 1 << 4
+    Weather_Station_OK      = 1 << 5
+    Power_OK                = 1 << 6
+    Battery_OK              = 1 << 7
+
+    Spare1_3G               = 1 << 8
+    Spare2_3G               = 1 << 9        ## IND2 Spare LED on 3G board.
+    Spare3_3G               = 1 << 10
+    Spare4_3G               = 1 << 11
+    Spare1_RF               = 1 << 12
+    Spare2_RF               = 1 << 13
+    Spare3_RF               = 1 << 14
+    Spare4_RF               = 1 << 15
+
+    Debug0                  = 1 << 28
+    Debug1                  = 1 << 29
+    Debug2                  = 1 << 30
+    Debug3                  = 1 << 30   ## FIXME !!
+
+    Spare                   = Spare_3G | Spare2_3G     ## Use both bits so works with IND1 and IND2 boards.
+
+    All                     = Running | Alert | Spare_3G | PPS_OK           \
+                            | Modem_OK | Weather_Station_OK                 \
+                            | Battery_OK | Power_OK                         \
+                            | Spare1_3G | Spare2_3G | Spare3_3G | Spare4_3G \
+                            | Spare1_RF | Spare2_RF | Spare3_RF | Spare4_RF \
+                            | Debug0 | Debug1 | Debug2 | Debug3             \
+
+class LED_2(IntEnum):
 ## IND2 Kutu assignments
 #     Running                 = 0             ##FIXME: currently in Control reg !!
 #     Alert                   = 0             ##FIXME: currently in Control reg !!
@@ -200,7 +267,7 @@ class LED(IntEnum):
     Power_OK                = 1 << 15
     PPS_OK                  = 1 << 16
 
-    Spare_3G                = Spare2_3G     ## IND2 Spare LED signal (on 3G board) mapped to Spare2 (FIXME: until mapped back to bit 2 !!)
+    Spare                   = Spare2_3G
 
     All                     = Debug0 | Debug1 | Debug2 | Debug3             \
                             | Spare1_3G | Spare2_3G | Spare3_3G | Spare4_3G \
@@ -208,6 +275,25 @@ class LED(IntEnum):
                             | Modem_OK | Weather_Station_OK                 \
                             | Battery_OK | Power_OK                         \
                             | PPS_OK
+
+
+#=============================================================================
+#! Map classes based on selected version of FPGA.
+#! There may be a way of doing this dynamically by reading the FPGA version register.
+#=============================================================================
+
+if IND_FPGA_API == 1:
+    Status = Status_1
+    Control = Control_1
+    LED = LED_1
+elif IND_FPGA_API == 2:
+    Status = Status_2
+    Control = Control_2
+    LED = LED_2
+else:
+    raise Exception("Invalid value for `IND_FPGA_API`")
+
+#=============================================================================
 
 class cmd_struct(ctypes.Structure):
     _fields_ = [
@@ -274,9 +360,11 @@ class debug_struct(ctypes.Structure):
     ]
 
 
+#=============================================================================
 #!
 #! IOCTL Command Constants
 #!
+#=============================================================================
 
 IOCTL_BASE = ord('t')
 
@@ -342,7 +430,7 @@ def fpga_reset(dev_hand=None):
 def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     '''Modify LEDs by setting bits (on) and clearing bits (off).'''
 
-    #print("DEBUG: leds_modify: on=0x{:08X}, off=0x{:08X}, toggle=0x{:08X}".format(on, off, toggle))
+    print("DEBUG: leds_modify: on=0x{:08X}, off=0x{:08X}, toggle=0x{:08X}".format(on, off, toggle))
 
     if (on & off):
         raise ValueError("'on' and 'off' arguments have conflicting bit(s) set (on=0x{:08X} off=0x{:08X} bits=0x{:08X})".format(on, off, (on & off)))
@@ -360,7 +448,7 @@ def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
         dev_hand = get_device_handle()
 
     try:
-        #print("DEBUG: modifying LEDS '{!r}'".format(bits))
+        print("DEBUG: modifying LEDS '{!r}'".format(bits))
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_MODIFY_LEDS, bits)
     except:
         print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
@@ -698,59 +786,59 @@ def power_os_running_set(value=None, dev_hand=None):
 
 def running_led_off(dev_hand=None):
 
-## IND1
-#     led = LED.Running
-#     leds_modify(off=led, dev_hand=dev_hand)
-## IND2
-    led = Control.Running
-    ctrl_modify(clear=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 1:
+        led = LED.Running
+        leds_modify(off=led, dev_hand=dev_hand)
+    elif IND_FPGA_API == 2:
+        led = Control.Running
+        ctrl_modify(clear=led, dev_hand=dev_hand)
 
 def running_led_on(dev_hand=None):
 
-## IND1
-#     led = LED.Running
-#     leds_modify(on=led, dev_hand=dev_hand)
-## IND2
-    led = Control.Running
-    ctrl_modify(set=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 1:
+        led = LED.Running
+        leds_modify(on=led, dev_hand=dev_hand)
+    elif IND_FPGA_API == 2:
+        led = Control.Running
+        ctrl_modify(set=led, dev_hand=dev_hand)
 
 def running_led_toggle(dev_hand=None):
 
-## IND1
-#     led = LED.Running
-#     leds_modify(toggle=led, dev_hand=dev_hand)
-## IND2
-    led = Control.Running
-    ctrl_modify(toggle=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 1:
+        led = LED.Running
+        leds_modify(toggle=led, dev_hand=dev_hand)
+    elif IND_FPGA_API == 2:
+        led = Control.Running
+        ctrl_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
 def alert_led_off(dev_hand=None):
 
-## IND1
-#     led = LED.Alert
-#     leds_modify(off=led, dev_hand=dev_hand)
-## IND2
-    led = Control.Alert
-    ctrl_modify(clear=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 1:
+        led = LED.Alert
+        leds_modify(off=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 2:
+        led = Control.Alert
+        ctrl_modify(clear=led, dev_hand=dev_hand)
 
 def alert_led_on(dev_hand=None):
 
-## IND1
-#     led = LED.Alert
-#     leds_modify(on=led, dev_hand=dev_hand)
-## IND2
-    led = Control.Alert
-    ctrl_modify(set=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 1:
+        led = LED.Alert
+        leds_modify(on=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 2:
+        led = Control.Alert
+        ctrl_modify(set=led, dev_hand=dev_hand)
 
 def alert_led_toggle(dev_hand=None):
 
-## IND1
-#     led = LED.Alert
-#     leds_modify(toggle=led, dev_hand=dev_hand)
-## IND2
-    led = Control.Alert
-    ctrl_modify(toggle=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 1:
+        led = LED.Alert
+        leds_modify(toggle=led, dev_hand=dev_hand)
+    if IND_FPGA_API == 2:
+        led = Control.Alert
+        ctrl_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
 
@@ -859,17 +947,17 @@ def battery_led_toggle(dev_hand=None):
 
 def spare_led_off(dev_hand=None):
 
-    led = LED.Spare_3G
+    led = LED.Spare
     leds_modify(off=led, dev_hand=dev_hand)
 
 def spare_led_on(dev_hand=None):
 
-    led = LED.Spare_3G
+    led = LED.Spare
     leds_modify(on=led, dev_hand=dev_hand)
 
 def spare_led_toggle(dev_hand=None):
 
-    led = LED.Spare_3G
+    led = LED.Spare
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 ##----------------------------------------------------------------------------
@@ -877,16 +965,19 @@ def spare_led_toggle(dev_hand=None):
 def debug_led_off(dev_hand=None):
 
     led = LED.Debug1
+    led = 0xFFFFFFFF
     leds_modify(off=led, dev_hand=dev_hand)
 
 def debug_led_on(dev_hand=None):
 
     led = LED.Debug1
+    led = 0xFFFFFFFF
     leds_modify(on=led, dev_hand=dev_hand)
 
 def debug_led_toggle(dev_hand=None):
 
     led = LED.Debug1
+    led = 0xFFFFFFFF
     leds_modify(toggle=led, dev_hand=dev_hand)
 
 
@@ -929,7 +1020,7 @@ def main():
         raise
 
     #led_seq = [ LED.Battery_OK, LED.Power_OK, LED.PPS_OK, LED.Running,
-    led_seq = [ LED.PPS_OK, LED.Running, LED.Modem_OK, LED.Alert, LED.Weather_Station_OK, LED.Spare_3G ]
+    led_seq = [ LED.PPS_OK, LED.Running, LED.Modem_OK, LED.Alert, LED.Weather_Station_OK, LED.Spare ]
     led_seq += led_seq[1:-1][::-1]
     for count, led in enumerate(led_seq * 10):
         ##
