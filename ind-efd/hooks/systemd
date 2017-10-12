@@ -81,3 +81,6 @@ $CHROOTBINDCMD systemctl enable sepl-shutdown.service
 ## Enable serial getty (login prompt) on /dev/ttyS1 (XBEE port).
 $CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
 
+## Disable logging of RF Sysytem status (Modem, GPS)
+$CHROOTBINDCMD systemctl disable efd-rf-status.service
+

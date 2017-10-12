@@ -1,0 +1,12 @@
+[Unit]
+Description=Log Status of RF systems (Modem, GPS)
+After=network.target auditd.service
+
+[Service]
+ExecStart=/opt/sbin/efd_rf_status.py
+KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
