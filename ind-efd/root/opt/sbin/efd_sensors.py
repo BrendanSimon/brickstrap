@@ -29,8 +29,13 @@ class Sensor(object):
         self.scale = scale
         
     def read(self):
-        return self.sensor.get_value() * self.scale
-        
+        try:
+            value = self.sensor.get_value() * self.scale
+        except sensors.SensorsError as ex:
+            #print("SensorsError: {!r}".format(ex.message))
+            value = 0.0
+        return value
+
 #!============================================================================
 
 class Sensors(object):
@@ -68,10 +73,16 @@ class Sensors(object):
                     self.supply_sensor = Sensor(feature, scale=self.supp_scale)
         
     def battery_voltage(self):
-        return self.battery_sensor.read()
+        value = 0.0
+        if self.battery_sensor:
+            value = self.battery_sensor.read()
+        return value
         
     def supply_voltage(self):
-        return self.supply_sensor.read()
+        value = 0.0
+        if self.supply_sensor:
+            value = self.supply_sensor.read()
+        return value
 
     ## note: the solar variant has it's voltage terminals accross the
     ## note: battery.  i.e. it's the same value as the battery voltage.
@@ -79,14 +90,16 @@ class Sensors(object):
         return self.battery_voltage()
         
     def box_temperature(self):
-        return self.box_temperature_sensor.read()
+        value = 0.0
+        if self.box_temperature_sensor:
+            value = self.box_temperature_sensor.read()
+        return value
         
 #!============================================================================
 
 def app_main():
     """Main entry if running this module directly."""
 
-    print(__name__)
     sensors = Sensors()
     #sensors.init()
     
