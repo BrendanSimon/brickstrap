@@ -46,6 +46,6 @@ fi
 ##
 ## Setup device-tree symlink.
 ##
-dtb=zynq-IND.dtb
+dtb=zynq-IND2.dtb
 ln -sf ${dtb} ${ROOTDIR}/boot/ind.dtb
 
