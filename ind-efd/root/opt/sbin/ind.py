@@ -743,23 +743,29 @@ def power_restart_requested(status=None, dev_hand=None):
     """
     Check if Restart Request is asserted from Power Management MCU.
     status [IN] -- is a raw status value.  If None, status will be fetched.
+    Check Shutdown Request is not asserted (allows main board to run with out PMU board attached, as both signals may be floating depending on FPGA config)
     """
     if status == None:
         status = status_get(dev_hand)
 
-    value = (status & Status.Not_Restart_Request) == 0
-    return value
+    shutdown = (status & Status.Not_Shutdown_Request) == 0
+    restart  = (status & Status.Not_Restart_Request) == 0
+    result   = restart and not shutdown
+    return result
 
 def power_shutdown_requested(status=None, dev_hand=None):
     """
     Check if Shutdown Request is asserted from Power Management MCU.
     status [IN] -- is a raw status value.  If None, status will be fetched.
+    Check Restart Request is not asserted (allows main board to run with out PMU board attached, as both signals may be floating depending on FPGA config)
     """
     if status == None:
         status = status_get(dev_hand)
 
-    value = (status & Status.Not_Shutdown_Request) == 0
-    return value
+    shutdown = (status & Status.Not_Shutdown_Request) == 0
+    restart  = (status & Status.Not_Restart_Request) == 0
+    result   = shutdown and not restart
+    return result
 
 #!===========================================================================
 
