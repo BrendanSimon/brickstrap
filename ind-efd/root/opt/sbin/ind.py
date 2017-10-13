@@ -995,6 +995,32 @@ def debug_led_toggle(dev_hand=None):
     led = 0xFFFFFFFF
     leds_modify(toggle=led, dev_hand=dev_hand)
 
+##----------------------------------------------------------------------------
+
+def blinky(count=0, delay=0.1, dev_hand=None):
+    """Cycle through all the LEDs."""
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    led_seq = [ LED.Battery_OK, LED.Power_OK, LED.PPS_OK,
+                LED.Running, LED.Modem_OK, LED.Alert,
+                LED.Weather_Station_OK, LED.Spare ]
+
+    ## append leds in reverse order, omitting end LEDs.
+    led_seq += list(reversed(led_seq[1:-1]))
+
+    remaining = 1 if count == 0 else count
+    while remaining:
+        for i, led in enumerate(led_seq):
+            on = led & LED.All
+            off = ~led & LED.All
+            leds_modify(on=on, off=off, dev_hand=dev_hand)
+            time.sleep(delay)
+        if count > 0:
+            remaining -= 1
+
+    leds_modify(on=0, off=LED.All, dev_hand=dev_hand)
 
 #!===========================================================================
 #!  module test.
