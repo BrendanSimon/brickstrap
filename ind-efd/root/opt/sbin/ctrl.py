@@ -20,13 +20,13 @@ DEBUG = False
 
 def clear(mask=0):
     """Clear (set to logic 0) the Control Bits specified by MASK."""
-    ind.ctrl_modify(off=mask)
+    ind.ctrl_modify(clear=mask)
 
 ##----------------------------------------------------------------------------
 
 def set(mask=0):
     """Set (set to logic 1) the Control Bits specified by MASK."""
-    ind.ctrl_modify(on=mask)
+    ind.ctrl_modify(set=mask)
 
 ##----------------------------------------------------------------------------
 
