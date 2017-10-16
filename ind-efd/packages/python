@@ -8,4 +8,5 @@ python-requests
 python-arrow
 python-dbus
 python-argh
+python-colorama
 
