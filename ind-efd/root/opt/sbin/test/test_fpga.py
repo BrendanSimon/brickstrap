@@ -1080,7 +1080,7 @@ config.show_capture_buffers = True
 
 ##############################################################################
 
-def app_main(capture_count=0, pps_mode=True):
+def app_main(capture_count=0, pps_mode=True, debug=False):
     """Main entry if running this module directly."""
 
     if capture_count:
@@ -1090,6 +1090,12 @@ def app_main(capture_count=0, pps_mode=True):
     if not pps_mode:
         config.set_capture_mode('manual')
         print("INFO: capture_mode set to {}".format(config.capture_mode))
+
+    if debug:
+        config.peak_detect_numpy_debug      = True
+        config.peak_detect_fpga_debug       = True
+        config.peak_detect_fpga_fix_debug   = True
+        config.peak_detection_debug         = True
 
     config.show_all()
 
