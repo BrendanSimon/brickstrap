@@ -300,11 +300,14 @@ class Production_Test_App(object):
             print("DEBUG: peak_max_blu = {!r}".format(peak_max_blu))
             print("DEBUG: peak_min_blu = {!r}".format(peak_min_blu))
 
-        ## For 10Vpp 1MHz sine input, max is ~ +18000, min is ~ -14000
-        ## For 5V 25Hz 1%duty pulse input, max is ~ +17700, min is ~ -15900
-        exp_max = 17700
-        exp_min = -15900
-        tolerance = int(exp_max * 0.02)
+        ## Digilent Analog Discovery 2:
+        ##   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
+        ##   5V 25Hz 1%duty pulse input => max is ~ +17700, min is ~ -15900
+        ## RIGOL DG1022 Signal Geneertor:
+        ##   5V 25Hz 1%duty pulse input => max is ~ +19200, min is ~ -18800
+        exp_max = 19200
+        exp_min = -18800
+        tolerance = int(exp_max * 0.05)
 
         exp_max_lo = exp_max - tolerance
         exp_max_hi = exp_max + tolerance
