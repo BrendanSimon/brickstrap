@@ -28,10 +28,6 @@ function add-admin()
     local username=$1
     local groups="sudo,root,adm,utmp"
 
-    ## Add path for EFD executables.
-    $CHROOTCMD bash -c "echo >> /home/${username}/.profile"
-    $CHROOTCMD bash -c "echo 'PATH=\$PATH:/opt/sbin' >> /home/${username}/.profile"
-
     #check-user-exists ${username}
 
     ret=$(add-user ${username})
@@ -44,7 +40,8 @@ function add-admin()
     $CHROOTCMD usermod -a -G ${groups} ${username}
 
     ## Add path for EFD executables.
-    $CHROOTCMD echo "\nPATH=$PATH:/opt/sbin" '>>' "/home/${username}/.profile"
+    $CHROOTCMD bash -c "echo >> /home/${username}/.profile"
+    $CHROOTCMD bash -c "echo 'PATH=\$PATH:/opt/sbin' >> /home/${username}/.profile"
 }
 
 #$CHROOTCMD adduser --disabled-password --gecos \"\" brendan
