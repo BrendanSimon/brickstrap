@@ -22,9 +22,12 @@ import subprocess
 import colorama
 from colorama import Fore as FG, Back as BG, Style as ST
 
+#sys.path.insert(1, '/opt/sbin')
 #sys.path.insert(1, '/mnt/data/etc')
+sys.path.append('.')
 sys.path.append('..')
-#sys.path.append('.')
+sys.path.append('/opt/sbin')
+sys.path.append('/mnt/data/etc')
 
 import ind
 from settings import SERIAL_NUMBER
@@ -34,13 +37,18 @@ from efd_config import Config
 
 class Production_Test_App(object):
 
+    error_count = 0
+    pass_count = 0
+
     ##------------------------------------------------------------------------
 
     def error(self, msg):
         print(FG.RED + "ERROR: " + msg + "\n")
+        self.error_count += 1
 
     def passed(self, msg):
         print(FG.GREEN + "PASS: " + msg + "\n")
+        self.pass_count += 1
 
     ##------------------------------------------------------------------------
 
@@ -72,13 +80,13 @@ class Production_Test_App(object):
 
     ##------------------------------------------------------------------------
 
-    def banner_end(self, err_count):
+    def banner_end(self):
         timestamp = arrow.now()
         self.end_timestamp = timestamp
         self.end_timestamp_str = timestamp.format("YYYY-MM-DD hh:mm:ss")
 
         color = FG.YELLOW
-        err_color = FG.GREEN if err_count == 0 else FG.RED
+        err_color = FG.GREEN if self.error_count == 0 else FG.RED
 
         banner = color \
                 + "======================================================\n" \
@@ -87,7 +95,7 @@ class Production_Test_App(object):
                 + "ended:   {}\n".format(self.end_timestamp_str) \
                 + "serial number: {}\n".format(SERIAL_NUMBER) \
                 + err_color \
-                + "Errors: {}\n".format(err_count) \
+                + "Errors: {}\n".format(self.error_count) \
                 + color \
                 + "======================================================\n"
 
@@ -96,23 +104,17 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def superuser_test(self):
-        err_count = 0
-
         filename = '/root/prod_test_was_here.txt'
         try:
             self.shell_command('touch ' + filename)
             self.shell_command('rm ' + filename)
         except Exception as ex:
             self.error("superuser test failed !!")
-            err_count += 1
             sys.exit(-1)
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def services_stop(self):
-        err_count = 0
         #print("Stopping services...")
 
         ## Stop the ntp service.
@@ -120,56 +122,48 @@ class Production_Test_App(object):
         try:
             self.shell_command('systemctl stop chrony')
         except Exception as ex:
-            err_count += 1
+            self.error("stopping chrony service failed !!")
 
         ## Stop modem being power cycled if no network connectivity.
         #print("Stopping sepl-modem service...")
         try:
             self.shell_command('systemctl stop sepl-modem')
         except Exception as ex:
-            err_count += 1
-
+            self.error("stopping sepl-modem service failed !!")
 
         ## Stop the efd sampling, measurement, logging, posting.
         #print("Stopping efd service...")
         try:
             self.shell_command('systemctl stop efd')
         except Exception as ex:
-            err_count += 1
-
-        return err_count
+            self.error("stopping efd service failed !!")
 
     ##------------------------------------------------------------------------
 
     def services_start(self):
-        err_count = 0
         print("Restarting services...")
 
         print("Restarting efd service...")
         try:
             self.shell_command('systemctl restart efd')
         except Exception as ex:
-            err_count += 1
+            self.error("starting efd service failed !!")
 
         print("Restarting sepl-modem service...")
         try:
             self.shell_command('systemctl restart sepl-modem')
         except Exception as ex:
-            err_count += 1
+            self.error("starting sepl-modem service failed !!")
 
         print("Restarting chrony service...")
         try:
             self.shell_command('systemctl restart chrony')
         except Exception as ex:
-            err_count += 1
-
-        return err_count
+            self.error("starting chrony service failed !!")
 
     ##------------------------------------------------------------------------
 
     def disk_usage_test(self):
-        err_count = 0
-
         out = self.shell_command('df -h')
         lines = out.split('\n')
         for l in lines[1:]:
@@ -187,25 +181,18 @@ class Production_Test_App(object):
                 #print("DEBUG: found {!r} in {!r}".format(mnt, l))
                 if unit != 'M' or mag < 970 or mag > 980:
                     self.error("{!r} size not valid ({})".format(mnt, size))
-                    err_count += 1
             elif mnt == '/boot/flash':
                 #print("DEBUG: found {!r} in {!r}".format(mnt, l))
                 if unit != 'M' or mag < 62 or mag > 64:
                     self.error("{!r} size not valid ({})".format(mnt, size))
-                    err_count += 1
             elif mnt == '/mnt/data':
                 #print("DEBUG: found {!r} in {!r}".format(mnt, l))
                 if unit != 'G' or mag < 27 or mag > 29:
                     self.error("{!r} size not valid ({})".format(mnt, size))
-                    err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def memory_usage_test(self):
-        err_count = 0
-
         out = self.shell_command('free -h')
         lines = out.split('\n')
         #print(FG.CYAN +"l = {!r}".format(l))
@@ -215,27 +202,17 @@ class Production_Test_App(object):
         #print("DEBUG: mem_type={!r}, size={!r}".format(mem_type, size))
         if mem_type != 'Mem:' or size != '1.0G':
             self.error("memory not valid: mem_type={!r}, size={!r}".format(mem_type, size))
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def usb_test(self):
-        err_count = 0
-
         out = self.shell_command('lsusb')
         if 'Linux Foundation 2.0 root hub' not in out:
             self.error("USB root hub not found")
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def i2c_0_test(self):
-        err_count = 0
-
         exp = """\
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
 00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
@@ -253,43 +230,42 @@ class Production_Test_App(object):
         #print("DEBUG: exp={!r}".format(exp))
         if out != exp:
             self.error("i2c-0 device probe mismatch")
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def rtc_test(self):
-        err_count = 0
-
-        out = self.shell_command('hwclock')
-        #print("DEBUG: out={!r}".format(out))
-
-        return err_count
+        try:
+            out = self.shell_command('hwclock')
+            #print("DEBUG: out={!r}".format(out))
+        except Exception as ex:
+            self.error("hwclock command failed")
 
     ##------------------------------------------------------------------------
 
     def fpga_test(self):
-        err_count = 0
+        self.dev_hand = ind.get_device_handle()
 
-        fpga_ver = ind.fpga_version_get()
+        ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
+        #ind.fpga_reset(dev_hand=self.dev_hand)
+
+        fpga_ver = ind.fpga_version_get(dev_hand=self.dev_hand)
         if fpga_ver.major != 2:
             self.error("Wrong FPGA version")
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def adc_test(self):
-        err_count = 0
+        errors = 0
 
         self.config = Config()
         self.config.set_capture_mode('manual')
 
         self.dev_hand = ind.get_device_handle()
 
-        ind.adc_capture_stop(dev_hand=self.dev_hand)
+        ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
+        #ind.fpga_reset(dev_hand=self.dev_hand)
+
+        #ind.adc_capture_stop(dev_hand=self.dev_hand)
 
         signed = self.config.capture_data_polarity_is_signed()
         peak_detect_start_count = 0
@@ -298,17 +274,16 @@ class Production_Test_App(object):
         ind.adc_capture_start(address=0, capture_count=self.config.capture_count, delay_count=self.config.delay_count, signed=signed, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=self.dev_hand)
 
 
-        for i in xrange(10):
+        for i in xrange(100):
             ind.adc_trigger(dev_hand=self.dev_hand)
+
             while True:
                 sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
                 if sem:
                     break
                 time.sleep(0.01)
 
-        ind.adc_capture_stop(dev_hand=self.dev_hand)
-
-        maxmin = ind.adc_capture_maxmin_get(dev_hand=self.dev_hand)
+            maxmin = ind.adc_capture_maxmin_get(dev_hand=self.dev_hand)
 
         peak_max_red = maxmin.max_ch0_data
         peak_min_red = maxmin.min_ch0_data
@@ -317,7 +292,7 @@ class Production_Test_App(object):
         peak_max_blu = maxmin.max_ch2_data
         peak_min_blu = maxmin.min_ch2_data
 
-        if 0:
+        if DEBUG:
             print("DEBUG: peak_max_red = {!r}".format(peak_max_red))
             print("DEBUG: peak_min_red = {!r}".format(peak_min_red))
             print("DEBUG: peak_max_wht = {!r}".format(peak_max_wht))
@@ -325,117 +300,114 @@ class Production_Test_App(object):
             print("DEBUG: peak_max_blu = {!r}".format(peak_max_blu))
             print("DEBUG: peak_min_blu = {!r}".format(peak_min_blu))
 
-        #if not (10000 < peak_max_red < 30000):
-        if abs(peak_max_red) < 1000:
+        ## For 10Vpp 1MHz sine input, max is ~ +18000, min is ~ -14000
+        ## For 5V 25Hz 1%duty pulse input, max is ~ +17700, min is ~ -15900
+        exp_max = 17700
+        exp_min = -15900
+        tolerance = int(exp_max * 0.02)
+
+        exp_max_lo = exp_max - tolerance
+        exp_max_hi = exp_max + tolerance
+        exp_min_lo = exp_min - tolerance
+        exp_min_hi = exp_min + tolerance
+
+        if not (exp_max_lo < peak_max_red < exp_max_hi):
             self.error("ADC peak max red failed.")
-            err_count += 1
+            errors += 1
 
-        #if not (10000 < peak_max_wht < 30000):
-        if abs(peak_max_wht) < 1000:
+        if not (exp_max_lo < peak_max_wht < exp_max_hi):
             self.error("ADC peak max wht failed.")
-            err_count += 1
+            errors += 1
 
-        #if not (10000 < peak_max_blu < 30000):
-        if abs(peak_max_blu) < 1000:
+        if not (exp_max_lo < peak_max_blu < exp_max_hi):
             self.error("ADC peak max blu failed.")
-            err_count += 1
+            errors += 1
 
-        #if not (-30000 < peak_min_red < -10000):
-        if abs(peak_min_red) < 1000:
+        if not (exp_min_lo < peak_min_red < exp_min_hi):
             self.error("ADC peak min red failed.")
-            err_count += 1
+            errors += 1
 
-        #if not (-30000 < peak_min_wht < -10000):
-        if abs(peak_min_wht) < 1000:
+        if not (exp_min_lo < peak_min_wht < exp_min_hi):
             self.error("ADC peak min wht failed.")
-            err_count += 1
+            errors += 1
 
-        #if not (-30000 < peak_min_blu < -10000):
-        if abs(peak_min_blu) < 1000:
+        if not (exp_min_lo < peak_min_blu < exp_min_hi):
             self.error("ADC peak min blu failed.")
-            err_count += 1
+            errors += 1
 
-        return err_count
+        #ind.adc_capture_stop(dev_hand=self.dev_hand)
+
+        return errors
 
     ##------------------------------------------------------------------------
 
     def blinky_test(self):
-        err_count = 0
-
         print(FG.CYAN + "Please check all LEDs are working...")
-        ind.blinky(count=1, delay=0.5)
+        ind.blinky(count=1, delay=0.3)
         print(FG.CYAN + "Did all LEDs illuminate? (y/n)")
         ans = sys.stdin.readline().strip().upper()
         if ans != 'Y':
             self.error("Blinky failed")
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def ttyS1_test(self):
-        err_count = 0
-
+        delay = 0.5
         print(FG.CYAN + "Connect XBee serial adapter...")
-        time.sleep(1)
+        time.sleep(delay)
         print(FG.CYAN + "Press enter and check for login prompt...")
-        time.sleep(1)
+        time.sleep(delay)
         print(FG.CYAN + "Did the login prompt respond? (y/n)")
         ans = sys.stdin.readline().strip().upper()
         if ans != 'Y':
             self.error("ttyS1 test failed")
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
-    def test_func(self, fn):
-        err_count = 0
-
+    def test_func(self, func):
         try:
-            err_count = fn()
-            msg = fn.__name__ + "()"
+            msg = func.__name__ + "()"
+            ret = func()
+            if ret:
+                print("DEBUG: ret = {!r}".format(ret))
+                raise Exception()
             self.passed(msg)
         except Exception as ex:
-            msg = "test function '" + fn.__name__ + "() failed !!"
+            msg = func.__name__ + "() failed !!"
             self.error(msg)
-            err_count += 1
-
-        return err_count
 
     ##------------------------------------------------------------------------
 
     def main(self):
         """Main entry for running the produciton tests."""
 
-        err_count = 0
-
         colorama.init(autoreset=True)
 
         self.banner_start()
 
-        err_count += self.test_func( self.superuser_test )
-        err_count += self.test_func( self.services_stop )
-        err_count += self.test_func( self.disk_usage_test )
-        err_count += self.test_func( self.memory_usage_test )
-        err_count += self.test_func( self.usb_test )
-        err_count += self.test_func( self.i2c_0_test )
-        err_count += self.test_func( self.rtc_test )
-        err_count += self.test_func( self.fpga_test )
-        err_count += self.test_func( self.adc_test )
-        err_count += self.test_func( self.blinky_test )
-        err_count += self.test_func( self.ttyS1_test )
-        #err_count += self.test_func( self.services_start )
+        self.test_func( self.superuser_test )
+        self.test_func( self.services_stop )
+        self.test_func( self.disk_usage_test )
+        self.test_func( self.memory_usage_test )
+        self.test_func( self.usb_test )
+        self.test_func( self.i2c_0_test )
+        self.test_func( self.rtc_test )
+        self.test_func( self.fpga_test )
+        self.test_func( self.adc_test )
+        self.test_func( self.blinky_test )
+        self.test_func( self.ttyS1_test )
+        #self.test_func( self.services_start )
 
-        self.banner_end(err_count)
+        self.banner_end()
         print
 
 ##============================================================================
 
-def argh_main():
+def argh_main(debug=False):
     """Main entry if running this module directly."""
+
+    global DEBUG
+    DEBUG = debug
 
     app = Production_Test_App()
 

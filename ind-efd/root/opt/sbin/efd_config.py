@@ -201,9 +201,9 @@ class Config(object):
 
         self.delay_count = self.total_count - self.capture_count
 
-        print("INFO: capture_count set to {}".format(self.capture_count))
-        print("INFO: delay_count set to {}".format(self.delay_count))
-        print("INFO: total_count is {}".format(self.total_count))
+        #print("INFO: capture_count set to {}".format(self.capture_count))
+        #print("INFO: delay_count set to {}".format(self.delay_count))
+        #print("INFO: total_count is {}".format(self.total_count))
 
         if self.capture_count < self.fft_size:
             print("WARN: fft_size lowered")
@@ -212,10 +212,10 @@ class Config(object):
     def set_fft_size(self, fft_size=None):
         if fft_size:
             self.fft_size = fft_size
-            print("INFO: fft_size set to {}".format(self.fft_size))
+            #print("INFO: fft_size set to {}".format(self.fft_size))
 
         self.fft_size_half = self.fft_size // 2
-        print("INFO: fft_size_half set to {}".format(self.fft_size_half))
+        #print("INFO: fft_size_half set to {}".format(self.fft_size_half))
 
     def capture_data_polarity_is_signed(self):
         return self.sample_offset == 0
@@ -226,13 +226,13 @@ class Config(object):
             raise ValueError(msg)
 
         self.capture_mode = capture_mode
-        print("INFO: capture_mode set to {}".format(self.capture_mode))
+        #print("INFO: capture_mode set to {}".format(self.capture_mode))
 
         if capture_mode == 'manual':
             self.peak_detect_numpy_capture_count_limit = self.capture_count
         else:
             peak_detect_numpy_capture_count_limit = 1*1000*1000
-        print("INFO: peak_detect_numpy_capture_count_limit set to {}".format(self.peak_detect_numpy_capture_count_limit))
+        #print("INFO: peak_detect_numpy_capture_count_limit set to {}".format(self.peak_detect_numpy_capture_count_limit))
 
         if self.capture_count > self.peak_detect_numpy_capture_count_limit:
             self.peak_detect_numpy = False
