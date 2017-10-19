@@ -345,25 +345,32 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def blinky_test(self):
-        print(FG.CYAN + "Please check all LEDs are working...")
-        ind.blinky(count=1, delay=0.3)
-        print(FG.CYAN + "Did all LEDs illuminate? (y/n)")
-        ans = sys.stdin.readline().strip().upper()
-        if ans != 'Y':
-            self.error("Blinky failed")
+        while True:
+            print(FG.CYAN + "Please check all LEDs are working...")
+            time.sleep(1)
+            ind.blinky(count=2, delay=0.2)
+            print(FG.CYAN + "Did all LEDs illuminate? (y/n)")
+            ans = sys.stdin.readline().strip().upper()
+            if ans == 'Y':
+                break
+            elif ans == 'N':
+                self.error("Blinky failed")
+                break
 
     ##------------------------------------------------------------------------
 
     def ttyS1_test(self):
         delay = 0.5
-        print(FG.CYAN + "Connect XBee serial adapter...")
-        time.sleep(delay)
-        print(FG.CYAN + "Press enter and check for login prompt...")
-        time.sleep(delay)
-        print(FG.CYAN + "Did the login prompt respond? (y/n)")
-        ans = sys.stdin.readline().strip().upper()
-        if ans != 'Y':
-            self.error("ttyS1 test failed")
+        while True:
+            print(FG.CYAN + "Connect XBee serial adapter...")
+            print(FG.CYAN + "Press enter and check for login prompt...")
+            print(FG.CYAN + "Did the login prompt respond? (y/n)")
+            ans = sys.stdin.readline().strip().upper()
+            if ans == 'Y':
+                break
+            elif ans == 'N':
+                self.error("ttyS1 test failed")
+                break
 
     ##------------------------------------------------------------------------
 

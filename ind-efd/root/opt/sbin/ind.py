@@ -1020,6 +1020,12 @@ def blinky(count=0, delay=0.1, dev_hand=None):
         if count > 0:
             remaining -= 1
 
+    led = led_seq[0]
+    on = led & LED.All
+    off = ~led & LED.All
+    leds_modify(on=on, off=off, dev_hand=dev_hand)
+    time.sleep(delay)
+
     leds_modify(on=0, off=LED.All, dev_hand=dev_hand)
 
 #!===========================================================================
