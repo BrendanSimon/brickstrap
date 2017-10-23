@@ -84,3 +84,6 @@ $CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
 ## DISABLE logging of RF Sysytem status (Modem, GPS)
 $CHROOTBINDCMD systemctl disable efd-rf-status.service
 
+## Enable the serial getty on ttyS1 (XBee @ 38400 baud only)
+$CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
+
