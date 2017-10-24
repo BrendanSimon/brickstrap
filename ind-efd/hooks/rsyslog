@@ -1,0 +1,31 @@
+#!/bin/bash
+
+## script to setup/modify the rsyslog config file.
+
+RSYSLOG_DIR=/etc
+
+RSYSLOG_CONF="${RSYSLOG_DIR}/rsyslog.conf"
+
+RSYSLOG_CONF_ORIG="${RSYSLOG_DIR}/rsyslog_ORIG.conf"
+
+RSYSLOG_CONF_SEPL="${RSYSLOG_DIR}/rsyslog_SEPL.conf"
+
+
+#echo "${RSYSLOG_DIR}"
+#echo "${RSYSLOG_CONF}"
+#echo "${RSYSLOG_CONF_TMP}"
+#echo "${SED_PATTERNS}"
+
+
+## Make a copy of the original file.
+${CHROOTCMD} cp ${RSYSLOG_CONF} ${RSYSLOG_CONF_ORIG}
+
+## Copy SEPL config file.
+${CHROOTCMD} cp ${RSYSLOG_CONF_SEPL} ${RSYSLOG_CONF}
+
+## Search/Replace patterns.
+#${CHROOTCMD} bash -c "cd ${RSYSLOG_DIR} && cat ${RSYSLOG_CONF} | sed ${SED_PATTERNS} >> ${RSYSLOG_CONF_TMP}"
+
+## Enable rsyslog systemd service.
+${CHROOTBINDCMD} systemctl enable rsyslog
+
