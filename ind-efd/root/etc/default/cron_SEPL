@@ -1,0 +1,25 @@
+# charset 'C' (canonical name: ANSI_X3.4-1968) will be used.
+#
+# This has no effect on tasks running under cron; their environment can
+# only be changed via PAM or from within the crontab; see crontab(5).
+READ_ENV="yes"
+
+# Extra options for cron, see cron(8)
+#
+# For example, to enable LSB name support in /etc/cron.d/, use
+# EXTRA_OPTS='-l'
+#
+# Or, to log standard messages, plus jobs with exit status != 0:
+# EXTRA_OPTS='-L 5'
+#
+# For quick reference, the currently available log levels are:
+#   0   no logging (errors are logged regardless)
+#   1   log start of jobs
+#   2   log end of jobs
+#   4   log jobs with exit status != 0
+#   8   log the process identifier of child process (in all logs)
+#
+# Default (nothing set) is to log start of jobs (1)
+#EXTRA_OPTS=""
+EXTRA_OPTS="-L 4"
+
