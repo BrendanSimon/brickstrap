@@ -12,4 +12,6 @@ findutils
 minicom
 bsdmainutils
 unzip
+screen
+tmux
 
