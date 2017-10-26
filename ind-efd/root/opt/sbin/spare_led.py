@@ -1,64 +1,55 @@
 #!/usr/bin/env python2
 
 ##############################################################################
-##
-##  Author:     Successful Endeavours Pty Ltd
-##
+#!
+#!  Author:     Successful Endeavours Pty Ltd
+#!
 ##############################################################################
 
-'''IND Driver Module.'''
+'''Utility to manipulate the Spare status LED.'''
 
-import sys
-import time
 import ind
 import argh
 
 ## could make this a runtime option.
 DEBUG = False
 
-LED = ind.LED.Spare
-
-##============================================================================
-## Commands
-##============================================================================
+#!============================================================================
+#! Commands
+#!============================================================================
 
 def off():
-    """Turn off the modem LED."""
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(off=LED, dev_hand=dev_hand)
+    """Turn off the spare LED."""
+    ind.spare_led_off()
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def on():
-    """Turn on the modem LED."""
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(on=LED, dev_hand=dev_hand)
+    """Turn on the spare LED."""
+    ind.spare_led_on()
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def toggle():
-    """Toggle on the modem LED."""
-    with ind.get_device_handle() as dev_hand:
-        ind.leds_modify(toggle=LED, dev_hand=dev_hand)
+    """Toggle on the spare LED."""
+    ind.spare_led_toggle()
 
-##============================================================================
+#!============================================================================
 
 def main():
     '''Main entry if running this module from command line.'''
 
-    ## assembling commands.
+    #! assembling commands.
     parser = argh.ArghParser()
     commands = [ off, on, toggle ]
     parser.add_commands(commands)
 
-    ## dispatching commands.
+    #! dispatching commands.
     parser.dispatch()
 
-
-##============================================================================
+#!============================================================================
 
 if __name__ == "__main__":
     main()
 
-##============================================================================
-
+#!============================================================================

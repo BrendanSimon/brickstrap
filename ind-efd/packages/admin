@@ -12,4 +12,5 @@ watchdog
 logrotate
 dosfstools
 psmisc
+lm-sensors
 

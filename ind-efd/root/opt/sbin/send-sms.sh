@@ -25,12 +25,12 @@ SMS_INFO="text='${MSG}',number='${PHONE}'"
 # The command needed for creating the SMS
 CMD="mmcli -m ${MODEM} --messaging-create-sms=\"${SMS_INFO}\""
 
-# Actually create the SMS. We're using the eval builting because of all the
+# Actually create the SMS. We're using the eval builtin because of all the
 # quotes and double quotes in the command. eval executes the command. Also
 # capture the output of the command in the process
 CREATE_OUT=$(eval "$CMD")
 
 # Send the SMS
-SMS_ID=$(echo ${CREATE_OUT}| grep "Modem" | sed "s:.*SMS/::g" | sed "s: .*::g")
+SMS_ID=$(echo ${CREATE_OUT} | grep "Modem" | sed "s:.*SMS/::g" | sed "s: .*::g")
 mmcli -s ${SMS_ID} --send
 

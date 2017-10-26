@@ -1,9 +1,9 @@
 #!/usr/bin/env python2
 
 ##############################################################################
-##
-##  Author:     Successful Endeavours Pty Ltd
-##
+#!
+#!  Author:     Successful Endeavours Pty Ltd
+#!
 ##############################################################################
 
 '''\
@@ -25,7 +25,7 @@ from cStringIO import StringIO
 
 import ind
 
-##============================================================================
+#!============================================================================
 
 class Cloud_Thread(threading.Thread):
 
@@ -37,7 +37,7 @@ class Cloud_Thread(threading.Thread):
 
     def run(self):
         while self.running:
-            ## continue to loop, wait for data, and process.
+            #! continue to loop, wait for data, and process.
             try:
                 self.cloud.wait_and_process()
             except Exception as exc:
@@ -54,11 +54,11 @@ class Cloud_Thread(threading.Thread):
         self.join()
         print('INFO: Cloud_Thread: Done.')
 
-##============================================================================
+#!============================================================================
 
 class Cloud(object):
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def __init__(self, config, app_state, cloud_queue):
 
@@ -69,7 +69,7 @@ class Cloud(object):
 
         self.init()
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def init(self):
 
@@ -84,13 +84,13 @@ class Cloud(object):
         self.measurements_log_mmap = None
         self.last_post_time = time.time()
 
-        ## initialise to earliest possible datetime value.
+        #! initialise to earliest possible datetime value.
         self.last_measurements_log_datetime_utc = arrow.Arrow(year=1, month=1, day=1)
 
-        ##
-        ## initialise csv header string.
-        ##
-        ## FIXME: this is duplicated from efd_app.py
+        #!
+        #! initialise csv header string.
+        #!
+        #! FIXME: this is duplicated from efd_app.py
         hdr_sio = StringIO()
         hdr_sio.write("data=")
         writer = csv.DictWriter(hdr_sio, fieldnames=self.config.measurements_log_field_names, extrasaction='ignore')
@@ -98,12 +98,12 @@ class Cloud(object):
         self.measurements_log_csv_header = hdr_sio.getvalue()
         hdr_sio.close()
 
-        ## list of csv data records to post.
+        #! list of csv data records to post.
         self.csv_data = []
 
         self.web_server_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def cleanup(self):
 
@@ -111,18 +111,19 @@ class Cloud(object):
             self.ind_dev_hand.close()
             self.ind_dev_hand = None
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def post_ping(self):
         '''Post measurements data to the cloud service.'''
 
-        try:
-            r = requests.get(self.config.web_server_ping, timeout=5)
-        except Exception as exc:
-            print(repr(exc))
-            print(traceback.format_exc())
+        for uri in self.config.efd_ping_uris:
+            try:
+                r = requests.get(uri, timeout=5)
+            except Exception as exc:
+                print(repr(exc))
+                print(traceback.format_exc())
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def post_measurements_data(self, data):
         '''Post measurements data to the cloud service.'''
@@ -146,7 +147,7 @@ class Cloud(object):
                 print("DEBUG: post measurements r.text = {}".format(r.text))
                 print("DEBUG: *******************************************")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def spare_led_off(self):
         ind.spare_led_off(dev_hand=self.ind_dev_hand)
@@ -157,39 +158,39 @@ class Cloud(object):
     def spare_led_toggle(self):
         ind.spare_led_toggle(dev_hand=self.ind_dev_hand)
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def wait_and_process(self):
         '''wait for data and process it.'''
 
-        ##
-        ## Batch up max_records_per_post into a single post to reduce data usage costs.
-        ##
-        ## A single csv record per post is approx 602 bytes (250 csv header + CRLF + 350 csv record).
-        ## The total bytes transferred is approximately 1456 (IP bytes) or 1594 (Ethernet bytes)
-        ## per single csv record post (over 9 packets) => almost 4GB per month !!
-        ##
-        ## Batching 60 csv records into a single http post will improve efficiency and should
-        ## bring the data usage to approximately 1GB per month.
-        ## Estimate: 600 (Eth/IP bytes) + 252 (csv_header) + 302*60 (csv record) + 34*60 (reply)
-        ##        => 895MB per month (approx 1GB per month)
-        ##
-        ## Telstra billing shows data usage has reduced to approximately 1.4-1.6MB/hour (~1.2GB/31days),
-        ## down from 8MB/hour (~6GB/31days).
-        ##
+        #!
+        #! Batch up max_records_per_post into a single post to reduce data usage costs.
+        #!
+        #! A single csv record per post is approx 602 bytes (250 csv header + CRLF + 350 csv record).
+        #! The total bytes transferred is approximately 1456 (IP bytes) or 1594 (Ethernet bytes)
+        #! per single csv record post (over 9 packets) => almost 4GB per month !!
+        #!
+        #! Batching 60 csv records into a single http post will improve efficiency and should
+        #! bring the data usage to approximately 1GB per month.
+        #! Estimate: 600 (Eth/IP bytes) + 252 (csv_header) + 302*60 (csv record) + 34*60 (reply)
+        #!        => 895MB per month (approx 1GB per month)
+        #!
+        #! Telstra billing shows data usage has reduced to approximately 1.4-1.6MB/hour (~1.2GB/31days),
+        #! down from 8MB/hour (~6GB/31days).
+        #!
 
         new_data = False
 
-        ##
-        ## Get next item in the queue (wait if necessary) if number of records to post is not at limit.
-        ##
+        #!
+        #! Get next item in the queue (wait if necessary) if number of records to post is not at limit.
+        #!
         while len(self.csv_data) < self.config.max_records_per_post:
 
             self.spare_led_off()
 
-            ##
-            ## Block on receive queue for first time in the receive queue.
-            ##
+            #!
+            #! Block on receive queue for first time in the receive queue.
+            #!
             try:
                 item = self.cloud_queue.get(block=True, timeout=2)
             except queue.Empty as exc:
@@ -212,39 +213,39 @@ class Cloud(object):
                 print(repr(exc))
                 sys.stdout.flush()
 
-        ##
-        ## Check if there is enough data to post.
-        ##
+        #!
+        #! Check if there is enough data to post.
+        #!
         if len(self.csv_data) < self.config.max_records_per_post:
-            ## Not enough data to post.
+            #! Not enough data to post.
             print("DEBUG: Not enough data records to post ({}).".format(len(self.csv_data)))
             return
 
-        ##
-        ## Always post data if new data was added, otherwise check if time to repost last data.
-        ##
+        #!
+        #! Always post data if new data was added, otherwise check if time to repost last data.
+        #!
         now = time.time()
         if not new_data:
             time_diff = now - self.last_post_time
             #print("DEBUG: now={}, last_post_time={}, time_diff={}".format(now, self.last_post_time, time_diff))
             if time_diff < self.config.measurments_post_retry_time_interval:
-                ## Not time to retry last post.
+                #! Not time to retry last post.
                 print("DEBUG: Not time to retry last post.")
                 time.sleep(1)
                 return
 
         self.last_post_time = now
 
-        ##
-        ## concatenate csv row header and data into a single string.
-        ##
+        #!
+        #! concatenate csv row header and data into a single string.
+        #!
         post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
         print("DEBUG: Posting data: len(csv_data)={}".format(len(self.csv_data)))
         #print("DEBUG: post_data={}".format(post_data))
 
-        ##
-        ## post the data to the web server.
-        ##
+        #!
+        #! post the data to the web server.
+        #!
         try:
             self.post_measurements_data(data=post_data)
         except Exception as exc:
@@ -252,20 +253,21 @@ class Cloud(object):
             print(traceback.format_exc())
         else:
             #print("INFO: Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
-            ## clear list to allow more csv data to accumulate from the queue.
+            #! clear list to allow more csv data to accumulate from the queue.
             self.csv_data = []
 
         return
 
-##============================================================================
+#!============================================================================
 
 def main():
     """Main entry if running this module directly."""
 
-    ##--------------------------------
+    #!--------------------------------
 
     class Config:
-        web_server_ping = 'http://portal.efdweb.com/api/Ping/0/'
+        efd_ping_servers = ['http://portal.efdweb.com']
+        efd_ping_uris = ['http://portal.efdweb.com/api/Ping/0/']
 
         web_server_measurements_log = 'http://portal.efdweb.com/api/AddEFDLog/0/'
 
@@ -279,13 +281,14 @@ def main():
             't2_blu', 'w2_blu',
             'temperature', 'humidity', 'rain_intensity',
             'alert',
+            'adc_clock_count_per_pps',
             ]
 
         max_cloud_queue_size = 10
 
     config = Config()
 
-    ##--------------------------------
+    #!--------------------------------
 
     #measurements = {}
     #measurements['datetime_utc']           = self.capture_datetime_utc.isoformat(sep=' ')
@@ -343,7 +346,7 @@ def main():
             print('----------------------------------------')
 
     except (KeyboardInterrupt, SystemExit) as exc:
-        ## ctrl+c key press or sys.exit() called.
+        #! ctrl+c key press or sys.exit() called.
         print("EXCEPTION: KeyboardInterrupt or SystemExit")
         print(repr(exc))
     finally:
@@ -355,7 +358,7 @@ def main():
 
     print("Done.  Exiting.")
 
-##============================================================================
+#!============================================================================
 
 if __name__ == "__main__":
     main()

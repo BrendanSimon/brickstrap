@@ -1,0 +1,32 @@
+#!/bin/bash
+
+#!============================================================================
+#!
+#!  Install PySensors python module (not avaialble as a Debian package)
+#!
+#!============================================================================
+
+PY_MOD="PySensors"
+
+SRC_DIR="third-party/PySensors-0.0.3"
+
+HOST_SRC_DIR="/host-rootfs/${BOARDDIR}/third-party/PySensors-0.0.3"
+
+#!
+#! Debug info.
+#!
+#echo "PY_MOD = '${PY_MOD}'"
+#echo "SRC_DIR = '${SRC_DIR}'"
+#echo "HOST_SRC_DIR = '${HOST_SRC_DIR}'"
+#echo "BOARDDIR = '${BOARDDIR}'"
+#echo "ROOTDIR = '${ROOTDIR}'"
+#echo "DEFAULT_ROOTDIR = '${DEFAULT_ROOTDIR}'"
+#echo "CHROOTCMD = '${CHROOTCMD}'"
+#echo "CHROOTBINDCMD = '${CHROOTBINDCMD}'"
+
+#!
+#! Install Python module.
+#!
+echo "Installing '${PY_MOD}' ..."
+${CHROOTCMD} bash -c "cd ${HOST_SRC_DIR} && python setup.py install"
+

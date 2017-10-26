@@ -15,4 +15,5 @@
 ##
 
 ln -sf /mnt/data/etc/settings ${ROOTDIR}/opt/sbin/settings.py
+ln -sf settings ${ROOTDIR}/opt/sbin/test/settings.py
 

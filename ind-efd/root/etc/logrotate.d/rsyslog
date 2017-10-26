@@ -11,7 +11,6 @@
 	## SEPL: limit size to 10MB
 	size 10M
 	rotate 7
-	#ORIG: daily
 	missingok
 	notifempty
 	delaycompress
@@ -37,8 +36,6 @@
 	## SEPL: limit size to 1MB
 	size 1M
 	rotate 7
-	#ORIG: rotate 4
-	#ORIG: weekly
 	missingok
 	notifempty
 	compress

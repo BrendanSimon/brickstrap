@@ -1,15 +1,18 @@
-##
-## ActiveState python recipe for a persistent dict class.
-## The python shelve module documentation pointed to this site.
-##
-## http://code.activestate.com/recipes/576642/
-## 
-## There are some bugs as highlighted in the user comments and
-## the suggested code changes are implemented.
-##
-##  Brendan Simon, 2016-01-14.
-##
+#!============================================================================
+#!
+#! ActiveState python recipe for a persistent dict class.
+#! The python shelve module documentation pointed to this site.
+#!
+#! http://code.activestate.com/recipes/576642/
+#! 
+#! There are some bugs as highlighted in the user comments and
+#! the suggested code changes are implemented.
+#!
+#!  Brendan Simon, 2016-01-14.
+#!
+#!============================================================================
 
+import copy
 import pickle
 import json
 import csv
@@ -18,10 +21,12 @@ import shutil
 from collections import OrderedDict
 
 
-## Default file format.
+#! Default file format.
 #FORMAT='pickle'
 FORMAT='json'
 #FORMAT='csv'
+
+#!============================================================================
 
 #class PersistentDict(dict):
 class PersistentDict(OrderedDict):
@@ -39,9 +44,9 @@ class PersistentDict(OrderedDict):
     '''
 
     def __init__(self, filename, flag='c', mode=None, format=FORMAT, *args, **kwds):
-        self.flag = flag                    # r=readonly, c=create, or n=new
-        self.mode = mode                    # None or an octal triple like 0644
-        self.format = format                # 'csv', 'json', or 'pickle'
+        self.flag = flag                    #! r=readonly, c=create, or n=new
+        self.mode = mode                    #! None or an octal triple like 0644
+        self.format = format                #! 'csv', 'json', or 'pickle'
         self.filename = filename
 
         #dict.__init__(self, *args, **kwds)
@@ -73,7 +78,7 @@ class PersistentDict(OrderedDict):
             raise
         finally:
             fileobj.close()
-        shutil.move(tempname, self.filename)    # atomic commit
+        shutil.move(tempname, self.filename)    #! atomic commit
         if self.mode is not None:
             os.chmod(self.filename, self.mode)
 
@@ -97,7 +102,7 @@ class PersistentDict(OrderedDict):
             raise NotImplementedError('Unknown format: ' + repr(self.format))
 
     def load(self, fileobj):
-        # try formats from most restrictive to least restrictive
+        #! try formats from most restrictive to least restrictive
         for loader in (pickle.load, json.load, csv.reader):
             fileobj.seek(0)
             try:
@@ -106,20 +111,20 @@ class PersistentDict(OrderedDict):
                 pass
         raise ValueError('File not in a supported format')
 
-
+#!============================================================================
 
 if __name__ == '__main__':
     import random
 
-    # Make and use a persistent dictionary
+    #! Make and use a persistent dictionary
     with PersistentDict('/tmp/demo.json', 'c', format='json') as d:
         print(d, 'start')
         d['abc'] = '123'
         d['rand'] = random.randrange(10000)
         print(d, 'updated')
 
-    # Show what the file looks like on disk
+    #! Show what the file looks like on disk
     with open('/tmp/demo.json', 'rb') as f:
         print(f.read())
 
-
+#!============================================================================

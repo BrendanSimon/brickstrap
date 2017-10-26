@@ -65,9 +65,22 @@ $CHROOTCMD chmod ug+x /opt/sbin/blinky.py
 $CHROOTCMD chmod ug+x /opt/sbin/modem.py
 $CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
 $CHROOTCMD chmod ug+x /opt/sbin/weather.py
-## Enable efd service -- automatically run at boot via systemd.
+
+## Enable efd service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd.service
 
-## Enable sepl modem service -- automatically run at boot via systemd.
+## Enable sepl modem service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable sepl-modem.service
+
+## Enable sepl power supervisor service -- run at boot via systemd.
+$CHROOTBINDCMD systemctl enable sepl-power-supervisor.service
+
+## Enable sepl shutdown service -- run at boot via systemd.
+$CHROOTBINDCMD systemctl enable sepl-shutdown.service
+
+## Enable serial getty (login prompt) on /dev/ttyS1 (XBEE port).
+$CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
+
+## Disable logging of RF Sysytem status (Modem, GPS)
+$CHROOTBINDCMD systemctl disable efd-rf-status.service
 

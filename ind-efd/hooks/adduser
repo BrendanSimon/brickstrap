@@ -38,6 +38,10 @@ function add-admin()
 
     echo "Add '${username}' to sudo group."
     $CHROOTCMD usermod -a -G ${groups} ${username}
+
+    ## Add path for EFD executables.
+    $CHROOTCMD bash -c "echo >> /home/${username}/.profile"
+    $CHROOTCMD bash -c "echo 'PATH=\$PATH:/opt/sbin' >> /home/${username}/.profile"
 }
 
 #$CHROOTCMD adduser --disabled-password --gecos \"\" brendan
@@ -51,4 +55,8 @@ add-user sepluser
 add-admin efdadmin
 
 add-user efduser
+
+## Add path for EFD Production executables (sepladmin user only)
+$CHROOTCMD bash -c "echo >> /home/sepladmin/.profile"
+$CHROOTCMD bash -c "echo 'PATH=\$PATH:/opt/sbin/prod_test' >> /home/sepladmin/.profile"
 
