@@ -16,7 +16,9 @@ ${CHROOTCMD} rm -f "${GPSD_CONF_TMP}"
 ## Replace DEVICES="" with DEVICES="/dev/ttyPS1"
 ## FIXME: This pattern works but isn't pretty.
 ## FIXME: Is there a neater or better way to do this?
-SED_PATTERNS="'s/DEVICES=\\\"\\\"/DEVICES=\\\"\/dev\/ttyPS1\\\"/g'"
+SED_PATTERNS="s/DEVICES=\\\"\\\"/DEVICES=\\\"\/dev\/ttyPS1\\\"/g"
+SED_PATTERNS="${SED_PATTERNS}; s/GPSD_OPTIONS=\\\"\\\"/GPSD_OPTIONS=\\\"-n\\\"/g"
+SED_PATTERNS="'"${SED_PATTERNS}"'"
 
 echo "${GPSD_DIR}"
 echo "${GPSD_CONF}"
