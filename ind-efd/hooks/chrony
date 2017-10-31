@@ -1,68 +1,8 @@
 #!/bin/bash
 
-## script to setup/modify the chrony config file.
-
-## NOTE: most of the stuff below is commented out as it easier
-## NOTE: to just put the correct chrony.conf file in /etc rather
-## NOTE: than programmatically edit the default.
-
-
-#CHRONY_DIR=/etc/chrony
-
-#CHRONY_CONF="${CHRONY_DIR}/chrony.conf"
-
-#CHRONY_CONF_ORIG="${CHRONY_CONF}.ORIG"
-
-#CHRONY_CONF_TMP="${CHRONY_CONF}.TMP"
-
-## Remove chrony.conf temp file so that it's empty to append to.
-#${CHROOTCMD} rm -f "${CHRONY_CONF_TMP}"
-
-#SED_PATTERNS="'s/debian.pool.ntp.org/au.pool.ntp.org/g'"
-
-#echo "${CHRONY_DIR}"
-#echo "${CHRONY_CONF}"
-#echo "${CHRONY_CONF_TMP}"
-#echo "${SED_PATTERNS}"
-
-## Make a copy of the original file.
-#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && cp ${CHRONY_CONF} ${CHRONY_CONF_ORIG}"
-
-## Search/Replace patterns.
-#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && cat ${CHRONY_CONF} | sed ${SED_PATTERNS} >> ${CHRONY_CONF_TMP}"
-
-
-#MAKESTEP='makestep 1000 -1'
-#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && echo ${MAKESTEP} >> ${CHRONY_CONF_TMP}"
-
-
-## FIXME: can't get HEREDOC working :(
-#TEMP_TEXT="yippee"
-#echo "${TEMP_TEXT}"
-#${CHROOTCMD} echo "${TEMP_TEXT} '>>' ${CHRONY_CONF_TMP}"
-#
-##IFS='\n' read -r -d '' TEMP_TEXT <<'EOF'
-##IFS='\n' read -r -d '' TEMP_TEXT <<EOF
-#read -r -d '' TEMP_TEXT <<EOF
-#set larger delay to allow the NMEA source to overlap with
-#the other sources and avoid the falseticker status.
-#Use SOCK instead of SHM 1 to use CHRONY high precision socket interface.
-#refclock SHM 0 refid GPS precision 1e-1 offset 0.9999 delay 0.2
-#refclock SHM 1 refid PPS precision 1e-9
-##refclock SOCK /var/run/chrony.ttyXX.sock refid PPS
-#EOF
-#
-#echo "${TEMP_TEXT}"
-#
-#TEMP_TEXT="blah blah blah"
-#echo "${TEMP_TEXT}"
-#
-#${CHROOTCMD} echo "${TEMP_TEXT}" '>>' ${CHRONY_CONF_TMP}
-
-
-
-## Copy temp file back fo conf file.
-#${CHROOTCMD} bash -c "cd ${CHRONY_DIR} && mv ${CHRONY_CONF_TMP} ${CHRONY_CONF}"
+## backup original conf file and replace with a SEPL customised file.
+${CHROOTCMD} cp -a /etc/chrony/chrony.conf      /etc/chrony/chrony_ORIG.conf
+${CHROOTCMD} cp    /etc/chrony/chrony_SEPL.conf /etc/chrony/chrony.conf
 
 ## Enable chrony systemd service.
 $CHROOTBINDCMD systemctl enable chrony
