@@ -18,6 +18,9 @@ ConditionCapability=CAP_SYS_TIME
 Type=forking
 PIDFile=/run/chronyd.pid
 ExecStart=/usr/sbin/chronyd
+## kill gpsd after chrony has started to force restart.
+## assumes gpsd has been configured to always restart !!
+ExecStartPost=-/usr/bin/killall -TERM gpsd
 PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=full
