@@ -1,3 +1,12 @@
+##
+## Successful Endeavours
+##
+## There is no `systemd` service file for `chrony` in Deiban Jessie.
+## This file was taken from Debian Stretch sources.
+## The `Restart=always` stanza was added to keep restart the service if it
+## exits (e.g. if `adjtimex()` fails.  See BitBucket issue #118).
+##
+
 [Unit]
 Description=chrony, an NTP client/server
 Documentation=man:chronyd(8) man:chronyc(1) man:chrony.conf(5)
@@ -12,6 +21,7 @@ ExecStart=/usr/sbin/chronyd
 PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=full
+Restart=always
 
 [Install]
 Alias=chronyd.service
