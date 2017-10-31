@@ -1,0 +1,18 @@
+[Unit]
+Description=chrony, an NTP client/server
+Documentation=man:chronyd(8) man:chronyc(1) man:chrony.conf(5)
+Conflicts=systemd-timesyncd.service openntpd.service
+After=network.target
+ConditionCapability=CAP_SYS_TIME
+
+[Service]
+Type=forking
+PIDFile=/run/chronyd.pid
+ExecStart=/usr/sbin/chronyd
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+
+[Install]
+Alias=chronyd.service
+WantedBy=multi-user.target
