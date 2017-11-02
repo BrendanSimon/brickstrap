@@ -236,6 +236,7 @@ function create-conf() {
         # because of the non-zero exit code of read which would cause while to skip the do-block & terminate the loop.
         #
         while IFS='' read -r line || [ -n "$line" ]; do
+            line=$(eval echo "$line")
             case "$line" in
             \#*|\;*) # permit comments: lines starting with # or ; are ignored.
             ;;
