@@ -1,3 +1,5 @@
-#deb http://ftp.au.debian.org/debian jessie main contrib non-free
-deb http://ftp.au.debian.org/debian jessie main contrib
+#deb http://mirror.aarnet.edu.au/debian jessie main contrib non-free
+deb http://mirror.aarnet.edu.au/debian jessie main contrib
+
+deb http://mirror.aarnet.edu.au/debian jessie-backports main contrib
 
