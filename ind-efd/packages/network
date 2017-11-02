@@ -10,7 +10,8 @@ sshfs
 rsync
 nfs-kernel-server
 nfs-common
-gpsd
+#gpsd
+gpsd/$BACKPORTS
 chrony
 dnsutils
 libqmi-utils
