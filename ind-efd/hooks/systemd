@@ -52,12 +52,12 @@ $CHROOTBINDCMD systemctl disable nfs-common.service
 $CHROOTBINDCMD systemctl disable rpcbind.service
 
 # disable smbd from running by default. Want to leave nmbd on though.
-$CHROOTBINDCMD systemctl disable smbd.service
+#$CHROOTBINDCMD systemctl disable smbd.service
 # we really don't want this running - it causes a long timeout on boot
-$CHROOTBINDCMD systemctl mask samba-ad-dc.service
+#$CHROOTBINDCMD systemctl mask samba-ad-dc.service
 
 # disable ddclient from running by default.
-$CHROOTBINDCMD systemctl disable ddclient.service
+#$CHROOTBINDCMD systemctl disable ddclient.service
 
 ## make python apps executable.
 $CHROOTCMD chmod ug+x /opt/sbin/efd_app.py
