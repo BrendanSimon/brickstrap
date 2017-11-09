@@ -1,6 +1,7 @@
 python
 python-numpy
-python-gps
+#python-gps
+python-gps/$BACKPORTS
 python-enum34
 python-serial
 python-cjson
