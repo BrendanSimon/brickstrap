@@ -5,9 +5,9 @@
 ## Uses the `makeself` utility.
 ## 
 
-ver_from="v0.10.0"
+ver_from="v0.10.1"
 
-ver_to="v0.10.1"
+ver_to="v0.10.2-dev"
 
 patch_name="ind-efd-patch-${ver_from}-to-${ver_to}"
 
