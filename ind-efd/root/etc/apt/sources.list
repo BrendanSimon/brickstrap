@@ -1,5 +1,6 @@
-#deb http://mirror.aarnet.edu.au/debian jessie main contrib non-free
-deb http://mirror.aarnet.edu.au/debian jessie main contrib
+#deb http://mirror.aarnet.edu.au/debian jessie main contrib
+#deb http://mirror.aarnet.edu.au/debian jessie-backports main contrib
 
-deb http://mirror.aarnet.edu.au/debian jessie-backports main contrib
+deb http://debian.mirror.serversaustralia.com.au/debian jessie main contrib
+deb http://debian.mirror.serversaustralia.com.au/debian jessie-backports main contrib
 
