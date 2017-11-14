@@ -6,7 +6,7 @@ dir=$(dirname ${prog})
 
 deb_files="${dir}/deb_files.txt"
 
-archive="${dir}/ind-efd-patch-v0.10.1-to-v0.10.2-dev.tgz" 
+archive=$(find -name "ind-efd-*gz")
 
 services="chrony gpsd efd"
 
