@@ -149,9 +149,11 @@ def extract_rain_intensity(s):
 
 class Weather_Station(object):
 
-    select_timeout = 1
+    select_timeout      = 1
 
-    serial_timeout = 0.1
+    serial_timeout      = 0.1
+
+    command_length_max  = 32
 
     #!------------------------------------------------------------------------
 
@@ -205,40 +207,53 @@ class Weather_Station(object):
         '''  - temperature, humidity, rain intensity, every one second.'''
 
         #! List of commands to run to configure the weather station.
+        #! NOTE: command string must not exceed 32 characters,
+        #!       including terminator characters or <cr><lf> !!
         config_commands = [
 
             #!
             #! Temperature, Humidity, Pressure settings.
             #!
             #'0TU,R=0000000001010000,I=1,P=H,T=C,N=T\r\n',
-            #! Set temperature and humidity read interval to 1.
-            '0TU,R=0000000001010000,I=1,P=H,T=C\r\n',
+            #!
+            #! Enable temperature and humidity.
+            '0TU,R=0000000001010000\r\n',
+            #! Set read interval and units.
+            '0TU,I=1,P=H,T=C\r\n',
 
             #!
             #! Wind settings.
             #!
             #'0WU,R=0000000000000000,I=3600,A=3,G=1,U=M,D=O,N=W,F=4\r\n',
+            #!
             #! Disable wind reporting.
-            '0WU,R=0000000000000000,I=3600\r\n',
+            '0WU,R=0000000000000000\r\n',
+            '0WU,I=3600\r\n',
 
             #!
             #! Precipitation settings.
             #!
             #'0RU,R=0000000000100000,I=1,U=M,S=M,M=R,Z=M,X=10000,Y=100\r\n',
-            #! Set Rain Intensity read interval to 1.
-            '0RU,R=0000000000100000,I=1,M=T\r\n',
+            #!
+            #! Enable Rain Intensity.
+            '0RU,R=0000000000100000\r\n',
+            #! Set read interval and timed mode.
+            '0RU,I=1,M=T\r\n',
 
             #!
             #! Supervisory settings.
             #!
             #'0SU,R=0000000000000000,I=3600,S=Y,H=N\r\n',
+            #!
             #! Disable supervisory reporting.
-            '0SU,R=0000000000000000,I=3600\r\n',
+            '0SU,R=0000000000000000\r\n',
+            '0SU,I=3600\r\n',
 
             #!
             #! Communications settings.
             #!
             #'0XU,A=0,M=A,T=0,C=2,I=1,B=19200,D=8,P=N,S=1,L=25,N=WXT520\r\n',
+            #!
             #! Set composite data inverval to 1 second.
             '0XU,I=1\r\n',
 
@@ -248,6 +263,7 @@ class Weather_Station(object):
 
         for cmd in config_commands:
             #print("INFO: Weather Station command = {!r}".format(cmd))
+            assert len(cmd) <= self.command_length_max, "Weather station command too long !! {!r}".format(cmd)
             self.ser_dev_hand.write(cmd)
             time.sleep(0.1)
 
@@ -274,12 +290,6 @@ class Weather_Station(object):
             return
 
         self.weather_led_toggle()
-
-        #! Composite data output format.
-        #! 0R0,Ta=24.9C,Ua=38.1P,Ri=0.0M
-        #! Default data output format.
-        #! 0R2,Ta=25.0C,Ua=39.9P,Pa=1008.2H
-        #! 0R3,Rc=0.00M,Rd=10s,Ri=0.1M,Hc=0.0M,Hd=0s,Hi=0.0M
 
         #print
         #print("DEBUG: Weather Data Captured")
