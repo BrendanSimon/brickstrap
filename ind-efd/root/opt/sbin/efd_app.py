@@ -373,7 +373,14 @@ class EFD_App(object):
         peak_detect_start_count = 0
         peak_detect_stop_count = self.config.capture_count - 1
 
-        ind.adc_capture_start(address=0, capture_count=self.config.capture_count, delay_count=self.config.delay_count, signed=signed, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=self.dev_hand)
+        ind.adc_capture_start(address=0,
+                              capture_count=self.config.capture_count,
+                              delay_count=self.config.delay_count,
+                              signed=signed,
+                              peak_detect_start_count=peak_detect_start_count,
+                              peak_detect_stop_count=peak_detect_stop_count,
+                              adc_offset=self.config.adc_offset,
+                              dev_hand=self.dev_hand)
 
     def adc_semaphore_get(self):
         #print("ADC Semaphore Get")
@@ -1223,22 +1230,30 @@ class EFD_App(object):
 #! Make config object global.
 config = Config()
 
-def app_main(capture_count=0, pps_mode=True, web_server=None, show_measurements=False, append_gps_data=False):
+def app_main(capture_count=0, pps_mode=True, adc_offset=0,
+             web_server=None,
+             show_measurements=False, append_gps_data=False):
     """Main entry if running this module directly."""
 
     if capture_count:
         config.set_capture_count(capture_count)
-        print("INFO: capture_count set to {}".format(config.capture_count))
+        print("INFO: `capture_count` set to {}".format(config.capture_count))
 
     if not pps_mode:
         config.set_capture_mode('manual')
         print("INFO: `capture_mode` set to {}".format(config.capture_mode))
 
+    if adc_offset:
+        config.set_adc_offset(adc_offset)
+        print("INFO: `adc_offset` set to {}".format(config.adc_offset))
+
     if web_server:
         config.set_web_server(web_server)
         print("INFO: `web_server` set to {}".format(config.web_server))
 
-    config.show_measurements = show_measurements
+    if show_measurements:
+        config.show_measurements = show_measurements
+        print("INFO: `show_measurements` set to {}".format(config.show_measurements))
 
     if append_gps_data:
         config.set_append_gps_data(append_gps_data)

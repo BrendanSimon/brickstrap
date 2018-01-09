@@ -348,8 +348,14 @@ class Read_Capture_Buffers_App(object):
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count = peak_detect_stop_count
 
-        cfg = self.config
-        ind.adc_capture_start(address=0, capture_count=cfg.capture_count, delay_count=cfg.delay_count, capture_mode=cfg.capture_mode, signed=signed, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=self.dev_hand)
+        ind.adc_capture_start(address=0,
+                              capture_count=self.config.capture_count,
+                              delay_count=self.config.delay_count,
+                              signed=signed,
+                              peak_detect_start_count=peak_detect_start_count,
+                              peak_detect_stop_count=peak_detect_stop_count,
+                              adc_offset=self.config.adc_offset,
+                              dev_hand=self.dev_hand)
 
     def adc_semaphore_get(self):
         #print("ADC Semaphore Get")
@@ -871,6 +877,13 @@ class Read_Capture_Buffers_App(object):
             print("Starting Analog Data Acquisition -- Auto PPS Trigger")
             self.adc_start()
 
+        ## Read back ADC Offset register to see if it was stored correctly.
+        adc_offset = ind.adc_offset_get(dev_hand=self.dev_hand)
+        print("read back: adc_offset = {} ({})".format(adc_offset, hex(adc_offset)))
+        if adc_offset != self.config.adc_offset:
+            cao = self.config.adc_offset
+            print("ERROR: adc_offset does not match config setting {} ({})".format(cao, hex(cao)))
+
         capture_count = self.config.capture_count
         self.adc_clock_count_now = 0
         self.adc_clock_count_min = 1000*1000*1000  ## a number > 250MHz + 50ppm
@@ -1041,7 +1054,7 @@ class Read_Capture_Buffers_App(object):
                         self.adc_clock_count_min = self.adc_clock_count_now
                     if self.adc_clock_count_now > self.adc_clock_count_max:
                         self.adc_clock_count_max = self.adc_clock_count_now
-            
+
                 delta = self.adc_clock_count_now - self.config.sample_frequency
                 print("DEBUG: adc_clock_count_per_pps_now = {:10}, delta = {:6}".format(self.adc_clock_count_now, delta))
                 delta = self.adc_clock_count_min - self.config.sample_frequency
@@ -1080,16 +1093,25 @@ config.show_capture_buffers = True
 
 ##############################################################################
 
-def app_main(capture_count=0, pps_mode=True, debug=False):
+def app_main(capture_count=0, pps_mode=True, adc_offset=0,
+             show_measurements=False, debug=False):
     """Main entry if running this module directly."""
 
     if capture_count:
         config.set_capture_count(capture_count)
-        print("INFO: capture_count set to {}".format(config.capture_count))
+        print("INFO: `capture_count` set to {}".format(config.capture_count))
 
     if not pps_mode:
         config.set_capture_mode('manual')
-        print("INFO: capture_mode set to {}".format(config.capture_mode))
+        print("INFO: `capture_mode` set to {}".format(config.capture_mode))
+
+    if adc_offset:
+        config.set_adc_offset(adc_offset)
+        print("INFO: `adc_offset` set to {}".format(config.adc_offset))
+
+    if show_measurements:
+        config.show_measurements = show_measurements
+        print("INFO: `show_measurements` set to {}".format(config.show_measurements))
 
     if debug:
         config.peak_detect_numpy_debug      = True

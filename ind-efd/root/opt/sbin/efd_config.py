@@ -47,6 +47,11 @@ class Config(object):
     #! 0x8000 if using offset-binary, 0 if using signed-binary.
     sample_offset = 0
 
+    #! ADC offset applied to compensate for DC offset in the system.
+    #! Signed value (in sample units).
+    #! Written to FPGA register and applied by the FPGA as samples are streamed from the ADC.
+    adc_offset = 0;
+
     voltage_range_pp = 2.5
 
     pd_event_trigger_voltage = 0.10
@@ -151,16 +156,17 @@ class Config(object):
         #! Currently a symlink is used from settings.py in app directory to the settings file.
         import settings
 
-        self.serial_number                          =        getattr(settings, 'SERIAL_NUMBER',                      self.serial_number)
-        self.site_name                              =        getattr(settings, 'SITE_NAME',                          self.site_name)
-        self.reporting_sms_phone_numbers            = list(  getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',        self.reporting_sms_phone_numbers) )
-        self.pd_event_trigger_voltage               = float( getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',           self.pd_event_trigger_voltage) )
-        self.pd_event_reporting_interval            = int(   getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',        self.pd_event_reporting_interval) )
-        self.efd_ping_servers                       = list(  getattr(settings, 'EFD_PING_SERVERS',                   self.efd_ping_servers) )
-        self.web_server                             =        getattr(settings, 'WEB_SERVER',                         self.web_server)
-        self.timezone                               =        getattr(settings, 'TIMEZONE',                           self.timezone)
-        self.append_gps_data_to_measurements_log    = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
-        self.fft_size                               = int(   getattr(settings, 'FFT_SIZE',                           self.fft_size) )
+        self.serial_number                       =            getattr(settings, 'SERIAL_NUMBER',                       self.serial_number)
+        self.site_name                           =            getattr(settings, 'SITE_NAME',                           self.site_name)
+        self.reporting_sms_phone_numbers         = list(      getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',         self.reporting_sms_phone_numbers) )
+        self.pd_event_trigger_voltage            = float(     getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',            self.pd_event_trigger_voltage) )
+        self.pd_event_reporting_interval         = int(       getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',         self.pd_event_reporting_interval) )
+        self.efd_ping_servers                    = list(      getattr(settings, 'EFD_PING_SERVERS',                    self.efd_ping_servers) )
+        self.web_server                          =            getattr(settings, 'WEB_SERVER',                          self.web_server)
+        self.timezone                            =            getattr(settings, 'TIMEZONE',                            self.timezone)
+        self.append_gps_data_to_measurements_log = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
+        self.fft_size                            = int(       getattr(settings, 'FFT_SIZE',                            self.fft_size) )
+        self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
 
         self.set_capture_count()
         self.set_fft_size()
@@ -209,6 +215,8 @@ class Config(object):
             print("WARN: fft_size lowered")
             self.set_fft_size(self.capture_count)
 
+    #!========================================================================
+
     def set_fft_size(self, fft_size=None):
         if fft_size:
             self.fft_size = fft_size
@@ -217,8 +225,12 @@ class Config(object):
         self.fft_size_half = self.fft_size // 2
         #print("INFO: fft_size_half set to {}".format(self.fft_size_half))
 
+    #!========================================================================
+
     def capture_data_polarity_is_signed(self):
         return self.sample_offset == 0
+
+    #!========================================================================
 
     def set_capture_mode(self, capture_mode='auto'):
         if capture_mode not in ['auto', 'manual']:
@@ -237,6 +249,13 @@ class Config(object):
         if self.capture_count > self.peak_detect_numpy_capture_count_limit:
             self.peak_detect_numpy = False
             print("INFO: skipping numpy peak detection as capture_count ({}) too high (> {})".format(self.capture_count, self.peak_detect_numpy_capture_count_limit))
+
+    #!========================================================================
+
+    def set_adc_offset(self, adc_offset=None):
+        if adc_offset:
+            self.adc_offset = adc_offset
+            #print("INFO: adc_offset set to {}".format(self.adc_offset))
 
     #!========================================================================
 

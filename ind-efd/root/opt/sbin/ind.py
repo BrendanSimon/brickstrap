@@ -43,7 +43,7 @@ assert(max_capture_size <= mmap_memory_size)
 
 #=============================================================================
 #!
-#! Config Constants
+#! Config Constants/Defaults.
 #!
 #=============================================================================
 class Config(IntEnum):
@@ -93,8 +93,10 @@ class Config(IntEnum):
     Mode_Manual_Trigger     = Mode_PPS_Trigger
     Mode_Stop               = Mode_System_Halt
 
-    Peak_Start_Disable      = 0x00FFFFFF
-    Peak_Stop_Disable       = 0x00FFFFFF
+    Peak_Start_Disable      = 0x00FFFFFF                #! default
+    Peak_Stop_Disable       = 0x00FFFFFF                #! default
+
+    ADC_Offset              = 0                         #! default
 
 
 #=============================================================================
@@ -304,17 +306,6 @@ else:
 
 #=============================================================================
 
-class cmd_struct(ctypes.Structure):
-    _fields_ = [
-        ('config',                  ctypes.c_uint32),   #! __u32 config
-        ('interrupt',               ctypes.c_uint32),   #! __u32 interrupt
-        ('address',                 ctypes.c_uint32),   #! __u32 address
-        ('capture_count',           ctypes.c_uint32),   #! __u32 capture_count
-        ('delay_count',             ctypes.c_uint32),   #! __u32 delay_count
-        ('peak_detect_start_count', ctypes.c_uint32),   #! __u32 delay_count
-        ('peak_detect_stop_count',  ctypes.c_uint32),   #! __u32 delay_count
-    ]
-
 class maxmin_struct(ctypes.Structure):
     _fields_ = [
         ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
@@ -341,31 +332,43 @@ class maxmin_struct(ctypes.Structure):
 
 class FPGA_Version(ctypes.Structure):
     _fields_ = [
-        ('_unused_0_',      ctypes.c_uint16),       ## __u16 unused
-        ('major',           ctypes.c_uint8),        ## __u8 major version number
-        ('minor',           ctypes.c_uint8),        ## __u8 minor version number
+        ('_unused_0_',      ctypes.c_uint16),       #! __u16 unused
+        ('major',           ctypes.c_uint8),        #! __u8 major version number
+        ('minor',           ctypes.c_uint8),        #! __u8 minor version number
     ]
 
 class bit_flag_struct(ctypes.Structure):
     _fields_ = [
-        ('set',             ctypes.c_uint),         #! __u32 set
-        ('clear',           ctypes.c_uint),         #! __u32 clear
-        ('toggle',          ctypes.c_uint),         #! __u32 clear
+        ('set',             ctypes.c_uint32),       #! __u32 set
+        ('clear',           ctypes.c_uint32),       #! __u32 clear
+        ('toggle',          ctypes.c_uint32),       #! __u32 clear
     ]
 
 class spi_cmd_struct(ctypes.Structure):
     _fields_ = [
-        ('port_devices',    ctypes.c_uint * 16),    #! __u32 port_device[16]
-        ('port_addr',       ctypes.c_uint * 16),    #! __u32 port_addr[16]
-        ('port_data',       ctypes.c_uint * 16),    #! __u32 port_data[16]
-        ('num_spi_writes',  ctypes.c_uint)          #! __u32 num_spi_writes
+        ('port_devices',    ctypes.c_uint32 * 16),  #! __u32 port_device[16]
+        ('port_addr',       ctypes.c_uint32 * 16),  #! __u32 port_addr[16]
+        ('port_data',       ctypes.c_uint32 * 16),  #! __u32 port_data[16]
+        ('num_spi_writes',  ctypes.c_uint32)        #! __u32 num_spi_writes
     ]
 
 class debug_struct(ctypes.Structure):
     _fields_ = [
-        ('cmd',     ctypes.c_uint),                 #! __u32 cmd
-        ('reg',     ctypes.c_uint),                 #! __u32 reg
-        ('data',    ctypes.c_uint),                 #! __u32 data
+        ('cmd',     ctypes.c_uint32),               #! __u32 cmd
+        ('reg',     ctypes.c_uint32),               #! __u32 reg
+        ('data',    ctypes.c_uint32),               #! __u32 data
+    ]
+
+class cmd_struct(ctypes.Structure):
+    _fields_ = [
+        ('config',                  ctypes.c_uint32),   #! __u32 config
+        ('interrupt',               ctypes.c_uint32),   #! __u32 interrupt
+        ('address',                 ctypes.c_uint32),   #! __u32 address
+        ('capture_count',           ctypes.c_uint32),   #! __u32 capture_count
+        ('delay_count',             ctypes.c_uint32),   #! __u32 delay_count
+        ('peak_detect_start_count', ctypes.c_uint32),   #! __u32 delay_count
+        ('peak_detect_stop_count',  ctypes.c_uint32),   #! __u32 delay_count
+        ('adc_offset',              ctypes.c_int32),    #! __s32 adc_offset
     ]
 
 
@@ -377,10 +380,18 @@ class debug_struct(ctypes.Structure):
 
 IOCTL_BASE = ord('t')
 
+IOCTL_ID_BASE = 0x80
+
+def _IOW(id, structure):
+    val = ioctl._IOW(IOCTL_BASE, (IOCTL_ID_BASE + id), ctypes.sizeof(structure))
+    return val
+
+def _IOR(id, structure):
+    val = ioctl._IOR(IOCTL_BASE, (IOCTL_ID_BASE + id), ctypes.sizeof(structure))
+    return val
+
 def _IOWR(id, structure):
-    val = ioctl._IOWR(IOCTL_BASE, (0x80 + id), ctypes.sizeof(structure))
-    #val = ioctl._IOWR(IOCTL_BASE, (0x80 + id), 16)
-    #print("DEBUG: _IOWR: val = 0x{:0X}".format(val))
+    val = ioctl._IOWR(IOCTL_BASE, (IOCTL_ID_BASE + id), ctypes.sizeof(structure))
     return val
 
 # Can't use enum with Python2, if value has top bit set.
@@ -409,6 +420,8 @@ class IOCTL:
     IND_USER_READ_MAXMIN                = _IOWR(0x12, structure=maxmin_struct)
     IND_USER_FPGA_VERSION               = _IOWR(0x13, structure=FPGA_Version)
     IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint)
+    IND_USER_ADC_OFFSET_SET             = _IOW( 0x15, structure=ctypes.c_int)
+    IND_USER_ADC_OFFSET_GET             = _IOR( 0x16, structure=ctypes.c_int)
 
 #!===========================================================================
 #!  Library functions.
@@ -563,8 +576,17 @@ def adc_capture_address(address=0, dev_hand=None):
         print("EXCEPTION: setting capture address.")
         raise
 
-def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable=False, capture_count=0, delay_count=0, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
+def adc_capture_set_mode(address=0,
+                         mode=Config.Mode_PPS_Debug,
+                         interrupt_enable=False,
+                         capture_count=0,
+                         delay_count=0,
+                         peak_detect_start_count=Config.Peak_Start_Disable,
+                         peak_detect_stop_count=Config.Peak_Stop_Disable,
+                         adc_offset=Config.ADC_Offset,
+                         dev_hand=None):
     '''Setup ADC Capture parameters.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -583,6 +605,7 @@ def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable
     cmd.delay_count = delay_count
     cmd.peak_detect_start_count = peak_detect_start_count
     cmd.peak_detect_stop_count = peak_detect_stop_count
+    cmd.adc_offset = adc_offset
 
     if 0:
         print("DEBUG: adc_capture_mode_set: cmd.config=0x{:08x}".format(cmd.config))
@@ -603,7 +626,15 @@ def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable
 
     #status = status_get(dev_hand=dev_hand)
 
-def adc_capture_start(address, capture_count, delay_count, capture_mode='auto', signed=True, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
+def adc_capture_start(address,
+                      capture_count,
+                      delay_count,
+                      capture_mode='auto',
+                      signed=True,
+                      peak_detect_start_count=Config.Peak_Start_Disable,
+                      peak_detect_stop_count=Config.Peak_Stop_Disable,
+                      adc_offset=Config.ADC_Offset,
+                      dev_hand=None):
     '''Start ADC Capture.'''
 
     if capture_mode == 'manual':
@@ -614,12 +645,23 @@ def adc_capture_start(address, capture_count, delay_count, capture_mode='auto', 
         msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
         raise ValueError(msg)
 
-    adc_capture_set_mode(address=address, mode=mode_start, interrupt_enable=True, capture_count=capture_count, delay_count=delay_count, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=dev_hand)
+    adc_capture_set_mode(address=address,
+                         mode=mode_start,
+                         interrupt_enable=True,
+                         capture_count=capture_count,
+                         delay_count=delay_count,
+                         peak_detect_start_count=peak_detect_start_count,
+                         peak_detect_stop_count=peak_detect_stop_count,
+                         adc_offset=adc_offset,
+                         dev_hand=dev_hand)
 
 def adc_capture_stop(dev_hand=None):
     '''Stop ADC Capture.'''
 
-    adc_capture_set_mode(address=0, mode=Config.Mode_Stop, interrupt_enable=False, dev_hand=dev_hand)
+    adc_capture_set_mode(address=0,
+                         mode=Config.Mode_Stop,
+                         interrupt_enable=False,
+                         dev_hand=dev_hand)
 
 def adc_trigger(dev_hand=None):
     '''Manually Trigger ADC Capture.'''
@@ -733,6 +775,37 @@ def adc_clock_count_per_pps_get(dev_hand=None):
         value = struct.unpack('l', a)[0]
     except:
         print("EXCEPTION: Get ADC Clock Counter Per PPS.")
+        raise
+
+    return value
+
+##----------------------------------------------------------------------------
+
+def adc_offset_set(adc_offset, dev_hand=None):
+    """Set the ADC Offset to be applied to ADC sample stream."""
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    try:
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_OFFSET_SET, adc_offset)
+    except:
+        print("EXCEPTION: Set ADC Offset.")
+        raise
+
+##----------------------------------------------------------------------------
+
+def adc_offset_get(dev_hand=None):
+    """Set the ADC DC Offset to be applied to ADC sample stream."""
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    try:
+        a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_OFFSET_GET, "1234")
+        value = struct.unpack('l', a)[0]
+    except:
+        print("EXCEPTION: Get ADC Offset.")
         raise
 
     return value
