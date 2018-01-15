@@ -15,8 +15,7 @@ def serial_loopback(port='', baudrate=115200, timeout=1):
         ser.write(test_str)
         in_str = ser.read(len(test_str))
         if in_str != test_str:
-            raise Exception("Loopback error: sent: {!r}, received: {!r}".format((
-test_str, in_str))
+            raise Exception("Loopback error: sent: {!r}, received: {!r}".format(test_str, in_str))
 
 ##============================================================================
 
@@ -28,4 +27,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
