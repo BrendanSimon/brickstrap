@@ -322,6 +322,7 @@ class Config(object):
         print("sample_frequency = {}".format(self.sample_frequency))
 
         print("sample_offset = {}".format(self.sample_offset))
+        print("adc_offset = {}".format(self.adc_offset))
 
         print("voltage_range_pp = {}".format(self.voltage_range_pp))
 
