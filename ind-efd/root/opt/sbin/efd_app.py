@@ -104,12 +104,19 @@ class EFD_App(object):
         self.wht_phase = None
         self.blu_phase = None
 
-        self.peak_max_red = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_min_red = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_max_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_min_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_max_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_min_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_max_red = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_min_red = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_max_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_min_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_max_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_min_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
+
+        self.peak_squared_max_red = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_squared_min_red = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_squared_max_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_squared_min_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_squared_max_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_squared_min_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
 
         self.adc_capture_buffer_offset = 0
         self.adc_capture_buffer_offset_half = None     #! should be set to 64MB (128MB / 2)
@@ -762,7 +769,7 @@ class EFD_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_numpy(self):
+    def peak_detection_normal_numpy(self):
         '''Perform peak detection on current phases using numpy.'''
 
         t1 = time.time()
@@ -781,12 +788,12 @@ class EFD_App(object):
         peak_max_blu = self.peak_max(self.blu_phase, index_offset=self.config.capture_index_offset_blu)
         peak_min_blu = self.peak_min(self.blu_phase, index_offset=self.config.capture_index_offset_blu)
 
-        self.peak_max_red = peak_max_red
-        self.peak_min_red = peak_min_red
-        self.peak_max_wht = peak_max_wht
-        self.peak_min_wht = peak_min_wht
-        self.peak_max_blu = peak_max_blu
-        self.peak_min_blu = peak_min_blu
+        self.peak_normal_max_red = peak_max_red
+        self.peak_normal_min_red = peak_min_red
+        self.peak_normal_max_wht = peak_max_wht
+        self.peak_normal_min_wht = peak_min_wht
+        self.peak_normal_max_blu = peak_max_blu
+        self.peak_normal_min_blu = peak_min_blu
 
     ##------------------------------------------------------------------------
 
@@ -801,124 +808,146 @@ class EFD_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_fpga(self):
+    def peak_detection_normal_fpga(self):
         '''Get peak detection info from FPGA.'''
 
         t1 = time.time()
 
-        #! Read the maxmin registers from the fpga.
-        maxmin = ind.adc_capture_maxmin_get(dev_hand=self.dev_hand)
+        #! Read the normal maxmin registers from the fpga.
+        maxmin = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
 
-        #! Red
+        #! red
         peak_max_red = self.peak_convert_fpga(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red)
         peak_min_red = self.peak_convert_fpga(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red)
 
-        #! Wht
+        #! white
         peak_max_wht = self.peak_convert_fpga(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht)
         peak_min_wht = self.peak_convert_fpga(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht)
 
-        #! Blu
+        #! blue
         peak_max_blu = self.peak_convert_fpga(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu)
         peak_min_blu = self.peak_convert_fpga(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
 
-        self.peak_max_red = peak_max_red
-        self.peak_min_red = peak_min_red
-        self.peak_max_wht = peak_max_wht
-        self.peak_min_wht = peak_min_wht
-        self.peak_max_blu = peak_max_blu
-        self.peak_min_blu = peak_min_blu
+        self.peak_normal_max_red = peak_max_red
+        self.peak_normal_min_red = peak_min_red
+        self.peak_normal_max_wht = peak_max_wht
+        self.peak_normal_min_wht = peak_min_wht
+        self.peak_normal_max_blu = peak_max_blu
+        self.peak_normal_min_blu = peak_min_blu
 
         t_delta_2 = time.time() - t1
         if config.peak_detect_fpga_debug:
-            print("DEBUG: Peak Detect FPGA: maxmin = {}".format(maxmin))
-            print("DEBUG: Peak Detect FPGA: t_delta_1 = {}".format(t_delta_1))
-            print("DEBUG: Peak Detect FPGA: t_delta_2 = {}".format(t_delta_2))
-
-        #!
-        #! Fix FPGA peak-detection errors.
-        #!
-        if config.peak_detect_fpga_fix:
-            self.peak_detection_fpga_fix(maxmin=maxmin)
+            print("DEBUG: Peak Detect Normal FPGA: maxmin = {}".format(maxmin))
+            print("DEBUG: Peak Detect Normal FPGA: t_delta_1 = {}".format(t_delta_1))
+            print("DEBUG: Peak Detect Normal FPGA: t_delta_2 = {}".format(t_delta_2))
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_fpga_fix(self, maxmin):
-        '''Fix peak detection errors from FPGA.'''
+    def peak_detection_squared_fpga(self):
+        '''Get peak detection info from FPGA.'''
 
-        #! FIXME: forget this for now -- higher priority issues !!
-        return
-
-        #!
-        #! Fix FPGA peak-detection errors.
-        #!
         t1 = time.time()
 
-        #! Red
-        tmp_phase = self.phase_array_around_index(phase=self.red_phase, index=self.peak_max_red.index, size_half=8)
-        print("DEBUG: tmp_phase = {!r}".format(tmp_phase))
-        print("DEBUG: tmp_phase = {}".format(tmp_phase))
+        #! Read the squared maxmin registers from the fpga.
+        maxmin = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
+        #! red
         peak_max_red = self.peak_convert_fpga(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red)
         peak_min_red = self.peak_convert_fpga(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red)
 
-        return
+        #! white
+        peak_max_wht = self.peak_convert_fpga(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht)
+        peak_min_wht = self.peak_convert_fpga(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht)
+
+        #! blue
+        peak_max_blu = self.peak_convert_fpga(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu)
+        peak_min_blu = self.peak_convert_fpga(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu)
+
+        t2 = time.time()
+        t_delta_1 = t2 - t1
+
+        self.peak_squared_max_red = peak_max_red
+        self.peak_squared_min_red = peak_min_red
+        self.peak_squared_max_wht = peak_max_wht
+        self.peak_squared_min_wht = peak_min_wht
+        self.peak_squared_max_blu = peak_max_blu
+        self.peak_squared_min_blu = peak_min_blu
+
+        t_delta_2 = time.time() - t1
+        if config.peak_detect_fpga_debug:
+            print("DEBUG: Peak Detect Squared FPGA: maxmin = {}".format(maxmin))
+            print("DEBUG: Peak Detect Squared FPGA: t_delta_1 = {}".format(t_delta_1))
+            print("DEBUG: Peak Detect Squared FPGA: t_delta_2 = {}".format(t_delta_2))
+
+    ##------------------------------------------------------------------------
+
+    def peak_detection_normal(self):
+        '''Perform peak detection on current phases.'''
+
+        #! Do FPGA first, as minmax registers are not double buffered.
+        if self.config.peak_detect_fpga:
+            ret = self.peak_detection_normal_fpga()
+
+            if self.config.peak_detect_fpga_debug:
+                print
+                print("DEBUG: Peak Detect FPGA")
+                print("DEBUG: peak_normal_max_red = {}".format(self.peak_normal_max_red))
+                print("DEBUG: peak_normal_min_red = {}".format(self.peak_normal_min_red))
+                print("DEBUG: peak_normal_max_wht = {}".format(self.peak_normal_max_wht))
+                print("DEBUG: peak_normal_min_wht = {}".format(self.peak_normal_min_wht))
+                print("DEBUG: peak_normal_max_blu = {}".format(self.peak_normal_max_blu))
+                print("DEBUG: peak_normal_min_blu = {}".format(self.peak_normal_min_blu))
+
+        if self.config.peak_detect_numpy:
+            if self.config.capture_count > self.config.peak_detect_numpy_capture_count_limit:
+                print("FIXME: skipping numpy peak detection as capture_count ({}) too high (> {})".format(self.config.capture_count, self.config.peak_detect_numpy_capture_count_limit))
+            else:
+                ret = self.peak_detection_normal_numpy()
+
+                if self.config.peak_detect_numpy_debug:
+                    print
+                    print("DEBUG: Peak Detect NUMPY")
+                    print("DEBUG: peak_normal_max_red = {}".format(self.peak_normal_max_red))
+                    print("DEBUG: peak_normal_min_red = {}".format(self.peak_normal_min_red))
+                    print("DEBUG: peak_normal_max_wht = {}".format(self.peak_normal_max_wht))
+                    print("DEBUG: peak_normal_min_wht = {}".format(self.peak_normal_min_wht))
+                    print("DEBUG: peak_normal_max_blu = {}".format(self.peak_normal_max_blu))
+                    print("DEBUG: peak_normal_min_blu = {}".format(self.peak_normal_min_blu))
+
+        if self.config.peak_detect_numpy_debug and self.config.peak_detect_fpga_debug:
+            print
+            print("DEBUG: Peak Detect Check FPGA v Numpy")
+
+            value = self.red_phase[self.peak_normal_max_red.index] - self.config.sample_offset
+            print("DEBUG: peak_normal_max_red: fpga={} numpy={}".format(self.peak_normal_max_red.value, value))
+
+            value = self.red_phase[self.peak_normal_min_red.index] - self.config.sample_offset
+            print("DEBUG: peak_normal_min_red: fpga={} numpy={}".format(self.peak_normal_min_red.value, value))
+
+            value = self.wht_phase[self.peak_normal_max_wht.index] - self.config.sample_offset
+            print("DEBUG: peak_normal_max_wht: fpga={} numpy={}".format(self.peak_normal_max_wht.value, value))
+
+            value = self.wht_phase[self.peak_normal_min_wht.index] - self.config.sample_offset
+            print("DEBUG: peak_normal_min_wht: fpga={} numpy={}".format(self.peak_normal_min_wht.value, value))
+
+            value = self.blu_phase[self.peak_normal_max_blu.index] - self.config.sample_offset
+            print("DEBUG: peak_normal_max_blu: fpga={} numpy={}".format(self.peak_normal_max_blu.value, value))
+
+            value = self.blu_phase[self.peak_normal_min_blu.index] - self.config.sample_offset
+            print("DEBUG: peak_normal_min_blu: fpga={} numpy={}".format(self.peak_normal_min_blu.value, value))
+
+        return ret
 
     ##------------------------------------------------------------------------
 
     def peak_detection(self):
         '''Perform peak detection on current phases.'''
 
-        #! Do FPGA first, as minmax registers are not double buffered.
-        if self.config.peak_detect_fpga:
-            ret = self.peak_detection_fpga()
-
-            if self.config.peak_detect_fpga_debug:
-                print
-                print("DEBUG: Peak Detect FPGA")
-                print("DEBUG: peak_max_red = {}".format(self.peak_max_red))
-                print("DEBUG: peak_min_red = {}".format(self.peak_min_red))
-                print("DEBUG: peak_max_wht = {}".format(self.peak_max_wht))
-                print("DEBUG: peak_min_wht = {}".format(self.peak_min_wht))
-                print("DEBUG: peak_max_blu = {}".format(self.peak_max_blu))
-                print("DEBUG: peak_min_blu = {}".format(self.peak_min_blu))
-
-        if self.config.peak_detect_numpy:
-            if self.config.capture_count > self.config.peak_detect_numpy_capture_count_limit:
-                print("FIXME: skipping numpy peak detection as capture_count ({}) too high (> {})".format(self.config.capture_count, self.config.peak_detect_numpy_capture_count_limit))
-            else:
-                ret = self.peak_detection_numpy()
-
-                if self.config.peak_detect_numpy_debug:
-                    print
-                    print("DEBUG: Peak Detect NUMPY")
-                    print("DEBUG: peak_max_red = {}".format(self.peak_max_red))
-                    print("DEBUG: peak_min_red = {}".format(self.peak_min_red))
-                    print("DEBUG: peak_max_wht = {}".format(self.peak_max_wht))
-                    print("DEBUG: peak_min_wht = {}".format(self.peak_min_wht))
-                    print("DEBUG: peak_max_blu = {}".format(self.peak_max_blu))
-                    print("DEBUG: peak_min_blu = {}".format(self.peak_min_blu))
-
-        if self.config.peak_detect_numpy_debug and self.config.peak_detect_fpga_debug:
-            print
-            print("DEBUG: Peak Detect Check FPGA v Numpy")
-            value = self.red_phase[self.peak_max_red.index] - self.config.sample_offset
-            print("DEBUG: peak_max_red: fpga={} numpy={}".format(self.peak_max_red.value, value))
-            value = self.red_phase[self.peak_min_red.index] - self.config.sample_offset
-            print("DEBUG: peak_min_red: fpga={} numpy={}".format(self.peak_min_red.value, value))
-
-            value = self.wht_phase[self.peak_max_wht.index] - self.config.sample_offset
-            print("DEBUG: peak_max_wht: fpga={} numpy={}".format(self.peak_max_wht.value, value))
-            value = self.wht_phase[self.peak_min_wht.index] - self.config.sample_offset
-            print("DEBUG: peak_min_wht: fpga={} numpy={}".format(self.peak_min_wht.value, value))
-
-            value = self.blu_phase[self.peak_max_blu.index] - self.config.sample_offset
-            print("DEBUG: peak_max_blu: fpga={} numpy={}".format(self.peak_max_blu.value, value))
-            value = self.blu_phase[self.peak_min_blu.index] - self.config.sample_offset
-            print("DEBUG: peak_min_blu: fpga={} numpy={}".format(self.peak_min_blu.value, value))
-
+        ret = self.peak_detection_normal()
+#         ret = self.peak_detection_squared()
         return ret
 
     ##------------------------------------------------------------------------
@@ -1040,12 +1069,12 @@ class EFD_App(object):
 
             if self.config.peak_detection_debug:
                 print("DEBUG: Peak Detection")
-                print("DEBUG: RED: max_idx={:6} max_val={:6}".format(self.peak_max_red.index, self.peak_max_red.value))
-                print("DEBUG: RED: min_idx={:6} min_val={:6}".format(self.peak_min_red.index, self.peak_min_red.value))
-                print("DEBUG: WHT: max_idx={:6} max_val={:6}".format(self.peak_max_wht.index, self.peak_max_wht.value))
-                print("DEBUG: WHT: min_idx={:6} min_val={:6}".format(self.peak_min_wht.index, self.peak_min_wht.value))
-                print("DEBUG: BLU: max_idx={:6} max_val={:6}".format(self.peak_max_blu.index, self.peak_max_blu.value))
-                print("DEBUG: BLU: min_idx={:6} min_val={:6}".format(self.peak_min_blu.index, self.peak_min_blu.value))
+                print("DEBUG: RED: max_idx={:6} max_val={:6}".format(self.peak_normal_max_red.index, self.peak_normal_max_red.value))
+                print("DEBUG: RED: min_idx={:6} min_val={:6}".format(self.peak_normal_min_red.index, self.peak_normal_min_red.value))
+                print("DEBUG: WHT: max_idx={:6} max_val={:6}".format(self.peak_normal_max_wht.index, self.peak_normal_max_wht.value))
+                print("DEBUG: WHT: min_idx={:6} min_val={:6}".format(self.peak_normal_min_wht.index, self.peak_normal_min_wht.value))
+                print("DEBUG: BLU: max_idx={:6} max_val={:6}".format(self.peak_normal_max_blu.index, self.peak_normal_max_blu.value))
+                print("DEBUG: BLU: min_idx={:6} min_val={:6}".format(self.peak_normal_min_blu.index, self.peak_normal_min_blu.value))
                 print
 
             adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
@@ -1055,19 +1084,19 @@ class EFD_App(object):
                 #! perform TF Mapping calculations for all phases.
                 #!
                 try:
-                    self.tf_map_red = self.tf_map_calculate(phase=self.red_phase, index=self.peak_max_red.index)
+                    self.tf_map_red = self.tf_map_calculate(phase=self.red_phase, index=self.peak_normal_max_red.index)
                 except Exception:
                     self.tf_map_red = tf_mapping.Null_TF_Map
                     print(traceback.format_exc())
 
                 try:
-                    self.tf_map_wht = self.tf_map_calculate(phase=self.wht_phase, index=self.peak_max_wht.index)
+                    self.tf_map_wht = self.tf_map_calculate(phase=self.wht_phase, index=self.peak_normal_max_wht.index)
                 except Exception:
                     self.tf_map_wht = tf_mapping.Null_TF_Map
                     print(traceback.format_exc())
 
                 try:
-                    self.tf_map_blu = self.tf_map_calculate(phase=self.blu_phase, index=self.peak_max_blu.index)
+                    self.tf_map_blu = self.tf_map_calculate(phase=self.blu_phase, index=self.peak_normal_max_blu.index)
                 except Exception:
                     self.tf_map_blu = tf_mapping.Null_TF_Map
                     print(traceback.format_exc())
@@ -1085,19 +1114,19 @@ class EFD_App(object):
             trigger_phase = None
             trigger_alert = '-'
 
-            max_volt = max( (self.peak_max_red.voltage, self.peak_max_wht.voltage, self.peak_max_blu.voltage) )
+            max_volt = max( (self.peak_normal_max_red.voltage, self.peak_normal_max_wht.voltage, self.peak_normal_max_blu.voltage) )
 
             if max_volt >= self.config.pd_event_trigger_voltage:
                 if config.pd_event_reporting_interval:
                     delta_dt = self.capture_datetime_utc - self.last_pd_event_report_datetime_utc
                     if delta_dt.total_seconds() >= config.pd_event_reporting_interval:
-                        if self.peak_max_red.voltage == max_volt:
+                        if self.peak_normal_max_red.voltage == max_volt:
                             trigger_phase = self.red_phase
                             trigger_alert = 'R'
-                        elif self.peak_max_wht.voltage == max_volt:
+                        elif self.peak_normal_max_wht.voltage == max_volt:
                             trigger_phase = self.wht_phase
                             trigger_alert = 'W'
-                        elif self.peak_max_blu.voltage == max_volt:
+                        elif self.peak_normal_max_blu.voltage == max_volt:
                             trigger_phase = self.blu_phase
                             trigger_alert = 'B'
 
@@ -1109,22 +1138,22 @@ class EFD_App(object):
             self.measurements['datetime_utc']               = self.capture_datetime_utc.isoformat(sep=' ')
             self.measurements['datetime_local']             = self.capture_datetime_local.isoformat(sep=' ')
 
-            self.measurements['max_volt_red']               = self.peak_max_red.voltage
-            self.measurements['min_volt_red']               = self.peak_min_red.voltage
-            self.measurements['max_time_offset_red']        = self.peak_max_red.time_offset
-            self.measurements['min_time_offset_red']        = self.peak_min_red.time_offset
+            self.measurements['max_volt_red']               = self.peak_normal_max_red.voltage
+            self.measurements['min_volt_red']               = self.peak_normal_min_red.voltage
+            self.measurements['max_time_offset_red']        = self.peak_normal_max_red.time_offset
+            self.measurements['min_time_offset_red']        = self.peak_normal_min_red.time_offset
             self.measurements['t2_red']                     = self.tf_map_red.T2
             self.measurements['w2_red']                     = self.tf_map_red.F2
-            self.measurements['max_volt_wht']               = self.peak_max_wht.voltage
-            self.measurements['min_volt_wht']               = self.peak_min_wht.voltage
-            self.measurements['max_time_offset_wht']        = self.peak_max_wht.time_offset
-            self.measurements['min_time_offset_wht']        = self.peak_min_wht.time_offset
+            self.measurements['max_volt_wht']               = self.peak_normal_max_wht.voltage
+            self.measurements['min_volt_wht']               = self.peak_normal_min_wht.voltage
+            self.measurements['max_time_offset_wht']        = self.peak_normal_max_wht.time_offset
+            self.measurements['min_time_offset_wht']        = self.peak_normal_min_wht.time_offset
             self.measurements['t2_wht']                     = self.tf_map_wht.T2
             self.measurements['w2_wht']                     = self.tf_map_wht.F2
-            self.measurements['max_volt_blu']               = self.peak_max_blu.voltage
-            self.measurements['min_volt_blu']               = self.peak_min_blu.voltage
-            self.measurements['max_time_offset_blu']        = self.peak_max_blu.time_offset
-            self.measurements['min_time_offset_blu']        = self.peak_min_blu.time_offset
+            self.measurements['max_volt_blu']               = self.peak_normal_max_blu.voltage
+            self.measurements['min_volt_blu']               = self.peak_normal_min_blu.voltage
+            self.measurements['max_time_offset_blu']        = self.peak_normal_max_blu.time_offset
+            self.measurements['min_time_offset_blu']        = self.peak_normal_min_blu.time_offset
             self.measurements['t2_blu']                     = self.tf_map_blu.T2
             self.measurements['w2_blu']                     = self.tf_map_blu.F2
             self.measurements['temperature']                = self.ws_info.temperature
@@ -1171,14 +1200,14 @@ class EFD_App(object):
                 print('time utc  : {}'.format(self.gpsd.utc))
                 print('fix time  : {}'.format(self.gpsd.fix.time))
                 print
-                print('peak_max_red : {}'.format(self.peak_max_red))
-                print('peak_min_red : {}'.format(self.peak_min_red))
+                print('peak_max_red : {}'.format(self.peak_normal_max_red))
+                print('peak_min_red : {}'.format(self.peak_normal_min_red))
                 print
-                print('peak_max_wht : {}'.format(self.peak_max_wht))
-                print('peak_min_wht : {}'.format(self.peak_min_wht))
+                print('peak_max_wht : {}'.format(self.peak_normal_max_wht))
+                print('peak_min_wht : {}'.format(self.peak_normal_min_wht))
                 print
-                print('peak_max_blu : {}'.format(self.peak_max_blu))
-                print('peak_min_blu : {}'.format(self.peak_min_blu))
+                print('peak_max_blu : {}'.format(self.peak_normal_max_blu))
+                print('peak_min_blu : {}'.format(self.peak_normal_min_blu))
                 print
                 print('temperature    : {}'.format(self.ws_info.temperature))
                 print('humidity       : {}'.format(self.ws_info.humidity))

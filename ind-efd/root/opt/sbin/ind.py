@@ -308,26 +308,37 @@ else:
 
 class maxmin_struct(ctypes.Structure):
     _fields_ = [
+        #! version 1 : peak values and indices.
         ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
-        ('_unused_1_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_1_',      ctypes.c_int16),        #! __i16 (unused)
         ('max_ch0_addr',    ctypes.c_uint32),       #! __u32 max_ch0_addr
         ('min_ch0_data',    ctypes.c_int16),        #! __i16 min_ch0_data
-        ('_unused_2_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_2_',      ctypes.c_int16),        #! __i16 (unused)
         ('min_ch0_addr',    ctypes.c_uint32),       #! __u32 min_ch0_addr
 
         ('max_ch1_data',    ctypes.c_int16),        #! __i16 max_ch1_data
-        ('_unused_3_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_3_',      ctypes.c_int16),        #! __i16 (unused)
         ('max_ch1_addr',    ctypes.c_uint32),       #! __u32 max_ch1_addr
         ('min_ch1_data',    ctypes.c_int16),        #! __i16 min_ch1_data
-        ('_unused_4_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_4_',      ctypes.c_int16),        #! __i16 (unused)
         ('min_ch1_addr',    ctypes.c_uint32),       #! __u32 min_ch1_addr
 
         ('max_ch2_data',    ctypes.c_int16),        #! __i16 max_ch2_data
-        ('_unused_5_',      ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_5_',      ctypes.c_int16),        #! __i16 (unused)
         ('max_ch2_addr',    ctypes.c_uint32),       #! __u32 max_ch2_addr
         ('min_ch2_data',    ctypes.c_int16),        #! __i16 min_ch2_data
-        ('_unused_6_',      ctypes.c_int16),        #! __i16 min_ch2_data
+        ('_unused_6_',      ctypes.c_int16),        #! __i16 (unused)
         ('min_ch2_addr',    ctypes.c_uint32),       #! __u32 min_ch2_addr
+
+        #! version 2 : add peak counts.
+        ('max_ch0_count',   ctypes.c_uint32),       #! __u32 max_ch0_count
+        ('min_ch0_count',   ctypes.c_uint32),       #! __u32 min_ch0_count
+
+        ('max_ch1_count',   ctypes.c_uint32),       #! __u32 max_ch1_count
+        ('min_ch1_count',   ctypes.c_uint32),       #! __u32 min_ch1_count
+
+        ('max_ch2_count',   ctypes.c_uint32),       #! __u32 max_ch2_count
+        ('min_ch2_count',   ctypes.c_uint32),       #! __u32 min_ch2_count
     ]
 
 class FPGA_Version(ctypes.Structure):
@@ -417,11 +428,12 @@ class IOCTL:
     IND_USER_REG_DEBUG                  = _IOWR(0x0F, structure=cmd_struct)
     IND_USER_MODIFY_LEDS                = _IOWR(0x10, structure=bit_flag_struct)
     IND_USER_MODIFY_CTRL                = _IOWR(0x11, structure=bit_flag_struct)
-    IND_USER_READ_MAXMIN                = _IOWR(0x12, structure=maxmin_struct)
+    IND_USER_READ_MAXMIN_NORMAL         = _IOR( 0x12, structure=maxmin_struct)
     IND_USER_FPGA_VERSION               = _IOWR(0x13, structure=FPGA_Version)
-    IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint)
-    IND_USER_ADC_OFFSET_SET             = _IOW( 0x15, structure=ctypes.c_int)
-    IND_USER_ADC_OFFSET_GET             = _IOR( 0x16, structure=ctypes.c_int)
+    IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint32)
+    IND_USER_ADC_OFFSET_SET             = _IOW( 0x15, structure=ctypes.c_int32)
+    IND_USER_ADC_OFFSET_GET             = _IOR( 0x16, structure=ctypes.c_int32)
+    IND_USER_READ_MAXMIN_SQUARED        = _IOR( 0x17, structure=maxmin_struct)
 
 #!===========================================================================
 #!  Library functions.
@@ -673,15 +685,30 @@ def adc_trigger(dev_hand=None):
         print("EXCEPTION: ADC Trigger.")
         raise
 
-def adc_capture_maxmin_get(dev_hand=None):
-    '''Get the maximum and minimum sample values and indices of each channel.'''
+def adc_capture_maxmin_normal_get(dev_hand=None):
+    '''Get the maximum and minimum normal sample values and indices of each channel.'''
     if not dev_hand:
         dev_hand = get_device_handle()
 
     maxmin = maxmin_struct()
     try:
         #! set mutable flag to true to place data in maxmin object.
-        fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN, maxmin, True)
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_NORMAL, maxmin, True)
+    except:
+        print("EXCEPTION: ADC Capture MaxMin Get.")
+        raise
+
+    return maxmin
+
+def adc_capture_maxmin_squared_get(dev_hand=None):
+    '''Get the maximum and minimum squared sample values and indices of each channel.'''
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    maxmin = maxmin_struct()
+    try:
+        #! set mutable flag to true to place data in maxmin object.
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_SQUARED, maxmin, True)
     except:
         print("EXCEPTION: ADC Capture MaxMin Get.")
         raise
