@@ -104,9 +104,9 @@ class Config(object):
     show_measurements = False
     show_measurements_post = False
 
-    page_size = 32
+    page_size = 64
 
-    page_width = 8
+    page_width = 16
 
     data_dir = os.path.join('/mnt', 'data')
 
