@@ -306,7 +306,7 @@ else:
 
 #=============================================================================
 
-class maxmin_struct(ctypes.Structure):
+class MaxMin(ctypes.Structure):
     _fields_ = [
         #! version 1 : peak values and indices.
         ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
@@ -428,12 +428,12 @@ class IOCTL:
     IND_USER_REG_DEBUG                  = _IOWR(0x0F, structure=cmd_struct)
     IND_USER_MODIFY_LEDS                = _IOWR(0x10, structure=bit_flag_struct)
     IND_USER_MODIFY_CTRL                = _IOWR(0x11, structure=bit_flag_struct)
-    IND_USER_READ_MAXMIN_NORMAL         = _IOR( 0x12, structure=maxmin_struct)
+    IND_USER_READ_MAXMIN_NORMAL         = _IOR( 0x12, structure=MaxMin)
     IND_USER_FPGA_VERSION               = _IOWR(0x13, structure=FPGA_Version)
     IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint32)
     IND_USER_ADC_OFFSET_SET             = _IOW( 0x15, structure=ctypes.c_int32)
     IND_USER_ADC_OFFSET_GET             = _IOR( 0x16, structure=ctypes.c_int32)
-    IND_USER_READ_MAXMIN_SQUARED        = _IOR( 0x17, structure=maxmin_struct)
+    IND_USER_READ_MAXMIN_SQUARED        = _IOR( 0x17, structure=MaxMin)
 
 #!===========================================================================
 #!  Library functions.
@@ -687,30 +687,32 @@ def adc_trigger(dev_hand=None):
 
 def adc_capture_maxmin_normal_get(dev_hand=None):
     '''Get the maximum and minimum normal sample values and indices of each channel.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
-    maxmin = maxmin_struct()
+    maxmin = MaxMin()
     try:
         #! set mutable flag to true to place data in maxmin object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_NORMAL, maxmin, True)
     except:
-        print("EXCEPTION: ADC Capture MaxMin Get.")
+        print("EXCEPTION: ADC Capture MaxMin Normal Get.")
         raise
 
     return maxmin
 
 def adc_capture_maxmin_squared_get(dev_hand=None):
     '''Get the maximum and minimum squared sample values and indices of each channel.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
-    maxmin = maxmin_struct()
+    maxmin = MaxMin()
     try:
         #! set mutable flag to true to place data in maxmin object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_SQUARED, maxmin, True)
     except:
-        print("EXCEPTION: ADC Capture MaxMin Get.")
+        print("EXCEPTION: ADC Capture MaxMin Squared Get.")
         raise
 
     return maxmin
@@ -732,6 +734,7 @@ def status_get(dev_hand=None):
 
 def adc_semaphore_get(dev_hand=None):
     '''Get ADC Semaphore.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -746,6 +749,7 @@ def adc_semaphore_get(dev_hand=None):
 
 def adc_semaphore_set(value=0, dev_hand=None):
     '''Set ADC Semaphore.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -757,6 +761,7 @@ def adc_semaphore_set(value=0, dev_hand=None):
 
 def adc_output_mode_twos_complement(dev_hand=None):
     '''Set ADC Semaphore.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 

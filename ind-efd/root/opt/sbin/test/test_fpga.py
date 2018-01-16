@@ -674,6 +674,7 @@ class Read_Capture_Buffers_App(object):
 
     def peak_convert_fpga(self, index, value, index_offset):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
+
         toff = float(index + index_offset) / self.config.sample_frequency
         #toff = float(index + index_offset) * self.time_resolution
         value -= self.config.sample_offset

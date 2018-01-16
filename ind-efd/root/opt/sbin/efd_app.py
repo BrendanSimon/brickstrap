@@ -742,6 +742,7 @@ class EFD_App(object):
 
     def peak_convert_numpy(self, index, data, index_offset):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
+
         toff = float(index + index_offset) / self.config.sample_frequency
         #toff = float(index + index_offset) * self.time_resolution
         value = data[index] - self.config.sample_offset
@@ -754,6 +755,7 @@ class EFD_App(object):
     def peak_min(self, data, index_offset):
         '''Search numpy data array for minimum value and the index.'''
         '''Value is converted from sample level to volts.'''
+
         idx = np.argmin(data)
         peak = self.peak_convert_numpy(index=idx, data=data, index_offset=index_offset)
         return peak
@@ -763,6 +765,7 @@ class EFD_App(object):
     def peak_max(self, data, index_offset):
         '''Search numpy data array for maximum value and the index.'''
         '''Value is converted from sample level to volts.'''
+
         idx = np.argmax(data)
         peak = self.peak_convert_numpy(index=idx, data=data, index_offset=index_offset)
         return peak
@@ -799,6 +802,7 @@ class EFD_App(object):
 
     def peak_convert_fpga(self, index, value, index_offset):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
+
         toff = float(index + index_offset) / self.config.sample_frequency
         #toff = float(index + index_offset) * self.time_resolution
         value -= self.config.sample_offset
