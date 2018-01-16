@@ -457,8 +457,8 @@ def fpga_reset(dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_RESET, 0)
-    except:
-        print("EXCEPTION: resetting ADC DMA engine.")
+    except IOError:
+        print("IOError: resetting ADC DMA engine.")
         raise
 
 def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
@@ -484,8 +484,8 @@ def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     try:
         #print("DEBUG: modifying LEDS '{!r}'".format(bits))
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_MODIFY_LEDS, bits)
-    except:
-        print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
+    except IOError:
+        print("IOError: modifying LEDS '{!r}'".format(bits))
         raise
 
 def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
@@ -509,8 +509,8 @@ def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
     try:
         #print("DEBUG: modifying LEDS '{!r}'".format(bits))
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_MODIFY_CTRL, bits)
-    except:
-        print("EXCEPTION: modifying CTRL '{!r}'".format(bits))
+    except IOError:
+        print("IOError: modifying CTRL '{!r}'".format(bits))
         raise
 
 def modem_power_pulse(duration, dev_hand=None):
@@ -573,8 +573,8 @@ def adc_dma_reset(dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_DMA_RESET, 0)
-    except:
-        print("EXCEPTION: resetting ADC DMA engine.")
+    except IOError:
+        print("IOError: resetting ADC DMA engine.")
         raise
 
 def adc_capture_address(address=0, dev_hand=None):
@@ -584,8 +584,8 @@ def adc_capture_address(address=0, dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_ADDRESS, address)
-    except:
-        print("EXCEPTION: setting capture address.")
+    except IOError:
+        print("IOError: setting capture address.")
         raise
 
 def adc_capture_set_mode(address=0,
@@ -632,8 +632,8 @@ def adc_capture_set_mode(address=0,
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_MODE, cmd)
-    except:
-        print("EXCEPTION: ADC Capture Setup.")
+    except IOError:
+        print("IOError: ADC Capture Setup.")
         raise
 
     #status = status_get(dev_hand=dev_hand)
@@ -681,8 +681,8 @@ def adc_trigger(dev_hand=None):
     arg = Config.Mode_Manual_Trigger
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_TRIG_PPS, arg)
-    except:
-        print("EXCEPTION: ADC Trigger.")
+    except IOError:
+        print("IOError: ADC Trigger.")
         raise
 
 def adc_capture_maxmin_normal_get(dev_hand=None):
@@ -695,8 +695,8 @@ def adc_capture_maxmin_normal_get(dev_hand=None):
     try:
         #! set mutable flag to true to place data in maxmin object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_NORMAL, maxmin, True)
-    except:
-        print("EXCEPTION: ADC Capture MaxMin Normal Get.")
+    except IOError:
+        print("IOError: ADC Capture MaxMin Normal Get.")
         raise
 
     return maxmin
@@ -711,8 +711,8 @@ def adc_capture_maxmin_squared_get(dev_hand=None):
     try:
         #! set mutable flag to true to place data in maxmin object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_SQUARED, maxmin, True)
-    except:
-        print("EXCEPTION: ADC Capture MaxMin Squared Get.")
+    except IOError:
+        print("IOError: ADC Capture MaxMin Squared Get.")
         raise
 
     return maxmin
@@ -725,8 +725,8 @@ def status_get(dev_hand=None):
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_STATUS, "1234")
         value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: Get Status.")
+    except IOError:
+        print("IOError: Get Status.")
         raise
 
     #print("DEBUG: status_get: status = 0x{:08x}".format(value))
@@ -741,8 +741,8 @@ def adc_semaphore_get(dev_hand=None):
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, "1234")
         value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: ADC Get Semaphore.")
+    except IOError:
+        print("IOError: ADC Get Semaphore.")
         raise
 
     return value
@@ -755,8 +755,8 @@ def adc_semaphore_set(value=0, dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_SEM, value)
-    except:
-        print("EXCEPTION: ADC Set Semaphore.")
+    except IOError:
+        print("IOError: ADC Set Semaphore.")
         raise
 
 def adc_output_mode_twos_complement(dev_hand=None):
@@ -772,8 +772,8 @@ def adc_output_mode_twos_complement(dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, spi_cmd)
-    except:
-        print("EXCEPTION: ADC Set Semaphore.")
+    except IOError:
+        print("IOError: ADC Set Semaphore.")
         raise
 
 #!===========================================================================
@@ -788,8 +788,8 @@ def fpga_version_get(dev_hand=None):
     try:
         ## set mutable flag to true to place data in the object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_FPGA_VERSION, fpga_version, True)
-    except:
-        print("EXCEPTION: FPGA Version Get.")
+    except IOError:
+        print("IOError: FPGA Version Get.")
         raise
 
     return fpga_version
@@ -805,8 +805,8 @@ def adc_clock_count_per_pps_get(dev_hand=None):
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_CLOCK_COUNT_PER_PPS, "1234")
         value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: Get ADC Clock Counter Per PPS.")
+    except IOError:
+        print("IOError: Get ADC Clock Counter Per PPS.")
         raise
 
     return value
@@ -821,8 +821,8 @@ def adc_offset_set(adc_offset, dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_OFFSET_SET, adc_offset)
-    except:
-        print("EXCEPTION: Set ADC Offset.")
+    except IOError:
+        print("IOError: Set ADC Offset.")
         raise
 
 ##----------------------------------------------------------------------------
@@ -836,8 +836,8 @@ def adc_offset_get(dev_hand=None):
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_OFFSET_GET, "1234")
         value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: Get ADC Offset.")
+    except IOError:
+        print("IOError: Get ADC Offset.")
         raise
 
     return value
