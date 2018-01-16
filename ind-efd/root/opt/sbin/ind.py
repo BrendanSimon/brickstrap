@@ -445,7 +445,7 @@ def get_device_handle():
         #dev_hand = open(dev_name, 'rw')
         dev_hand = open(dev_name, 'r+b')
         #print("DEBUG: dev_hand={!r}".format(dev_hand))
-    except:
+    except IOError:
         print("EXCEPTION: opening device name '{}'".format(dev_name))
         raise
     return dev_hand
@@ -560,7 +560,7 @@ def adc_memory_map(size=0, dev_hand=None):
     try:
         #mem = mmap.mmap(dev_hand.fileno(), length=size, access=mmap.ACCESS_READ, offset=0)
         mem = mmap.mmap(dev_hand.fileno(), length=size, offset=0)
-    except:
+    except Exception:
         print("EXCEPTION: getting ADC Memory Map.")
         raise
 
@@ -1167,8 +1167,8 @@ def main():
         #dev_hand = open(dev_name, 'rw')
         dev_hand = open(dev_name, 'r+b')
         print("DEBUG: dev_hand={!r}".format(dev_hand))
-    except:
-        print("EXCEPTION: opening device name '{}'".format(dev_name))
+    except IOError:
+        print("IOError: opening device name '{}'".format(dev_name))
         raise
 
     #led_seq = [ LED.Battery_OK, LED.Power_OK, LED.PPS_OK, LED.Running,
