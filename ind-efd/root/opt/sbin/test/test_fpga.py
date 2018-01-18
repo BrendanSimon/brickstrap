@@ -33,20 +33,25 @@ import ind
 ## Named Tuple for Sample info, with fields 'index' and 'value'
 Sample = namedtuple('Sample', ['index', 'value'])
 
-PeakBase = namedtuple('Peak', ['index', 'value', 'time_offset', 'voltage'])
+##============================================================================
+
+PeakBase = namedtuple('Peak', ['index', 'value', 'count', 'time_offset', 'voltage'])
+
+PeakBase.__new__.__defaults__ = (0, 0, 0, 0.0, 0.0)     ## list of default values.
 
 class Peak(PeakBase):
-    def __init__(self, *args, **kwargs):
-        PeakBase.__init__(self, *args, **kwargs)
 
     def __repr__(self):
         #! """Peak(index=1597787L, value=176, time_offset=0.056391148, voltage=0.0067138671875)"""
-        return "{}( index={:8}, value={:7}, time_offset={:12.9f}, voltage={:12.9f} )".format(self.__class__.__name__, self.index, self.value, self.time_offset, self.voltage)
+        return "{}( index={:10}, value={:+11}, count={:8}, time_offset={:12.9f}, voltage={:12.9f} )".format(self.__class__.__name__, self.index, self.value, self.count, self.time_offset, self.voltage)
+
+peak_default = Peak()
 
 ##============================================================================
 
 def sample_min(data):
     '''Search numpy data array for minimum value and the index.'''
+
     idx = np.argmin(data)
     val = data[idx]
     sample = Sample(index=idx, value=val)
@@ -54,6 +59,7 @@ def sample_min(data):
 
 def sample_max(data):
     '''Search numpy data array for maximum value and the index.'''
+
     idx = np.argmax(data)
     val = data[idx]
     sample = Sample(index=idx, value=val)
@@ -87,19 +93,19 @@ class Read_Capture_Buffers_App(object):
         self.wht_phase = None
         self.blu_phase = None
 
-        self.peak_normal_max_red = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_normal_min_red = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_normal_max_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_normal_min_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_normal_max_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_normal_min_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_normal_max_red = peak_default
+        self.peak_normal_min_red = peak_default
+        self.peak_normal_max_wht = peak_default
+        self.peak_normal_min_wht = peak_default
+        self.peak_normal_max_blu = peak_default
+        self.peak_normal_min_blu = peak_default
 
-        self.peak_squared_max_red = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_squared_min_red = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_squared_max_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_squared_min_wht = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_squared_max_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
-        self.peak_squared_min_blu = Peak(index=0, value=0, time_offset=0, voltage=0)
+        self.peak_squared_max_red = peak_default
+        self.peak_squared_min_red = peak_default
+        self.peak_squared_max_wht = peak_default
+        self.peak_squared_min_wht = peak_default
+        self.peak_squared_max_blu = peak_default
+        self.peak_squared_min_blu = peak_default
 
         self.adc_capture_buffer_offset = 0
         self.adc_capture_buffer_offset_half = None     ## should be set to 64MB (128MB / 2)
@@ -568,14 +574,28 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_convert_numpy(self, index, data, index_offset):
+    def peak_convert(self, index, value, index_offset, count):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
 
         toff = float(index + index_offset) / self.config.sample_frequency
         #toff = float(index + index_offset) * self.time_resolution
-        value = data[index] - self.config.sample_offset
+        value -= self.config.sample_offset
         volt = value * self.voltage_factor
-        peak = Peak(index=index, value=value, time_offset=toff, voltage=volt)
+        peak = Peak(index=index, value=value, count=count, time_offset=toff, voltage=volt)
+        return peak
+
+    ##------------------------------------------------------------------------
+
+    def peak_by_func(self, func, data, index_offset):
+        '''Search numpy data array (by function) and get the index.'''
+        '''Value is converted from sample level to volts.'''
+
+        peak_data = data[self.peak_detect_start_count:self.peak_detect_stop_count]
+        idx = func(peak_data) + self.peak_detect_start_count
+        value = data[idx]
+        condition = (data == value)
+        count = np.count_nonzero(condition)
+        peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count)
         return peak
 
     ##------------------------------------------------------------------------
@@ -584,10 +604,7 @@ class Read_Capture_Buffers_App(object):
         '''Search numpy data array for minimum value and the index.'''
         '''Value is converted from sample level to volts.'''
 
-        peak_data = data[self.peak_detect_start_count:self.peak_detect_stop_count]
-        idx = np.argmin(peak_data) + self.peak_detect_start_count
-        peak = self.peak_convert_numpy(index=idx, data=data, index_offset=index_offset)
-        return peak
+        return self.peak_by_func(func=np.argmin, data=data, index_offset=index_offset)
 
     ##------------------------------------------------------------------------
 
@@ -595,10 +612,7 @@ class Read_Capture_Buffers_App(object):
         '''Search numpy data array for maximum value and the index.'''
         '''Value is converted from sample level to volts.'''
 
-        peak_data = data[self.peak_detect_start_count:self.peak_detect_stop_count]
-        idx = np.argmax(peak_data) + self.peak_detect_start_count
-        peak = self.peak_convert_numpy(index=idx, data=data, index_offset=index_offset)
-        return peak
+        return self.peak_by_func(func=np.argmax, data=data, index_offset=index_offset)
 
     ##------------------------------------------------------------------------
 
@@ -640,7 +654,8 @@ class Read_Capture_Buffers_App(object):
     def peak_detection_squared_numpy(self):
         '''Perform peak detection on squared current phases using numpy.'''
 
-        phase = self.red_phase
+#         phase = np.square(self.red_phase.astype)
+        phase = np.square(self.red_phase.astype(np.int32))
         offset = self.config.capture_index_offset_red
         t1 = time.time()
         peak_max_red = self.peak_max(phase, index_offset=offset)
@@ -653,12 +668,14 @@ class Read_Capture_Buffers_App(object):
             print("DEBUG: RED: time_delta_1={}".format(red_time_delta_1))
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
-        phase = self.wht_phase
+#         phase = np.square(self.wht_phase)
+        phase = np.square(self.wht_phase.astype(np.int32))
         offset = self.config.capture_index_offset_wht
         peak_max_wht = self.peak_max(phase, index_offset=offset)
         peak_min_wht = self.peak_min(phase, index_offset=offset)
 
-        phase = self.blu_phase
+#         phase = np.square(self.blu_phase)
+        phase = np.square(self.blu_phase.astype(np.int32))
         offset = self.config.capture_index_offset_blu
         peak_max_blu = self.peak_max(phase, index_offset=offset)
         peak_min_blu = self.peak_min(phase, index_offset=offset)
@@ -672,37 +689,24 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_convert_fpga(self, index, value, index_offset):
-        '''Convert peak index and value to Peak object, converting to time and voltage.'''
-
-        toff = float(index + index_offset) / self.config.sample_frequency
-        #toff = float(index + index_offset) * self.time_resolution
-        value -= self.config.sample_offset
-        volt = value * self.voltage_factor
-        peak = Peak(index=index, value=value, time_offset=toff, voltage=volt)
-        return peak
-
-    ##------------------------------------------------------------------------
-
     def peak_detection_normal_fpga(self):
         '''Get normal peak detection info from FPGA.'''
 
         t1 = time.time()
 
-        ## Read the maxmin registers from the fpga.
-        maxmin = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
+        maxmin = self.maxmin_normal
 
-        ## Red
-        peak_max_red = self.peak_convert_fpga(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red)
-        peak_min_red = self.peak_convert_fpga(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red)
+        #! channel 0 (red)
+        peak_max_red = self.peak_convert(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
+        peak_min_red = self.peak_convert(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
 
-        ## Wht
-        peak_max_wht = self.peak_convert_fpga(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht)
-        peak_min_wht = self.peak_convert_fpga(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht)
+        ## channel 1 (white)
+        peak_max_wht = self.peak_convert(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
+        peak_min_wht = self.peak_convert(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
 
-        ## Blu
-        peak_max_blu = self.peak_convert_fpga(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu)
-        peak_min_blu = self.peak_convert_fpga(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu)
+        ## channel 2 (blue)
+        peak_max_blu = self.peak_convert(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
+        peak_min_blu = self.peak_convert(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
@@ -716,9 +720,10 @@ class Read_Capture_Buffers_App(object):
 
         t_delta_2 = time.time() - t1
         if config.peak_detect_fpga_debug:
-            print("DEBUG: Peak Detect FPGA: maxmin = {}".format(maxmin))
-            print("DEBUG: Peak Detect FPGA: t_delta_1 = {}".format(t_delta_1))
-            print("DEBUG: Peak Detect FPGA: t_delta_2 = {}".format(t_delta_2))
+            print
+            print("DEBUG: Peak Detect Normal FPGA: maxmin = {}".format(maxmin))
+            print("DEBUG: Peak Detect Normal FPGA: t_delta_1 = {}".format(t_delta_1))
+            print("DEBUG: Peak Detect Normal FPGA: t_delta_2 = {}".format(t_delta_2))
 
     ##------------------------------------------------------------------------
 
@@ -727,20 +732,19 @@ class Read_Capture_Buffers_App(object):
 
         t1 = time.time()
 
-        #! Read the squared maxmin registers from the fpga.
-        maxmin = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
+        maxmin = self.maxmin_squared
 
-        #! red
-        peak_max_red = self.peak_convert_fpga(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red)
-        peak_min_red = self.peak_convert_fpga(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red)
+        #! channel 0 (red)
+        peak_max_red = self.peak_convert(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
+        peak_min_red = self.peak_convert(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
 
-        #! white
-        peak_max_wht = self.peak_convert_fpga(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht)
-        peak_min_wht = self.peak_convert_fpga(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht)
+        ## channel 1 (white)
+        peak_max_wht = self.peak_convert(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
+        peak_min_wht = self.peak_convert(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
 
-        #! blue
-        peak_max_blu = self.peak_convert_fpga(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu)
-        peak_min_blu = self.peak_convert_fpga(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu)
+        ## channel 2 (blue)
+        peak_max_blu = self.peak_convert(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
+        peak_min_blu = self.peak_convert(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
@@ -754,6 +758,7 @@ class Read_Capture_Buffers_App(object):
 
         t_delta_2 = time.time() - t1
         if config.peak_detect_fpga_debug:
+            print
             print("DEBUG: Peak Detect Squared FPGA: maxmin = {}".format(maxmin))
             print("DEBUG: Peak Detect Squared FPGA: t_delta_1 = {}".format(t_delta_1))
             print("DEBUG: Peak Detect Squared FPGA: t_delta_2 = {}".format(t_delta_2))
@@ -763,7 +768,10 @@ class Read_Capture_Buffers_App(object):
     def peak_detection_normal(self):
         '''Perform normal peak detection on current phases.'''
 
-        errors = 0
+        peak_index_errors = 0
+        peak_value_errors = 0
+        peak_count_errors = 0
+
 
         ## Do FPGA first, as minmax registers are not double buffered.
         if self.config.peak_detect_fpga:
@@ -778,12 +786,13 @@ class Read_Capture_Buffers_App(object):
             fpga_peak_normal_min_blu = self.peak_normal_min_blu
 
             if self.config.peak_detect_fpga_debug:
+                print
                 print("DEBUG: Peak Detect FPGA")
-                print("DEBUG: peak_normal_max_red = {!r}".format(fpga_peak_normal_max_red))
+                print("DEBUG: peak_normal_max_red = {}".format(fpga_peak_normal_max_red))
                 print("DEBUG: peak_normal_min_red = {}".format(fpga_peak_normal_min_red))
-                print("DEBUG: peak_normal_max_wht = {!r}".format(fpga_peak_normal_max_wht))
+                print("DEBUG: peak_normal_max_wht = {}".format(fpga_peak_normal_max_wht))
                 print("DEBUG: peak_normal_min_wht = {}".format(fpga_peak_normal_min_wht))
-                print("DEBUG: peak_normal_max_blu = {!r}".format(fpga_peak_normal_max_blu))
+                print("DEBUG: peak_normal_max_blu = {}".format(fpga_peak_normal_max_blu))
                 print("DEBUG: peak_normal_min_blu = {}".format(fpga_peak_normal_min_blu))
 
         if self.config.peak_detect_numpy:
@@ -798,103 +807,136 @@ class Read_Capture_Buffers_App(object):
             numpy_peak_normal_min_blu = self.peak_normal_min_blu
 
             if self.config.peak_detect_numpy_debug:
+                print
                 print("DEBUG: Peak Detect NUMPY")
-                print("DEBUG: peak_normal_max_red = {:7}".format(numpy_peak_normal_max_red))
-                print("DEBUG: peak_normal_min_red = {:7}".format(numpy_peak_normal_min_red))
-                print("DEBUG: peak_normal_max_wht = {:7}".format(numpy_peak_normal_max_wht))
-                print("DEBUG: peak_normal_min_wht = {:7}".format(numpy_peak_normal_min_wht))
-                print("DEBUG: peak_normal_max_blu = {:7}".format(numpy_peak_normal_max_blu))
-                print("DEBUG: peak_normal_min_blu = {:7}".format(numpy_peak_normal_min_blu))
+                print("DEBUG: peak_normal_max_red = {}".format(numpy_peak_normal_max_red))
+                print("DEBUG: peak_normal_min_red = {}".format(numpy_peak_normal_min_red))
+                print("DEBUG: peak_normal_max_wht = {}".format(numpy_peak_normal_max_wht))
+                print("DEBUG: peak_normal_min_wht = {}".format(numpy_peak_normal_min_wht))
+                print("DEBUG: peak_normal_max_blu = {}".format(numpy_peak_normal_max_blu))
+                print("DEBUG: peak_normal_min_blu = {}".format(numpy_peak_normal_min_blu))
 
             if fpga_peak_normal_max_red is numpy_peak_normal_max_red:
                 print("ERROR: SAME OBJECT: fpga_peak_normal_max_red is numpy_peak_normal_max_red !!")
 
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
-            print("DEBUG: Peak Detect Check FPGA v Numpy")
+            print("\nDEBUG: Peak Detect Check FPGA v Numpy")
 
             ## Red Max
             if fpga_peak_normal_max_red.value != numpy_peak_normal_max_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_red.value={:7} numpy_peak_normal_max_red.value={:7}".format(fpga_peak_normal_max_red.value, numpy_peak_normal_max_red.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_normal_max_red.index != numpy_peak_normal_max_red.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_normal_max_red.index={:8} numpy_peak_normal_max_red.index={:8}".format(fpga_peak_normal_max_red.index, numpy_peak_normal_max_red.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_normal_max_red.index={:8} numpy_peak_normal_max_red.index={:8}".format(fpga_peak_normal_max_red.index, numpy_peak_normal_max_red.index))
+                peak_index_errors += 1
             if fpga_peak_normal_max_red.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_normal_max_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_max_red.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_normal_max_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_max_red.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_normal_max_red.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_normal_max_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_max_red.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_normal_max_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_max_red.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_normal_max_red.count != numpy_peak_normal_max_red.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_red.count={:8} numpy_peak_normal_max_red.count={:8}".format(fpga_peak_normal_max_red.count, numpy_peak_normal_max_red.count))
+                peak_count_errors += 1
 
             ## Red Min
             if fpga_peak_normal_min_red.value != numpy_peak_normal_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_red.value={:7} numpy_peak_normal_min_red.value={:7}".format(fpga_peak_normal_min_red.value, numpy_peak_normal_min_red.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_normal_min_red.index != numpy_peak_normal_min_red.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_normal_min_red.index={:8} numpy_peak_normal_min_red.index={:8}".format(fpga_peak_normal_min_red.index, numpy_peak_normal_min_red.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_normal_min_red.index={:8} numpy_peak_normal_min_red.index={:8}".format(fpga_peak_normal_min_red.index, numpy_peak_normal_min_red.index))
+                peak_index_errors += 1
             if fpga_peak_normal_min_red.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_normal_min_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_min_red.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_normal_min_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_min_red.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_normal_min_red.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_normal_min_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_min_red.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_normal_min_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_min_red.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_normal_min_red.count != numpy_peak_normal_min_red.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_red.count={:8} numpy_peak_normal_min_red.count={:8}".format(fpga_peak_normal_min_red.count, numpy_peak_normal_min_red.count))
+                peak_count_errors += 1
+
 
             ## White Max
             if fpga_peak_normal_max_wht.value != numpy_peak_normal_max_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_wht.value={:7} numpy_peak_normal_max_wht.value={:7}".format(fpga_peak_normal_max_wht.value, numpy_peak_normal_max_wht.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_normal_max_wht.index != numpy_peak_normal_max_wht.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_normal_max_wht.index={:8} numpy_peak_normal_max_wht.index={:8}".format(fpga_peak_normal_max_wht.index, numpy_peak_normal_max_wht.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_normal_max_wht.index={:8} numpy_peak_normal_max_wht.index={:8}".format(fpga_peak_normal_max_wht.index, numpy_peak_normal_max_wht.index))
+                peak_index_errors += 1
             if fpga_peak_normal_max_wht.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_normal_max_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_max_wht.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_normal_max_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_max_wht.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_normal_max_wht.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_normal_max_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_max_wht.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_normal_max_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_max_wht.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_normal_max_wht.count != numpy_peak_normal_max_wht.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_wht.count={:8} numpy_peak_normal_max_wht.count={:8}".format(fpga_peak_normal_max_wht.count, numpy_peak_normal_max_wht.count))
+                peak_count_errors += 1
+
 
             ## White Min
             if fpga_peak_normal_min_wht.value != numpy_peak_normal_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_wht.value={:7} numpy_peak_normal_min_wht.value={:7}".format(fpga_peak_normal_min_wht.value, numpy_peak_normal_min_wht.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_normal_min_wht.index != numpy_peak_normal_min_wht.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_normal_min_wht.index={:8} numpy_peak_normal_min_wht.index={:8}".format(fpga_peak_normal_min_wht.index, numpy_peak_normal_min_wht.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_normal_min_wht.index={:8} numpy_peak_normal_min_wht.index={:8}".format(fpga_peak_normal_min_wht.index, numpy_peak_normal_min_wht.index))
+                peak_index_errors += 1
             if fpga_peak_normal_min_wht.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_normal_min_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_min_wht.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_normal_min_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_min_wht.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_normal_min_wht.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_normal_min_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_min_wht.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_normal_min_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_min_wht.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_normal_min_wht.count != numpy_peak_normal_min_wht.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_wht.count={:8} numpy_peak_normal_min_wht.count={:8}".format(fpga_peak_normal_min_wht.count, numpy_peak_normal_min_wht.count))
+                peak_count_errors += 1
+
 
             ## Blue Max
             if fpga_peak_normal_max_blu.value != numpy_peak_normal_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_blu.value={:7} numpy_peak_normal_max_blu.value={:7}".format(fpga_peak_normal_max_blu.value, numpy_peak_normal_max_blu.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_normal_max_blu.index != numpy_peak_normal_max_blu.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_normal_max_blu.index={:8} numpy_peak_normal_max_blu.index={:8}".format(fpga_peak_normal_max_blu.index, numpy_peak_normal_max_blu.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_normal_max_blu.index={:8} numpy_peak_normal_max_blu.index={:8}".format(fpga_peak_normal_max_blu.index, numpy_peak_normal_max_blu.index))
+                peak_index_errors += 1
             if fpga_peak_normal_max_blu.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_normal_max_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_max_blu.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_normal_max_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_max_blu.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_normal_max_blu.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_normal_max_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_max_blu.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_normal_max_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_max_blu.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_normal_max_blu.count != numpy_peak_normal_max_blu.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_blu.count={:8} numpy_peak_normal_max_blu.count={:8}".format(fpga_peak_normal_max_blu.count, numpy_peak_normal_max_blu.count))
+                peak_count_errors += 1
+
 
             ## Blue Min
             if fpga_peak_normal_min_blu.value != numpy_peak_normal_min_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_blu.value={:7} numpy_peak_normal_min_blu.value={:7}".format(fpga_peak_normal_min_blu.value, numpy_peak_normal_min_blu.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_normal_min_blu.index != numpy_peak_normal_min_blu.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_normal_min_blu.index={:8} numpy_peak_normal_min_blu.index={:8}".format(fpga_peak_normal_min_blu.index, numpy_peak_normal_min_blu.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_normal_min_blu.index={:8} numpy_peak_normal_min_blu.index={:8}".format(fpga_peak_normal_min_blu.index, numpy_peak_normal_min_blu.index))
+                peak_index_errors += 1
             if fpga_peak_normal_min_blu.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_normal_min_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_min_blu.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_normal_min_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_normal_min_blu.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_normal_min_blu.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_normal_min_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_min_blu.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_normal_min_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_normal_min_blu.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_normal_min_blu.count != numpy_peak_normal_min_blu.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_blu.count={:8} numpy_peak_normal_min_blu.count={:8}".format(fpga_peak_normal_min_blu.count, numpy_peak_normal_min_blu.count))
+                peak_count_errors += 1
+
+        self.peak_index_errors += peak_index_errors
+        self.peak_value_errors += peak_value_errors
+        self.peak_count_errors += peak_count_errors
+
+        self.peak_index_errors_total += peak_index_errors
+        self.peak_value_errors_total += peak_value_errors
+        self.peak_count_errors_total += peak_count_errors
+
+        errors = peak_index_errors + peak_value_errors + peak_count_errors
 
         return errors
 
@@ -903,7 +945,9 @@ class Read_Capture_Buffers_App(object):
     def peak_detection_squared(self):
         '''Perform squared peak detection on current phases.'''
 
-        errors = 0
+        peak_index_errors = 0
+        peak_value_errors = 0
+        peak_count_errors = 0
 
         ## Do FPGA first, as minmax registers are not double buffered.
         if self.config.peak_detect_fpga:
@@ -918,13 +962,14 @@ class Read_Capture_Buffers_App(object):
             fpga_peak_squared_min_blu = self.peak_squared_min_blu
 
             if self.config.peak_detect_fpga_debug:
+                print
                 print("DEBUG: Peak Detect FPGA")
-                print("DEBUG: peak_squared_max_red = {:7}".format(fpga_peak_squared_max_red))
-                print("DEBUG: peak_squared_min_red = {:7}".format(fpga_peak_squared_min_red))
-                print("DEBUG: peak_squared_max_wht = {:7}".format(fpga_peak_squared_max_wht))
-                print("DEBUG: peak_squared_min_wht = {:7}".format(fpga_peak_squared_min_wht))
-                print("DEBUG: peak_squared_max_blu = {:7}".format(fpga_peak_squared_max_blu))
-                print("DEBUG: peak_squared_min_blu = {:7}".format(fpga_peak_squared_min_blu))
+                print("DEBUG: peak_squared_max_red = {}".format(fpga_peak_squared_max_red))
+                print("DEBUG: peak_squared_min_red = {}".format(fpga_peak_squared_min_red))
+                print("DEBUG: peak_squared_max_wht = {}".format(fpga_peak_squared_max_wht))
+                print("DEBUG: peak_squared_min_wht = {}".format(fpga_peak_squared_min_wht))
+                print("DEBUG: peak_squared_max_blu = {}".format(fpga_peak_squared_max_blu))
+                print("DEBUG: peak_squared_min_blu = {}".format(fpga_peak_squared_min_blu))
 
         if self.config.peak_detect_numpy:
             ret = self.peak_detection_squared_numpy()
@@ -938,105 +983,139 @@ class Read_Capture_Buffers_App(object):
             numpy_peak_squared_min_blu = self.peak_squared_min_blu
 
             if self.config.peak_detect_numpy_debug:
+                print
                 print("DEBUG: Peak Detect NUMPY")
-                print("DEBUG: peak_squared_max_red = {:7}".format(numpy_peak_squared_max_red))
-                print("DEBUG: peak_squared_min_red = {:7}".format(numpy_peak_squared_min_red))
-                print("DEBUG: peak_squared_max_wht = {:7}".format(numpy_peak_squared_max_wht))
-                print("DEBUG: peak_squared_min_wht = {:7}".format(numpy_peak_squared_min_wht))
-                print("DEBUG: peak_squared_max_blu = {:7}".format(numpy_peak_squared_max_blu))
-                print("DEBUG: peak_squared_min_blu = {:7}".format(numpy_peak_squared_min_blu))
+                print("DEBUG: peak_squared_max_red = {}".format(numpy_peak_squared_max_red))
+                print("DEBUG: peak_squared_min_red = {}".format(numpy_peak_squared_min_red))
+                print("DEBUG: peak_squared_max_wht = {}".format(numpy_peak_squared_max_wht))
+                print("DEBUG: peak_squared_min_wht = {}".format(numpy_peak_squared_min_wht))
+                print("DEBUG: peak_squared_max_blu = {}".format(numpy_peak_squared_max_blu))
+                print("DEBUG: peak_squared_min_blu = {}".format(numpy_peak_squared_min_blu))
 
             if fpga_peak_squared_max_red is numpy_peak_squared_max_red:
                 print("ERROR: SAME OBJECT: fpga_peak_squared_max_red is numpy_peak_squared_max_red !!")
 
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
-            print("DEBUG: Peak Detect Check FPGA v Numpy")
+            print("\nDEBUG: Peak Detect Check FPGA v Numpy")
 
             ## Red Max
             if fpga_peak_squared_max_red.value != numpy_peak_squared_max_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_red.value={:7} numpy_peak_squared_max_red.value={:7}".format(fpga_peak_squared_max_red.value, numpy_peak_squared_max_red.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_squared_max_red.index != numpy_peak_squared_max_red.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_squared_max_red.index={:8} numpy_peak_squared_max_red.index={:8}".format(fpga_peak_squared_max_red.index, numpy_peak_squared_max_red.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_squared_max_red.index={:8} numpy_peak_squared_max_red.index={:8}".format(fpga_peak_squared_max_red.index, numpy_peak_squared_max_red.index))
+                peak_index_errors += 1
             if fpga_peak_squared_max_red.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_squared_max_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_max_red.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_squared_max_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_max_red.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_squared_max_red.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_squared_max_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_max_red.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_squared_max_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_max_red.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_squared_max_red.count != numpy_peak_squared_max_red.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_red.count={:8} numpy_peak_squared_max_red.count={:8}".format(fpga_peak_squared_max_red.count, numpy_peak_squared_max_red.count))
+                peak_count_errors += 1
+
 
             ## Red Min
             if fpga_peak_squared_min_red.value != numpy_peak_squared_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_red.value={:7} numpy_peak_squared_min_red.value={:7}".format(fpga_peak_squared_min_red.value, numpy_peak_squared_min_red.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_squared_min_red.index != numpy_peak_squared_min_red.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_squared_min_red.index={:8} numpy_peak_squared_min_red.index={:8}".format(fpga_peak_squared_min_red.index, numpy_peak_squared_min_red.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_squared_min_red.index={:8} numpy_peak_squared_min_red.index={:8}".format(fpga_peak_squared_min_red.index, numpy_peak_squared_min_red.index))
+                peak_index_errors += 1
             if fpga_peak_squared_min_red.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_squared_min_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_min_red.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_squared_min_red.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_min_red.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_squared_min_red.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_squared_min_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_min_red.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_squared_min_red.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_min_red.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_squared_min_red.count != numpy_peak_squared_min_red.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_red.count={:8} numpy_peak_squared_min_red.count={:8}".format(fpga_peak_squared_min_red.count, numpy_peak_squared_min_red.count))
+                peak_count_errors += 1
+
 
             ## White Max
             if fpga_peak_squared_max_wht.value != numpy_peak_squared_max_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_wht.value={:7} numpy_peak_squared_max_wht.value={:7}".format(fpga_peak_squared_max_wht.value, numpy_peak_squared_max_wht.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_squared_max_wht.index != numpy_peak_squared_max_wht.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_squared_max_wht.index={:8} numpy_peak_squared_max_wht.index={:8}".format(fpga_peak_squared_max_wht.index, numpy_peak_squared_max_wht.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_squared_max_wht.index={:8} numpy_peak_squared_max_wht.index={:8}".format(fpga_peak_squared_max_wht.index, numpy_peak_squared_max_wht.index))
+                peak_index_errors += 1
             if fpga_peak_squared_max_wht.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_squared_max_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_max_wht.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_squared_max_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_max_wht.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_squared_max_wht.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_squared_max_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_max_wht.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_squared_max_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_max_wht.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_squared_max_wht.count != numpy_peak_squared_max_wht.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_wht.count={:8} numpy_peak_squared_max_wht.count={:8}".format(fpga_peak_squared_max_wht.count, numpy_peak_squared_max_wht.count))
+                peak_count_errors += 1
+
 
             ## White Min
             if fpga_peak_squared_min_wht.value != numpy_peak_squared_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_wht.value={:7} numpy_peak_squared_min_wht.value={:7}".format(fpga_peak_squared_min_wht.value, numpy_peak_squared_min_wht.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_squared_min_wht.index != numpy_peak_squared_min_wht.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_squared_min_wht.index={:8} numpy_peak_squared_min_wht.index={:8}".format(fpga_peak_squared_min_wht.index, numpy_peak_squared_min_wht.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_squared_min_wht.index={:8} numpy_peak_squared_min_wht.index={:8}".format(fpga_peak_squared_min_wht.index, numpy_peak_squared_min_wht.index))
+                peak_index_errors += 1
             if fpga_peak_squared_min_wht.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_squared_min_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_min_wht.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_squared_min_wht.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_min_wht.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_squared_min_wht.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_squared_min_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_min_wht.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_squared_min_wht.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_min_wht.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_squared_min_wht.count != numpy_peak_squared_min_wht.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_wht.count={:8} numpy_peak_squared_min_wht.count={:8}".format(fpga_peak_squared_min_wht.count, numpy_peak_squared_min_wht.count))
+                peak_count_errors += 1
+
 
             ## Blue Max
             if fpga_peak_squared_max_blu.value != numpy_peak_squared_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_blu.value={:7} numpy_peak_squared_max_blu.value={:7}".format(fpga_peak_squared_max_blu.value, numpy_peak_squared_max_blu.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_squared_max_blu.index != numpy_peak_squared_max_blu.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_squared_max_blu.index={:8} numpy_peak_squared_max_blu.index={:8}".format(fpga_peak_squared_max_blu.index, numpy_peak_squared_max_blu.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_squared_max_blu.index={:8} numpy_peak_squared_max_blu.index={:8}".format(fpga_peak_squared_max_blu.index, numpy_peak_squared_max_blu.index))
+                peak_index_errors += 1
             if fpga_peak_squared_max_blu.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_squared_max_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_max_blu.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_squared_max_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_max_blu.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_squared_max_blu.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_squared_max_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_max_blu.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_squared_max_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_max_blu.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_squared_max_blu.count != numpy_peak_squared_max_blu.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_blu.count={:8} numpy_peak_squared_max_blu.count={:8}".format(fpga_peak_squared_max_blu.count, numpy_peak_squared_max_blu.count))
+                peak_count_errors += 1
+
 
             ## Blue Min
             if fpga_peak_squared_min_blu.value != numpy_peak_squared_min_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_blu.value={:7} numpy_peak_squared_min_blu.value={:7}".format(fpga_peak_squared_min_blu.value, numpy_peak_squared_min_blu.value))
-                errors += 1
+                peak_value_errors += 1
             if fpga_peak_squared_min_blu.index != numpy_peak_squared_min_blu.index:
-                print(" INFO: INDEX NOT EQUAL: fpga_peak_squared_min_blu.index={:8} numpy_peak_squared_min_blu.index={:8}".format(fpga_peak_squared_min_blu.index, numpy_peak_squared_min_blu.index))
-                errors += 1
+                print("ERROR: INDEX NOT EQUAL: fpga_peak_squared_min_blu.index={:8} numpy_peak_squared_min_blu.index={:8}".format(fpga_peak_squared_min_blu.index, numpy_peak_squared_min_blu.index))
+                peak_index_errors += 1
             if fpga_peak_squared_min_blu.index < self.peak_detect_start_count:
-                print("ERROR: INDEX TOO LOW:  fpga_peak_squared_min_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_min_blu.index, self.peak_detect_start_count))
-                errors += 1
+                print("ERROR: INDEX TOO LOW:   fpga_peak_squared_min_blu.index={:8} peak_detect_start_count={:8}".format(fpga_peak_squared_min_blu.index, self.peak_detect_start_count))
+                peak_index_errors += 1
             if fpga_peak_squared_min_blu.index >= self.peak_detect_stop_count:
-                print("ERROR: INDEX TOO HIGH: fpga_peak_squared_min_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_min_blu.index, self.peak_detect_stop_count))
-                errors += 1
+                print("ERROR: INDEX TOO HIGH:  fpga_peak_squared_min_blu.index={:8} peak_detect_stop_count={:8}".format(fpga_peak_squared_min_blu.index, self.peak_detect_stop_count))
+                peak_index_errors += 1
+            if fpga_peak_squared_min_blu.count != numpy_peak_squared_min_blu.count:
+                print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_blu.count={:8} numpy_peak_squared_min_blu.count={:8}".format(fpga_peak_squared_min_blu.count, numpy_peak_squared_min_blu.count))
+                peak_count_errors += 1
 
-        return ret
+        self.peak_index_errors += peak_index_errors
+        self.peak_value_errors += peak_value_errors
+        self.peak_count_errors += peak_count_errors
+
+        self.peak_index_errors_total += peak_index_errors
+        self.peak_value_errors_total += peak_value_errors
+        self.peak_count_errors_total += peak_count_errors
+
+        errors = peak_index_errors + peak_value_errors + peak_count_errors
+
+        return errors
 
     ##------------------------------------------------------------------------
 
@@ -1045,29 +1124,39 @@ class Read_Capture_Buffers_App(object):
 
         errors = 0
 
-        errors += self.peak_detection_normal()
+        ##
+        ## Normal Peak Detection.
+        ##
 
-        if self.config.peak_detection_debug:
-            print("DEBUG: Normal Peak Detection")
-            print("DEBUG: RED (max): idx={:8} val={:7}".format(self.peak_normal_max_red.index, self.peak_normal_max_red.value))
-            print("DEBUG: RED (min): idx={:8} val={:7}".format(self.peak_normal_min_red.index, self.peak_normal_min_red.value))
-            print("DEBUG: WHT (max): idx={:8} val={:7}".format(self.peak_normal_max_wht.index, self.peak_normal_max_wht.value))
-            print("DEBUG: WHT (min): idx={:8} val={:7}".format(self.peak_normal_min_wht.index, self.peak_normal_min_wht.value))
-            print("DEBUG: BLU (max): idx={:8} val={:7}".format(self.peak_normal_max_blu.index, self.peak_normal_max_blu.value))
-            print("DEBUG: BLU (min): idx={:8} val={:7}".format(self.peak_normal_min_blu.index, self.peak_normal_min_blu.value))
-            print
+        if 1:
+            errors += self.peak_detection_normal()
 
-#         errors += self.peak_detection_squared()
-#
-#         if self.config.peak_detection_debug:
-#             print("DEBUG: Squared Peak Detection")
-#             print("DEBUG: RED (max): idx={:8} val={:7}".format(self.peak_squared_max_red.index, self.peak_squared_max_red.value))
-#             print("DEBUG: RED (min): idx={:8} val={:7}".format(self.peak_squared_min_red.index, self.peak_squared_min_red.value))
-#             print("DEBUG: WHT (max): idx={:8} val={:7}".format(self.peak_squared_max_wht.index, self.peak_squared_max_wht.value))
-#             print("DEBUG: WHT (min): idx={:8} val={:7}".format(self.peak_squared_min_wht.index, self.peak_squared_min_wht.value))
-#             print("DEBUG: BLU (max): idx={:8} val={:7}".format(self.peak_squared_max_blu.index, self.peak_squared_max_blu.value))
-#             print("DEBUG: BLU (min): idx={:8} val={:7}".format(self.peak_squared_min_blu.index, self.peak_squared_min_blu.value))
-#             print
+            if self.config.peak_detection_debug:
+                print
+                print("DEBUG: Normal Peak Detection")
+                print("DEBUG: RED (max): {}".format(self.peak_normal_max_red))
+                print("DEBUG: RED (min): {}".format(self.peak_normal_min_red))
+                print("DEBUG: WHT (max): {}".format(self.peak_normal_max_wht))
+                print("DEBUG: WHT (min): {}".format(self.peak_normal_min_wht))
+                print("DEBUG: BLU (max): {}".format(self.peak_normal_max_blu))
+                print("DEBUG: BLU (min): {}".format(self.peak_normal_min_blu))
+
+        ##
+        ## Squared Peak Detection.
+        ##
+
+        if 0:
+            errors += self.peak_detection_squared()
+
+            if self.config.peak_detection_debug:
+                print
+                print("DEBUG: Squared Peak Detection")
+                print("DEBUG: RED (max): {}".format(self.peak_normal_max_red))
+                print("DEBUG: RED (min): {}".format(self.peak_normal_min_red))
+                print("DEBUG: WHT (max): {}".format(self.peak_normal_max_wht))
+                print("DEBUG: WHT (min): {}".format(self.peak_normal_min_wht))
+                print("DEBUG: BLU (max): {}".format(self.peak_normal_max_blu))
+                print("DEBUG: BLU (min): {}".format(self.peak_normal_min_blu))
 
         return errors
 
@@ -1154,8 +1243,16 @@ class Read_Capture_Buffers_App(object):
         self.adc_clock_count_valid_min = self.config.sample_frequency - self.adc_clock_count_valid_delta
         self.adc_clock_count_valid_max = self.config.sample_frequency + self.adc_clock_count_valid_delta
 
-        buffer_errors_total = 0
-        peak_errors_total = 0
+        self.buffer_errors_total = 0
+
+        self.peak_index_errors = 0
+        self.peak_value_errors = 0
+        self.peak_count_errors = 0
+
+        self.peak_index_errors_total = 0
+        self.peak_value_errors_total = 0
+        self.peak_count_errors_total = 0
+        self.peak_errors_total = 0
 
         ## flush buffers with a few samples before actual testing.
         ## Suppresses an error on the first pass where `get_sample_data()`
@@ -1166,6 +1263,9 @@ class Read_Capture_Buffers_App(object):
 
         ## main sampling and testing loop.
         while True:
+            if 1:
+                print("\n========================================")
+
             sys.stdout.flush()
 
             #self.running_led_off()
@@ -1175,28 +1275,44 @@ class Read_Capture_Buffers_App(object):
             #self.running_led_on()
             self.running_led_toggle()
 
-            ## NOTE: stdout ends up in /var/log/syslog when app run via systemd !!
-            if 1:
-                print("\n========================================")
+            ## Retrieve info from FPGA registers (especially if not double buffered).
+            ## Would be better to double buffer in the interrupt routine and save
+            ## to kernel memory, then retrieve via a single IOCTL (BB#105).
+            ##
+            ## Read the normal maxmin registers from the fpga.
+            self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
+            ##
+            ## Read the squared maxmin registers from the fpga.
+            self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
             ## Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
 
+            if 1:
+                print("\n========================================")
+
             if config.show_capture_debug:
-                print("DEBUG: Data Captured - Processing ...")
+                print("\nDEBUG: Data Captured - Processing ...")
+
+            if config.peak_detect_fpga_debug:
+                print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
+                print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
 
             #self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
 
             self.spare_led_on()
 
             buffer_errors = 0
+            self.peak_index_errors = 0
+            self.peak_value_errors = 0
+            self.peak_count_errors = 0
 
             ##
             ## Read capture memory
             ## NOTE: with non-cache memory, CANNOT copy/memcpy large arrays (within PPS one second period)
             ##
             if 0:
-                print("Copying adc_capture_array_0 to tmp_array_0")
+                print("\nCopying adc_capture_array_0 to tmp_array_0")
                 tmp_array_0 = np.array(adc_capture_array_0[0:(capture_count*3+1)])
                 #tmp_array_0 = adc_capture_array_0.copy()
                 x = adc_capture_array_0[0:(capture_count*3+1)].copy()
@@ -1217,7 +1333,7 @@ class Read_Capture_Buffers_App(object):
             ##
             if 0:
                 for index in [0, (capture_count*1)-1, (capture_count*1), (capture_count*2)-1, (capture_count*2), (capture_count*3)-1, (capture_count*4)]:
-                    print("Checking adc_capture_array_0 and tmp_array_0 at index={:8}".format(index))
+                    print("\nChecking adc_capture_array_0 and tmp_array_0 at index={:8}".format(index))
                     value = adc_capture_array_0[index]
                     temp = tmp_array_0[index]
                     if value != temp:
@@ -1230,7 +1346,7 @@ class Read_Capture_Buffers_App(object):
             if self.config.initialise_capture_memory:
                 magic_value = self.config.initialise_capture_memory_magic_value
 
-                print("Checking adc_capture_array for magic number")
+                print("\nChecking adc_capture_array for magic number")
 
                 index = (capture_count * 3) - 1
                 #print("DEBUG: adc_capture_array_0[CC] index={:8}".format(index))
@@ -1288,17 +1404,25 @@ class Read_Capture_Buffers_App(object):
                     buffer_errors += 1
 
                 print("Capture Buffer Errors = {}".format(buffer_errors))
-                buffer_errors_total += buffer_errors
-                print("Total Capture Buffer Errors = {}".format(buffer_errors_total))
+                self.buffer_errors_total += buffer_errors
+                print("Total Capture Buffer Errors = {}".format(self.buffer_errors_total))
 
             ##
             ## Peak Detection Test
             ##
             if self.config.peak_detection:
                 peak_errors = self.peak_detection()
+                self.peak_errors_total += peak_errors
+                print
+                print("Peak Detection Index Errors = {}".format(self.peak_index_errors))
+                print("Peak Detection Value Errors = {}".format(self.peak_value_errors))
+                print("Peak Detection Count Errors = {}".format(self.peak_count_errors))
                 print("Peak Detection Errors = {}".format(peak_errors))
-                peak_errors_total += peak_errors
-                print("Total Peak Detection Errors = {}".format(peak_errors_total))
+                print
+                print("Total Peak Detection Index Errors = {}".format(self.peak_index_errors_total))
+                print("Total Peak Detection Value Errors = {}".format(self.peak_value_errors_total))
+                print("Total Peak Detection Count Errors = {}".format(self.peak_count_errors_total))
+                print("Total Peak Detection Errors = {}".format(self.peak_errors_total))
 
             ##
             ## Show capture data / phase arrays
@@ -1324,13 +1448,13 @@ class Read_Capture_Buffers_App(object):
                     if self.adc_clock_count_now > self.adc_clock_count_max:
                         self.adc_clock_count_max = self.adc_clock_count_now
 
+                print
                 delta = self.adc_clock_count_now - self.config.sample_frequency
                 print("DEBUG: adc_clock_count_per_pps_now = {:10}, delta = {:7}".format(self.adc_clock_count_now, delta))
                 delta = self.adc_clock_count_min - self.config.sample_frequency
                 print("DEBUG: adc_clock_count_per_pps_min = {:10}, delta = {:7}".format(self.adc_clock_count_min, delta))
                 delta = self.adc_clock_count_max - self.config.sample_frequency
                 print("DEBUG: adc_clock_count_per_pps_max = {:10}, delta = {:7}".format(self.adc_clock_count_max, delta))
-                print
 
             ## FIXME: DEBUG: exit after one cycle.
             #break
