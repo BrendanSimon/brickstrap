@@ -67,12 +67,12 @@ class Config(object):
 
     delay_count = total_count - capture_count
 
-    initialise_capture_memory = True
-    initialise_capture_memory_magic_value = 0x6141
-    show_intialised_capture_buffers = False
-    show_intialised_phase_arrays = False
+    initialise_capture_memory               = True
+    initialise_capture_memory_magic_value   = 0x6141
+    show_intialised_capture_buffers         = False
+    show_intialised_phase_arrays            = False
 
-    show_capture_debug = False
+    show_capture_debug                      = False
 
     capture_index_offset_red = 0
     capture_index_offset_wht = total_count
@@ -81,28 +81,28 @@ class Config(object):
     fft_size = 1 << 8      #! 256 bins.  Was 1 << 16 (65,536)
     fft_size_half = fft_size >> 1
 
-    show_phase_arrays = False
-    show_phase_arrays_on_pd_event = False
-    show_capture_buffers = False
+    show_phase_arrays               = False
+    show_phase_arrays_on_pd_event   = False
+    show_capture_buffers            = False
 
     peak_detect_numpy_capture_count_limit = 1*1000*1000
-    peak_detect_numpy = False
-    peak_detect_numpy_debug = False
+    peak_detect_numpy           = False
+    peak_detect_numpy_debug     = False
 
-    peak_detect_fpga = True
-    peak_detect_fpga_debug = False
+    peak_detect_fpga            = True
+    peak_detect_fpga_debug      = False
 
-    peak_detect_fpga_fix = False
-    peak_detect_fpga_fix_debug = False
+    peak_detect_fpga_fix        = False
+    peak_detect_fpga_fix_debug  = False
 
-    peak_detection = True
-    peak_detection_debug = False
+    peak_detection              = True
+    peak_detection_debug        = False
 
-    tf_mapping = True
-    tf_mapping_debug = False
+    tf_mapping                  = True
+    tf_mapping_debug            = False
 
-    show_measurements = False
-    show_measurements_post = False
+    show_measurements           = False
+    show_measurements_post      = False
 
     page_size = 64
 
