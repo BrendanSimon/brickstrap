@@ -188,6 +188,9 @@ class Config(object):
         self.fft_size                            = int(       getattr(settings, 'FFT_SIZE',                            self.fft_size) )
         self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
 
+        peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
+        self.set_peak_detect_mode(peak_detect_mode)
+
         self.set_capture_count()
         self.set_fft_size()
         #self.set_serial_number()
@@ -296,7 +299,8 @@ class Config(object):
                 print("INFO: `peak_detect_mode` set to {}".format(self.peak_detect_mode))
             except KeyError as ex:
                 print("ERROR: invalid `peak_detect_mode`: {!r}".format(peak_detect_mode))
-                #print(ex.message)
+            except Exception as ex:
+                print(ex.message)
 
     #!========================================================================
 
