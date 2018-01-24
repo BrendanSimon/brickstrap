@@ -26,44 +26,10 @@ from collections import namedtuple
 sys.path.append('..')
 
 from efd_config import Config
+from efd_app import Peak, PEAK_DEFAULT
+from efd_app import Sample, sample_min, sample_max
+
 import ind
-
-##============================================================================
-
-## Named Tuple for Sample info, with fields 'index' and 'value'
-Sample = namedtuple('Sample', ['index', 'value'])
-
-##============================================================================
-
-PeakBase = namedtuple('Peak', ['index', 'value', 'count', 'time_offset', 'voltage'])
-
-PeakBase.__new__.__defaults__ = (0, 0, 0, 0.0, 0.0)     ## list of default values.
-
-class Peak(PeakBase):
-
-    def __repr__(self):
-        #! """Peak(index=1597787L, value=176, time_offset=0.056391148, voltage=0.0067138671875)"""
-        return "{}( index={:10}, value={:+11}, count={:8}, time_offset={:12.9f}, voltage={:12.9f} )".format(self.__class__.__name__, self.index, self.value, self.count, self.time_offset, self.voltage)
-
-peak_default = Peak()
-
-##============================================================================
-
-def sample_min(data):
-    '''Search numpy data array for minimum value and the index.'''
-
-    idx = np.argmin(data)
-    val = data[idx]
-    sample = Sample(index=idx, value=val)
-    return sample
-
-def sample_max(data):
-    '''Search numpy data array for maximum value and the index.'''
-
-    idx = np.argmax(data)
-    val = data[idx]
-    sample = Sample(index=idx, value=val)
-    return sample
 
 ##============================================================================
 
@@ -76,7 +42,6 @@ class Read_Capture_Buffers_App(object):
 
         self.config = config
 
-        self.app_state = None
         self.dev_name = ind.dev_name
         self.dev_hand = None
         self.adc_capture_array = None
@@ -93,22 +58,40 @@ class Read_Capture_Buffers_App(object):
         self.wht_phase = None
         self.blu_phase = None
 
-        self.peak_normal_max_red = peak_default
-        self.peak_normal_min_red = peak_default
-        self.peak_normal_max_wht = peak_default
-        self.peak_normal_min_wht = peak_default
-        self.peak_normal_max_blu = peak_default
-        self.peak_normal_min_blu = peak_default
+        self.peak_normal_max_red = PEAK_DEFAULT
+        self.peak_normal_min_red = PEAK_DEFAULT
+        self.peak_normal_max_wht = PEAK_DEFAULT
+        self.peak_normal_min_wht = PEAK_DEFAULT
+        self.peak_normal_max_blu = PEAK_DEFAULT
+        self.peak_normal_min_blu = PEAK_DEFAULT
 
-        self.peak_squared_max_red = peak_default
-        self.peak_squared_min_red = peak_default
-        self.peak_squared_max_wht = peak_default
-        self.peak_squared_min_wht = peak_default
-        self.peak_squared_max_blu = peak_default
-        self.peak_squared_min_blu = peak_default
+        self.peak_squared_max_red = PEAK_DEFAULT
+        self.peak_squared_min_red = PEAK_DEFAULT
+        self.peak_squared_max_wht = PEAK_DEFAULT
+        self.peak_squared_min_wht = PEAK_DEFAULT
+        self.peak_squared_max_blu = PEAK_DEFAULT
+        self.peak_squared_min_blu = PEAK_DEFAULT
 
         self.adc_capture_buffer_offset = 0
         self.adc_capture_buffer_offset_half = None     ## should be set to 64MB (128MB / 2)
+
+        self.capture_datetime_utc = None
+        self.capture_datetime_local = None
+
+        #!
+        #! Error and diagnostics
+        #!
+
+        self.buffer_errors_total = 0
+
+        self.peak_index_errors = 0
+        self.peak_value_errors = 0
+        self.peak_count_errors = 0
+
+        self.peak_index_errors_total = 0
+        self.peak_value_errors_total = 0
+        self.peak_count_errors_total = 0
+        self.peak_errors_total = 0
 
     def set_capture_count(self, capture_count):
         self.config.set_capture_count(capture_count)
@@ -268,11 +251,11 @@ class Read_Capture_Buffers_App(object):
         print("DEBUG: ADC DMA Reset.")
 
     def adc_capture_buffer_next(self):
-        '''Set next capture bufer for next dma acquisition -- use for ping-pong buffering.'''
-        curr_offset = self.adc_capture_buffer_offset
+        '''Set next capture buffer for next dma acquisition -- use for ping-pong buffering.'''
 
         self.set_phases()
 
+        curr_offset = self.adc_capture_buffer_offset
         next_offset = self.adc_capture_buffer_offset_half if curr_offset == 0 else 0
         print("DEBUG: next_capture_buffer: curr_offset={:X}, next_offset={:X}".format(curr_offset, next_offset))
         self.adc_capture_buffer_offset = next_offset
@@ -450,13 +433,22 @@ class Read_Capture_Buffers_App(object):
 
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
+
         self.adc_semaphore_set(0)
         self.adc_data_ready_wait()
 
     def get_sample_data(self):
         '''Get sample data from memory mapped buffer or capture files.'''
         '''FIXME: capture files not implemented !!'''
+
         self.get_mmap_sample_data()
+
+    def get_capture_datetime(self):
+        '''Get the datetime stamp .'''
+
+        utc_dt = arrow.utcnow().floor('second')
+        self.capture_datetime_utc = utc_dt
+        self.capture_datetime_local = utc_dt.to(self.config.timezone)
 
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
@@ -616,7 +608,7 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_normal_numpy(self):
+    def peak_detect_normal_numpy(self):
         '''Perform peak detection on normal current phases using numpy.'''
 
         phase = self.red_phase
@@ -651,7 +643,7 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_squared_numpy(self):
+    def peak_detect_squared_numpy(self):
         '''Perform peak detection on squared current phases using numpy.'''
 
 #         phase = np.square(self.red_phase.astype)
@@ -696,7 +688,7 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_normal_fpga(self):
+    def peak_detect_normal_fpga(self):
         '''Get normal peak detection info from FPGA.'''
 
         t1 = time.time()
@@ -734,7 +726,7 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_squared_fpga(self):
+    def peak_detect_squared_fpga(self):
         '''Get squared peak detection info from FPGA.'''
 
         t1 = time.time()
@@ -772,17 +764,16 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_normal(self):
+    def peak_detect_normal(self):
         '''Perform normal peak detection on current phases.'''
 
         peak_index_errors = 0
         peak_value_errors = 0
         peak_count_errors = 0
 
-
         ## Do FPGA first, as minmax registers are not double buffered.
         if self.config.peak_detect_fpga:
-            ret = self.peak_detection_normal_fpga()
+            ret = self.peak_detect_normal_fpga()
 
             ## Maintain reference to FPGA peak values.
             fpga_peak_normal_max_red = self.peak_normal_max_red
@@ -803,7 +794,7 @@ class Read_Capture_Buffers_App(object):
                 print("DEBUG: peak_normal_min_blu = {}".format(fpga_peak_normal_min_blu))
 
         if self.config.peak_detect_numpy:
-            ret = self.peak_detection_normal_numpy()
+            ret = self.peak_detect_normal_numpy()
 
             ## Maintain reference to numpy peak values.
             numpy_peak_normal_max_red = self.peak_normal_max_red
@@ -949,7 +940,7 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection_squared(self):
+    def peak_detect_squared(self):
         '''Perform squared peak detection on current phases.'''
 
         peak_index_errors = 0
@@ -958,7 +949,7 @@ class Read_Capture_Buffers_App(object):
 
         ## Do FPGA first, as minmax registers are not double buffered.
         if self.config.peak_detect_fpga:
-            ret = self.peak_detection_squared_fpga()
+            ret = self.peak_detect_squared_fpga()
 
             ## Maintain reference to FPGA peak values.
             fpga_peak_squared_max_red = self.peak_squared_max_red
@@ -979,7 +970,7 @@ class Read_Capture_Buffers_App(object):
                 print("DEBUG: peak_squared_min_blu = {}".format(fpga_peak_squared_min_blu))
 
         if self.config.peak_detect_numpy:
-            ret = self.peak_detection_squared_numpy()
+            ret = self.peak_detect_squared_numpy()
 
             ## Maintain reference to numpy peak values.
             numpy_peak_squared_max_red = self.peak_squared_max_red
@@ -1126,7 +1117,7 @@ class Read_Capture_Buffers_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_detection(self):
+    def peak_detect(self):
         '''Perform peak detection on current phases.'''
 
         errors = 0
@@ -1134,16 +1125,14 @@ class Read_Capture_Buffers_App(object):
         ##
         ## Normal Peak Detection.
         ##
-
-        if self.config.peak_detection_normal:
-            errors += self.peak_detection_normal()
+        if self.config.peak_detect_normal:
+            errors += self.peak_detect_normal()
 
         ##
         ## Squared Peak Detection.
         ##
-
-        if self.config.peak_detection_squared:
-            errors += self.peak_detection_squared()
+        if self.config.peak_detect_squared:
+            errors += self.peak_detect_squared()
 
         return errors
 
@@ -1274,33 +1263,39 @@ class Read_Capture_Buffers_App(object):
             ## Read the squared maxmin registers from the fpga.
             self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
-            ## Clear terminal screen by sending special chars (ansi sequence?).
+            #! Read the `adc_clock_count_per_pps` register from the fpga.
+            adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
+
+            #self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
+
+            self.get_capture_datetime()
+
+            self.capture_trigger_count += 1
+
+            #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
 
-            if 1:
+            if config.show_capture_debug:
                 print("\n========================================")
+                print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
 
             ##
             ## Show capture data / phase arrays
             ##
-            #self.show_phase_arrays(phase_index=0)
-            #self.show_phase_arrays(phase_index=1)
-
-            if self.config.show_phase_arrays:
-                self.show_phase_arrays()
-
             if self.config.show_capture_buffers:
                 self.show_all_capture_buffers()
+
+            if self.config.show_phase_arrays:
+                #self.show_phase_arrays(phase_index=0)
+                #self.show_phase_arrays(phase_index=1)
+                self.show_phase_arrays()
 
             if config.peak_detect_fpga_debug:
                 print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
                 print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
 
-            #self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
-
             self.spare_led_on()
 
-            self.capture_trigger_count += 1
             buffer_errors = 0
             self.peak_index_errors = 0
             self.peak_value_errors = 0
@@ -1409,19 +1404,21 @@ class Read_Capture_Buffers_App(object):
             ##
             ## Peak Detection Test
             ##
-            if self.config.peak_detection:
-                peak_errors = self.peak_detection()
+            if self.config.peak_detect:
+                peak_errors = self.peak_detect()
                 self.peak_errors_total += peak_errors
-                print
-                print("Peak Detection Index Errors = {}".format(self.peak_index_errors))
-                print("Peak Detection Value Errors = {}".format(self.peak_value_errors))
-                print("Peak Detection Count Errors = {}".format(self.peak_count_errors))
-                print("Peak Detection Errors = {}".format(peak_errors))
-                print
-                print("Total Peak Detection Index Errors = {}".format(self.peak_index_errors_total))
-                print("Total Peak Detection Value Errors = {}".format(self.peak_value_errors_total))
-                print("Total Peak Detection Count Errors = {}".format(self.peak_count_errors_total))
-                print("Total Peak Detection Errors = {}".format(self.peak_errors_total))
+
+                if self.config.peak_detect_debug:
+                    print
+                    print("Peak Detect Index Errors = {}".format(self.peak_index_errors))
+                    print("Peak Detect Value Errors = {}".format(self.peak_value_errors))
+                    print("Peak Detect Count Errors = {}".format(self.peak_count_errors))
+                    print("Peak Detect Errors = {}".format(peak_errors))
+                    print
+                    print("Total Peak Detect Index Errors = {}".format(self.peak_index_errors_total))
+                    print("Total Peak Detect Value Errors = {}".format(self.peak_value_errors_total))
+                    print("Total Peak Detect Count Errors = {}".format(self.peak_count_errors_total))
+                    print("Total Peak Detect Errors = {}".format(self.peak_errors_total))
 
             print("\nTotal Capture Trigger Count = {}".format(self.capture_trigger_count))
 
@@ -1456,6 +1453,8 @@ config = Config()
 ##
 ## set config defaults for test_fpga app.
 ##
+config.show_capture_debug       = True
+
 config.peak_detect_numpy_capture_count_limit = 1*1000*1000
 config.peak_detect_numpy        = True
 config.peak_detect_numpy_debug  = False
@@ -1463,12 +1462,11 @@ config.peak_detect_numpy_debug  = False
 config.peak_detect_fpga         = True
 config.peak_detect_fpga_debug   = False
 
-config.peak_detection           = True
-config.peak_detection_debug     = False
+config.peak_detect           = True
+config.peak_detect_debug     = False
 
-## NOTE: these are only used in `test_fpga` for now.  They don't exist by default.
-config.peak_detection_normal    = True
-config.peak_detection_squared   = True
+config.peak_detect_normal       = True
+config.peak_detect_squared      = True
 
 #config.show_capture_buffers = True
 
@@ -1476,41 +1474,50 @@ config.peak_detection_squared   = True
 
 ##############################################################################
 
-def app_main(capture_count=0, pps_mode=True, adc_offset=0,
-             peak_detection_squared=True,
+def app_main(capture_count=0,
+             pps_mode=True,
+             adc_offset=0,
+             peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
+             peak_detect_normal=True,
+             peak_detect_squared=True,
              show_measurements=False,
              show_capture_buffers=False,
+             show_capture_debug=False,
              debug=False):
+
     """Main entry if running this module directly."""
 
     if capture_count:
         config.set_capture_count(capture_count)
-        print("INFO: `capture_count` set to {}".format(config.capture_count))
 
     if not pps_mode:
         config.set_capture_mode('manual')
-        print("INFO: `capture_mode` set to {}".format(config.capture_mode))
 
     if adc_offset:
         config.set_adc_offset(adc_offset)
-        print("INFO: `adc_offset` set to {}".format(config.adc_offset))
 
-    if not peak_detection_squared:
-        config.peak_detection_squared = peak_detection_squared
-        print("INFO: `peak_detection_squared` set to {}".format(config.peak_detection_squared))
+    if peak_detect_mode != 'default':
+        config.set_peak_detect_mode(peak_detect_mode)
+
+    if not peak_detect_normal:
+        config.set_peak_detect_normal(peak_detect_normal)
+
+    if not peak_detect_squared:
+        config.set_peak_detect_squared(peak_detect_squared)
 
     if show_measurements:
-        config.show_measurements = show_measurements
-        print("INFO: `show_measurements` set to {}".format(config.show_measurements))
+        config.set_show_measurements(show_measurements)
 
     if show_capture_buffers:
-        config.show_capture_buffers = show_capture_buffers
-        print("INFO: `show_capture_buffers` set to {}".format(config.show_capture_buffers))
+        config.set_show_capture_buffers(show_capture_buffers)
+
+    if show_capture_debug:
+        config.set_show_capture_debug(show_capture_debug)
 
     if debug:
-        config.peak_detect_numpy_debug      = True
-        config.peak_detect_fpga_debug       = True
-        config.peak_detection_debug         = True
+        config.peak_detect_numpy_debug  = True
+        config.peak_detect_fpga_debug   = True
+        config.peak_detect_debug        = True
 
     config.show_all()
 
