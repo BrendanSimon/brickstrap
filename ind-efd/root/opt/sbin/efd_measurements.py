@@ -15,8 +15,11 @@ import sys
 import os.path
 import Queue as queue       #! Python 3 renames Queue module as queue.
 import csv
+import copy
 
 from cStringIO import StringIO
+
+from efd_config import PeakDetectMode
 
 #!============================================================================
 
@@ -27,9 +30,7 @@ class Measurements_Log(object):
     '''Rotate log files each day, based on 'datetime_utc' field.'''
 
     #! FIXME: not sure if putting the measurements_log_field_names in the config object is the right thing.
-    def __init__(self, cloud_queue, url, field_names):
-        self.cloud_queue = cloud_queue
-        self.url = url
+    def __init__(self, field_names):
         self.field_names = field_names
         self.csv_file = None
         self.path = os.path.join(os.sep, 'mnt', 'data', 'log', 'measurements')
@@ -47,12 +48,136 @@ class Measurements_Log(object):
 
     def init(self):
         '''Runtime intialisation method.'''
+
         #! Create directory to store measurements log if it doesn't exists.
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
-    def write(self, measurements, datetime):
+    def to_csv(self, measurements, peak_detect_mode):
+        '''
+        Convert measurements to a csv record.
+
+        NOTE: in some modes, some csv fields are used for a different purpose
+        than originally intended !!  Some measurement fields are replaced !!
+        '''
+
+        #!
+        #! Take a copy of the measurements so we can modify it.
+        #!
+        m = copy.deepcopy(measurements)
+
+        #!
+        #! Some modes reuse the csv fields for different purposes,
+        #! so copy the necessary measurements to the appropriate csv fields.
+        #! This was chosen by IND to minimise changing the web backend API !!
+        #!
+# measurements_log_field_names = [
+#     'datetime_utc', 'datetime_local',
+#     'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
+#     't2_red', 'w2_red',
+#     'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
+#     't2_wht', 'w2_wht',
+#     'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
+#     't2_blu', 'w2_blu',
+#     'temperature', 'humidity', 'rain_intensity',
+#     'alert',
+#     'adc_clock_count_per_pps',
+#
+#     measurements['max_volt_red']
+#     measurements['min_volt_red']
+#     measurements['max_time_offset_red']
+#     measurements['min_time_offset_red']
+#     measurements['max_volt_count_red']
+#     measurements['min_volt_count_red']
+#     measurements['t2_red']
+#     measurements['w2_red']
+#     measurements['max_volt_squared_red']
+#     measurements['min_volt_squared_red']
+#     measurements['max_time_offset_squared_red']
+#     measurements['min_time_offset_squared_red']
+#     measurements['max_volt_squared_count_red']
+#     measurements['min_volt_squared_count_red']
+
+        if peak_detect_mode == PeakDetectMode.NORMAL:
+            pass
+
+#         elif peak_detect_mode == PeakDetectMode.ABSOLUTE:
+#             #! Work out if min or max has largest magnitude.
+#             #! (important for correct time index/offset !!)
+#             #! max_volt_* contains signed adjusted squared voltage.
+#             #! min_volt_* contains the total count of peaks.
+#
+#             #! red
+#             if abs(m['min_volt_red']) > abs(m['max_volt_red']):
+#                 m['max_volt_red']           = abs(m['min_volt_red'])
+#                 m['max_time_offset_red']    = m['min_time_offset_red']
+#                 m['min_volt_red']           = m['min_volt_count_red']
+#             else:
+#                 m['max_volt_red']           = abs(m['max_volt_red'])
+#                 m['max_time_offset_red']    = m['max_time_offset_red']
+#                 m['min_volt_red']           = m['max_volt_count_red']
+#             #! white
+#             if abs(m['min_volt_wht']) > abs(m['max_volt_wht']):
+#                 m['max_volt_wht']           = abs(m['min_volt_wht'])
+#                 m['max_time_offset_wht']    = m['min_time_offset_wht']
+#                 m['min_volt_wht']           = m['min_volt_count_wht']
+#             else:
+#                 m['max_volt_wht']           = abs(m['max_volt_wht'])
+#                 m['max_time_offset_wht']    = m['max_time_offset_wht']
+#                 m['min_volt_wht']           = m['max_volt_count_wht']
+#             #! blue
+#             if abs(m['min_volt_blu']) > abs(m['max_volt_blu']):
+#                 m['max_volt_blu']           = abs(m['min_volt_blu'])
+#                 m['max_time_offset_blu']    = m['min_time_offset_blu']
+#                 m['min_volt_blu']           = m['min_volt_count_blu']
+#             else:
+#                 m['max_volt_blu']           = abs(m['max_volt_blu'])
+#                 m['max_time_offset_blu']    = m['max_time_offset_blu']
+#                 m['min_volt_blu']           = m['max_volt_count_blu']
+
+        elif peak_detect_mode == PeakDetectMode.SQUARED:
+            #! max_volt_* contains signed adjusted squared voltage.
+            #! min_volt_* contains the total count of peaks.
+
+            #! red
+            m['max_volt_red']           = m['max_volt_squared_red']
+            m['max_time_offset_red']    = m['max_time_offset_squared_red']
+            m['min_volt_red']           = m['max_volt_squared_count_red']
+            #! white
+            m['max_volt_wht']           = m['max_volt_squared_wht']
+            m['max_time_offset_wht']    = m['max_time_offset_squared_wht']
+            m['min_volt_wht']           = m['max_volt_squared_count_wht']
+            #! blue
+            m['max_volt_blu']           = m['max_volt_squared_blu']
+            m['max_time_offset_blu']    = m['max_time_offset_squared_blu']
+            m['min_volt_blu']           = m['max_volt_squared_count_blu']
+
+        else:
+            #! shouldn't get here !!
+            #! FIXME: print an error or raise an exception.
+            pass
+
+        #!
+        #! Convert dates to strings that are compatible with Microsoft Excel.
+        #!
+        m['datetime_utc']   = m['datetime_utc'].isoformat(sep=' ')
+        m['datetime_local'] = m['datetime_local'].isoformat(sep=' ')
+
+        #! format csv output to a string (not a file) so the same output
+        #! can be efficiently saved to a file and post to web server.
+        row_sio= StringIO()
+        writer = csv.DictWriter(row_sio, fieldnames=self.field_names, extrasaction='ignore')
+        writer.writerow(m)
+        csv_data = row_sio.getvalue()
+        row_sio.close()
+        #print("DEBUG: csv_data =", csv_data)
+        return csv_data
+
+    def write(self, csv_data, datetime):
+        '''Write measurements to file in CSV format.'''
+
         dt = datetime
+
         if not self.filename or (dt.day != self.day_saved):
             dt_str = dt.floor('day').format('YYYYMMDDTHHmmssZ')
             #dt_str = dt.format('YYYYMMDDTZ')
@@ -60,17 +185,7 @@ class Measurements_Log(object):
             filename = '{prefix}{dtstr}{extension}'.format(prefix=self.filename_prefix, dtstr=dt_str, extension=self.filename_extension)
             self.filename = filename
 
-
         self.day_saved = dt.day
-
-        #! format csv output to a string (not a file) so the same output
-        #! can be efficiently saved to a file and post to web server.
-        row_sio= StringIO()
-        writer = csv.DictWriter(row_sio, fieldnames=self.field_names, extrasaction='ignore')
-        writer.writerow(measurements)
-        self.csv_data = row_sio.getvalue()
-        row_sio.close()
-        #print("DEBUG: csv_data =", self.csv_data)
 
         #!
         #! Write measurements to log file; and header if it's a new file.
@@ -82,18 +197,7 @@ class Measurements_Log(object):
                 #! write header to new file.
                 csvfile.write(self.csv_header)
             #! write measurements to file.
-            csvfile.write(self.csv_data)
-
-        #!
-        #! use queue to send the csv row to the cloud thread.
-        #! NOTE: could send the measurement dict to the cloud thread and let it:
-        #! generate the csv for saving to file and posting to web, and send sms.
-        #!
-        try:
-            self.cloud_queue.put(item=self.csv_data, block=False)
-        except queue.Full:
-            print("EXCEPTION: could not queue measurement data to cloud thread. qsize={}".format(self.cloud_queue.qsize()))
-            sys.stdout.flush()
+            csvfile.write(csv_data)
 
 #!============================================================================
 

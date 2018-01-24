@@ -18,10 +18,11 @@ import time
 import arrow
 import mmap
 import csv
+import copy
 import requests
 import Queue as queue
 
-from cStringIO import StringIO
+from efd_measurements import Measurements_Log
 
 import ind
 
@@ -29,10 +30,10 @@ import ind
 
 class Cloud_Thread(threading.Thread):
 
-    def __init__(self, config, app_state, cloud_queue):
+    def __init__(self, cloud):
         threading.Thread.__init__(self)
 
-        self.cloud = Cloud(config=config, app_state=app_state, cloud_queue=cloud_queue)
+        self.cloud = cloud
         self.running = True
 
     def run(self):
@@ -60,11 +61,12 @@ class Cloud(object):
 
     #!------------------------------------------------------------------------
 
-    def __init__(self, config, app_state, cloud_queue):
+    def __init__(self, config, cloud_queue, measurements_log):
 
         self.config = config
-        self.app_state = app_state
         self.cloud_queue = cloud_queue
+        self.measurements_log = measurements_log
+
         self.ind_dev_hand = None
 
         self.init()
@@ -77,26 +79,7 @@ class Cloud(object):
 
         self.ind_dev_hand = ind.get_device_handle()
 
-        self.measurement_ack = ''
-        self.last_measurements_log_path = ''
-        self.last_measurements_log_data = ''
-        self.measurements_log_file = None
-        self.measurements_log_mmap = None
         self.last_post_time = time.time()
-
-        #! initialise to earliest possible datetime value.
-        self.last_measurements_log_datetime_utc = arrow.Arrow(year=1, month=1, day=1)
-
-        #!
-        #! initialise csv header string.
-        #!
-        #! FIXME: this is duplicated from efd_app.py
-        hdr_sio = StringIO()
-        hdr_sio.write("data=")
-        writer = csv.DictWriter(hdr_sio, fieldnames=self.config.measurements_log_field_names, extrasaction='ignore')
-        writer.writeheader()
-        self.measurements_log_csv_header = hdr_sio.getvalue()
-        hdr_sio.close()
 
         #! list of csv data records to post.
         self.csv_data = []
@@ -199,19 +182,35 @@ class Cloud(object):
 
             self.spare_led_on()
 
+            #! work with a true copy of the measurement data
+            #! (so we can modify it for posting if necessary).
+            measurements = copy.deepcopy(item)
+
+            #!
+            #! Notify the queue that we have processed the retrieved item.
+            #!
+            try:
+                #print("DEBUG: notify queue that next item has been processed.")
+                self.cloud_queue.task_done()
+            except Exception as exc:
+                print("EXCEPTION: issue `task_done()` to cloud queue after getting next item !!")
+                print(repr(exc))
+                sys.stdout.flush()
+
+            capture_datetime_utc = measurements['datetime_utc']
+
+            csv_data = self.measurements_log.to_csv(measurements=measurements, peak_detect_mode=self.config.peak_detect_mode)
+            #print("DEBUG: csv_data =", csv_data)
+
+            #! write csv data to measurements log file.
+            self.measurements_log.write(csv_data=csv_data, datetime=capture_datetime_utc)
+
+            #! append csv_data to list for posting in a batch.
             #print("DEBUG: appending next csv_data.")
-            self.csv_data.append(item)
+            self.csv_data.append(csv_data)
             #print("DEBUG: appended next csv_data (len={})".format(len(self.csv_data)))
 
             new_data = True
-
-            try:
-                #print("DEBUG: inform queue that next item has been processed.")
-                self.cloud_queue.task_done()
-            except Exception as exc:
-                print("EXCEPTION: issue task_done() to cloud queue after getting next item !!")
-                print(repr(exc))
-                sys.stdout.flush()
 
         #!
         #! Check if there is enough data to post.
@@ -239,7 +238,7 @@ class Cloud(object):
         #!
         #! concatenate csv row header and data into a single string.
         #!
-        post_data = self.measurements_log_csv_header + ''.join(self.csv_data)
+        post_data = self.measurements_log.csv_header + ''.join(self.csv_data)
         #print("DEBUG: Posting data: len(csv_data)={}".format(len(self.csv_data)))
         #print("DEBUG: post_data={}".format(post_data))
 
@@ -266,8 +265,8 @@ def main():
     #!--------------------------------
 
     class Config:
-        efd_ping_servers = ['http://portal.efdweb.com']
-        efd_ping_uris = ['http://portal.efdweb.com/api/Ping/0/']
+        efd_ping_servers    = ['http://portal.efdweb.com']
+        efd_ping_uris       = ['http://portal.efdweb.com/api/Ping/0/']
 
         web_server_measurements_log = 'http://portal.efdweb.com/api/AddEFDLog/0/'
 
@@ -290,37 +289,39 @@ def main():
 
     #!--------------------------------
 
-    #measurements = {}
-    #measurements['datetime_utc']           = self.capture_datetime_utc.isoformat(sep=' ')
-    #measurements['datetime_local']         = self.capture_datetime_local.isoformat(sep=' ')
-    #measurements['max_volt_red']           = self.peak_max_red.voltage
-    #measurements['min_volt_red']           = self.peak_min_red.voltage
-    #measurements['max_time_offset_red']    = self.peak_max_red.time_offset
-    #measurements['min_time_offset_red']    = self.peak_min_red.time_offset
-    #measurements['t2_red']                 = self.tf_map_red.T2
-    #measurements['w2_red']                 = self.tf_map_red.F2
-    #measurements['max_volt_wht']           = self.peak_max_wht.voltage
-    #measurements['min_volt_wht']           = self.peak_min_wht.voltage
-    #measurements['max_time_offset_wht']    = self.peak_max_wht.time_offset
-    #measurements['min_time_offset_wht']    = self.peak_min_wht.time_offset
-    #measurements['t2_wht']                 = self.tf_map_wht.T2
-    #measurements['w2_wht']                 = self.tf_map_wht.F2
-    #measurements['max_volt_blu']           = self.peak_max_blu.voltage
-    #measurements['min_volt_blu']           = self.peak_min_blu.voltage
-    #measurements['max_time_offset_blu']    = self.peak_max_blu.time_offset
-    #measurements['min_time_offset_blu']    = self.peak_min_blu.time_offset
-    #measurements['t2_blu']                 = self.tf_map_blu.T2
-    #measurements['w2_blu']                 = self.tf_map_blu.F2
-    #measurements['temperature']            = self.ws_info.temperature
-    #measurements['humidity']               = self.ws_info.humidity
-    #measurements['rain_intensity']         = self.ws_info.rain_intensity
+    measurements = {
+            'datetime_utc'              : 'FIXME',
+            'datetime_local'            : 'FIXME',
+            'max_volt_red'              : 'FIXME',
+            'min_volt_red'              : 'FIXME',
+            'max_time_offset_red'       : 'FIXME',
+            'min_time_offset_red'       : 'FIXME',
+            't2_red'                    : 'FIXME',
+            'w2_red'                    : 'FIXME',
+            'max_volt_wht'              : 'FIXME',
+            'min_volt_wht'              : 'FIXME',
+            'max_time_offset_wht'       : 'FIXME',
+            'min_time_offset_wht'       : 'FIXME',
+            't2_wht'                    : 'FIXME',
+            'w2_wht'                    : 'FIXME',
+            'max_volt_blu'              : 'FIXME',
+            'min_volt_blu'              : 'FIXME',
+            'max_time_offset_blu'       : 'FIXME',
+            'min_time_offset_blu'       : 'FIXME',
+            't2_blu'                    : 'FIXME',
+            'w2_blu'                    : 'FIXME',
+            'temperature'               : 'FIXME',
+            'humidity'                  : 'FIXME',
+            'alert'                     : 'FIXME',
+            'adc_clock_count_per_pps'   : 'FIXME',
+        }
 
-    csv_str = '2016-01-12 15:04:12+00:00,2016-01-13 02:04:12+11:00,-0.00034332275390625,-0.0017547607421875,0.001766072,5.7265854614087719e-09,29205329.549096104,0.0016021728515625,-0.003662109375,0.00355964,5.7265854614087719e-09,31948299.751001682,-0.00034332275390625,-0.00171661376953125,0.001133052,5.7266116565935494e-09,29143762.475214832,20.2C,56.4P,0\n'
+    measurements_log = Measurements_Log(field_names=config.measurements_log_field_names)
 
     cloud_queue = queue.Queue(maxsize=config.max_cloud_queue_size)
 
-    cloud_thread = Cloud_Thread(config=config, app_state=None, cloud_queue=cloud_queue)
-    cloud = cloud_thread.cloud
+    cloud = Cloud(config=config, cloud_queue=cloud_queue, measurements_log=measurements_log)
+    cloud_thread = Cloud_Thread(cloud)
 
     #cloud_thread.init()
     cloud_thread.start()
@@ -338,8 +339,8 @@ def main():
             print("Queueing {} csv rows".format(count))
             for i in range(count):
                 try:
-                    #cloud_queue.put(item=csv_str, block=False)
-                    cloud_queue.put(item=csv_str, block=True)
+                    #cloud_queue.put(item=measurements, block=False)
+                    cloud_queue.put(item=measurements, block=True)
                 except queue.Full as exc:
                     print("EXCEPTION: queue is full.  i={}".format(i))
                     print(traceback.format_exc())
