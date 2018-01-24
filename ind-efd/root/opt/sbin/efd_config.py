@@ -12,6 +12,20 @@ This module handles configuration information for EFD applications.
 
 import argh
 import os.path
+import enum
+
+#!============================================================================
+
+class CaptureMode(enum.Enum):
+    AUTO        = 1
+    MANUAL      = 2
+
+#!============================================================================
+
+class PeakDetectMode(enum.Enum):
+    SQUARED     = 1
+    NORMAL      = 2
+#     ABSOLUTE    = 3
 
 #!============================================================================
 
@@ -85,24 +99,30 @@ class Config(object):
     show_phase_arrays_on_pd_event   = False
     show_capture_buffers            = False
 
+    #peak_detect_mode                = PeakDetectMode.SQUARED
+    peak_detect_mode                = PeakDetectMode.NORMAL
+
+    peak_detect_normal              = True
+    peak_detect_squared             = True
+
     peak_detect_numpy_capture_count_limit = 1*1000*1000
-    peak_detect_numpy           = False
-    peak_detect_numpy_debug     = False
+    peak_detect_numpy               = False
+    peak_detect_numpy_debug         = False
 
-    peak_detect_fpga            = True
-    peak_detect_fpga_debug      = False
+    peak_detect_fpga                = True
+    peak_detect_fpga_debug          = False
 
-    peak_detect_fpga_fix        = False
-    peak_detect_fpga_fix_debug  = False
+    peak_detect_fpga_fix            = False
+    peak_detect_fpga_fix_debug      = False
 
-    peak_detection              = True
-    peak_detection_debug        = False
+    peak_detect                     = True
+    peak_detect_debug               = False
 
-    tf_mapping                  = True
-    tf_mapping_debug            = False
+    tf_mapping                      = True
+    tf_mapping_debug                = False
 
-    show_measurements           = False
-    show_measurements_post      = False
+    show_measurements               = False
+    show_measurements_post          = False
 
     page_size = 64
 
@@ -195,14 +215,16 @@ class Config(object):
 
     def set_web_server(self, web_server=None):
 
-        if web_server:
+        if web_server != None:
             self.web_server = web_server
             self.set_web_uris()
+            print("INFO: `web_server` set to {}".format(self.web_server))
+            print("INFO: `web_server_measurements_log` set to {}".format(self.web_server_measurements_log))
 
     #!========================================================================
 
     def set_capture_count(self, capture_count=None):
-        if capture_count:
+        if capture_count != None:
             self.capture_count = capture_count
 
         self.delay_count = self.total_count - self.capture_count
@@ -218,7 +240,7 @@ class Config(object):
     #!========================================================================
 
     def set_fft_size(self, fft_size=None):
-        if fft_size:
+        if fft_size != None:
             self.fft_size = fft_size
             #print("INFO: fft_size set to {}".format(self.fft_size))
 
@@ -235,10 +257,10 @@ class Config(object):
     def set_capture_mode(self, capture_mode='auto'):
         if capture_mode not in ['auto', 'manual']:
             msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
-            raise ValueError(msg)
+            raise KeyError(msg)
 
         self.capture_mode = capture_mode
-        #print("INFO: capture_mode set to {}".format(self.capture_mode))
+        print("INFO: `capture_mode` set to {}".format(self.capture_mode))
 
         if capture_mode == 'manual':
             self.peak_detect_numpy_capture_count_limit = self.capture_count
@@ -252,24 +274,57 @@ class Config(object):
 
     #!========================================================================
 
+    def set_show_capture_debug(self, show_capture_debug=None):
+        if show_capture_debug != None:
+            self.show_capture_debug = show_capture_debug
+            print("INFO: `show_capture_debug` set to {}".format(self.show_capture_debug))
+
+    #!========================================================================
+
     def set_adc_offset(self, adc_offset=None):
-        if adc_offset:
+        if adc_offset != None:
             self.adc_offset = adc_offset
-            #print("INFO: adc_offset set to {}".format(self.adc_offset))
+            print("INFO: `adc_offset` set to {}".format(self.adc_offset))
+
+    #!========================================================================
+
+    def set_peak_detect_mode(self, peak_detect_mode=None):
+        if peak_detect_mode != None:
+            try:
+                value = peak_detect_mode.upper()
+                self.peak_detect_mode = PeakDetectMode[value]
+                print("INFO: `peak_detect_mode` set to {}".format(self.peak_detect_mode))
+            except KeyError as ex:
+                print("ERROR: invalid `peak_detect_mode`: {!r}".format(peak_detect_mode))
+                #print(ex.message)
+
+    #!========================================================================
+
+    def set_peak_detect_normal(self, peak_detect_normal=None):
+        if peak_detect_normal != None:
+            self.peak_detect_normal = peak_detect_normal
+            print("INFO: `peak_detect_normal` set to {}".format(self.peak_detect_normal))
+
+    #!========================================================================
+
+    def set_peak_detect_squared(self, peak_detect_squared=None):
+        if peak_detect_squared != None:
+            self.peak_detect_squared = peak_detect_squared
+            print("INFO: `peak_detect_squared` set to {}".format(self.peak_detect_squared))
 
     #!========================================================================
 
     def set_append_gps_data(self, append_gps_data=None):
-        if append_gps_data:
+        if append_gps_data != None:
             self.append_gps_data_to_measurements_log = bool(append_gps_data)
-            print("INFO: append_gps_data_to_measurements_log set to {}".format(self.append_gps_data_to_measurements_log))
+            print("INFO: `append_gps_data_to_measurements_log` set to {}".format(self.append_gps_data_to_measurements_log))
 
     #!========================================================================
 
     def set_show_measurements(self, show_measurements=None):
-        if show_measurements:
+        if show_measurements != None:
             self.show_measurements = bool(show_measurements)
-            print("INFO: show_measurements set to {}".format(self.show_measurements))
+            print("INFO: `show_measurements` set to {}".format(self.show_measurements))
 
     #!========================================================================
 
@@ -350,6 +405,11 @@ class Config(object):
         print("show_phase_arrays_on_pd_event = {}".format(self.show_phase_arrays_on_pd_event))
         print("show_capture_buffers = {}".format(self.show_capture_buffers))
 
+        print("peak_detect_mode = {}".format(self.peak_detect_mode))
+
+        print("peak_detect_normal = {}".format(self.peak_detect_normal))
+        print("peak_detect_squared = {}".format(self.peak_detect_squared))
+
         print("peak_detect_numpy_capture_count_limit = {}".format(self.peak_detect_numpy_capture_count_limit))
         print("peak_detect_numpy = {}".format(self.peak_detect_numpy))
         print("peak_detect_numpy_debug = {}".format(self.peak_detect_numpy_debug))
@@ -360,8 +420,8 @@ class Config(object):
         print("peak_detect_fpga_fix = {}".format(self.peak_detect_fpga_fix))
         print("peak_detect_fpga_fix_debug = {}".format(self.peak_detect_fpga_fix_debug))
 
-        print("peak_detection = {}".format(self.peak_detection))
-        print("peak_detection_debug = {}".format(self.peak_detection_debug))
+        print("peak_detect = {}".format(self.peak_detect))
+        print("peak_detect_debug = {}".format(self.peak_detect_debug))
 
         print("tf_mapping = {}".format(self.tf_mapping))
         print("tf_mapping_debug = {}".format(self.tf_mapping_debug))
@@ -392,7 +452,17 @@ class Config(object):
 
 ##############################################################################
 
-def app_main(capture_count=0, pps_mode=True, web_server=None, show_measurements=False, append_gps_data=False):
+def app_main(capture_count=0,
+             pps_mode=True,
+             adc_offset=0,
+             peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
+             peak_detect_normal=True,
+             peak_detect_squared=True,
+             web_server=None,
+             show_measurements=False,
+             show_capture_buffers=False,
+             show_capture_debug=False,
+             append_gps_data=False):
     """Main entry if running this module directly."""
 
     print(__name__)
@@ -401,23 +471,36 @@ def app_main(capture_count=0, pps_mode=True, web_server=None, show_measurements=
 
     if capture_count:
         config.set_capture_count(capture_count)
-        print("INFO: `capture_count` set to {}".format(config.capture_count))
 
     if not pps_mode:
         config.set_capture_mode('manual')
-        print("INFO: `capture_mode` set to {}".format(config.capture_mode))
+
+    if adc_offset:
+        config.set_adc_offset(adc_offset)
+
+    if peak_detect_mode != 'default':
+        config.set_peak_detect_mode(peak_detect_mode)
+
+    if not peak_detect_normal:
+        config.set_peak_detect_normal(peak_detect_normal)
+
+    if not peak_detect_squared:
+        config.set_peak_detect_squared(peak_detect_squared)
 
     if web_server:
         config.set_web_server(web_server)
-        print("INFO: `web_server' set to {}".format(config.web_server))
 
     if show_measurements:
         config.set_show_measurements(show_measurements)
-        print("INFO: `show_measurements' set to {}".format(config.show_measurements))
+
+    if show_capture_buffers:
+        config.set_show_capture_buffers(show_capture_buffers)
+
+    if show_capture_debug:
+        config.set_show_capture_debug(show_capture_debug)
 
     if append_gps_data:
         config.set_append_gps_data(append_gps_data)
-        print("INFO: `append_gps_data_to_measurements_log' set to {}".format(config.append_gps_data_to_measurements_log))
 
     config.show_all()
 
