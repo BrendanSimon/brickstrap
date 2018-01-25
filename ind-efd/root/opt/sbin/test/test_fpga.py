@@ -14,12 +14,12 @@ Default parameters are 250 MS/s 16-bit data.
 
 import argh
 import sys
-import os.path
+import os
 import numpy as np
 import math
 import time
 import arrow
-import select
+import selectors2 as selectors
 
 from collections import namedtuple
 
@@ -210,11 +210,19 @@ class Read_Capture_Buffers_App(object):
         if self.config.show_intialised_phase_arrays:
             self.show_phase_arrays()
 
+        # setup the selector for adc (uses `selectors2` module instead of `select`)
+        # register the IND device for read events.
+        self.adc_selector = selectors.DefaultSelector()
+        self.adc_selector.register(self.dev_hand, selectors.EVENT_READ)
+
     def cleanup(self):
         '''Cleanup application before exit.'''
 
         print("Stopping ADC.")
         self.adc_stop()
+
+        # unregister the IND device from adc selector.
+        self.adc_selector.unregister(self.dev_hand)
 
     def adc_numpy_array(self):
         mem = ind.adc_memory_map(dev_hand=self.dev_hand)
@@ -400,15 +408,18 @@ class Read_Capture_Buffers_App(object):
         print("ADC Select Wait")
 
         #!
-        #! Using select.  NOTE: very simple and it works :)
-        #! FIXME: Use `selectors` module !!
+        #! Use `selectors2` module to wait for data to be available.
         #!
         ret = True
         while True:
-            r = select.select([self.dev_hand], [], [], 1)
-            if r[0]:
-                #print("DEBUG: adc_select_wait(): select() returned ok")
+            have_data = False
+            events = self.adc_selector.select(timeout=1.0)
+            for key, event in events:
+                if event & selectors.EVENT_READ:
+                    have_data = True
+            if have_data:
                 break
+
             print("DEBUG: TIMEOUT: adc_select_wait()")
             status = ind.status_get(dev_hand=self.dev_hand)
             sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
