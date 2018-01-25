@@ -25,7 +25,7 @@ from collections import namedtuple
 
 sys.path.append('..')
 
-from efd_config import Config
+from efd_config import Config, PeakDetectMode
 from efd_app import Peak, PEAK_DEFAULT
 from efd_app import Sample, sample_min, sample_max
 
@@ -576,6 +576,8 @@ class Read_Capture_Buffers_App(object):
         #toff = float(index + index_offset) * self.time_resolution
         value -= self.config.sample_offset
         volt = value * self.voltage_factor
+        if self.config.peak_detect_mode == PeakDetectMode.SQUARED:
+            volt *= self.voltage_factor
         peak = Peak(index=index, value=value, count=count, time_offset=toff, voltage=volt)
         return peak
 

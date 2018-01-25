@@ -38,7 +38,7 @@ from cloud import Cloud, Cloud_Thread
 from efd_gps import GPS_Poller_Thread
 
 from efd_measurements import Measurements_Log
-from efd_config import Config
+from efd_config import Config, PeakDetectMode
 
 from efd_sensors import Sensors
 
@@ -763,6 +763,8 @@ class EFD_App(object):
         #toff = float(index + index_offset) * self.time_resolution
         value -= self.config.sample_offset
         volt = value * self.voltage_factor
+        if self.config.peak_detect_mode == PeakDetectMode.SQUARED:
+            volt *= self.voltage_factor
         peak = Peak(index=index, value=value, count=count, time_offset=toff, voltage=volt)
         return peak
 
