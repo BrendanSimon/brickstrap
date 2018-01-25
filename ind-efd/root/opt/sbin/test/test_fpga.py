@@ -649,11 +649,11 @@ class Read_Capture_Buffers_App(object):
     def peak_detect_squared_numpy(self):
         '''Perform peak detection on squared current phases using numpy.'''
 
-#         phase = np.square(self.red_phase.astype)
         phase = self.red_phase
         if 0:
             print("RED phase (normal):")
             self.show_phase(phase)
+#         phase = np.square(phase)
         phase = np.square(phase.astype(np.int32))
         if 0:
             print("RED phase (squared):")
@@ -670,14 +670,16 @@ class Read_Capture_Buffers_App(object):
             print("DEBUG: RED: time_delta_1={}".format(red_time_delta_1))
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
-#         phase = np.square(self.wht_phase)
-        phase = np.square(self.wht_phase.astype(np.int32))
+        phase = self.wht_phase
+#         phase = np.square(phase)
+        phase = np.square(phase.astype(np.int32))
         offset = self.config.capture_index_offset_wht
         peak_max_wht = self.peak_max(phase, index_offset=offset)
         peak_min_wht = self.peak_min(phase, index_offset=offset)
 
-#         phase = np.square(self.blu_phase)
-        phase = np.square(self.blu_phase.astype(np.int32))
+        phase = self.blu_phase
+#         phase = np.square(phase)
+        phase = np.square(phase.astype(np.int32))
         offset = self.config.capture_index_offset_blu
         peak_max_blu = self.peak_max(phase, index_offset=offset)
         peak_min_blu = self.peak_min(phase, index_offset=offset)
