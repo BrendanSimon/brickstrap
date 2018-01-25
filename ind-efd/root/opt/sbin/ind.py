@@ -754,13 +754,14 @@ def adc_capture_maxmin_squared_get(dev_hand=None):
     return maxmin
 
 def status_get(dev_hand=None):
-    '''Get Status.'''
+    '''Get FPGA Status.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_STATUS, "1234")
-        value = struct.unpack('l', a)[0]
+        value = struct.unpack('L', a)[0]
     except IOError:
         print("IOError: Get Status.")
         raise
@@ -776,7 +777,7 @@ def adc_semaphore_get(dev_hand=None):
 
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, "1234")
-        value = struct.unpack('l', a)[0]
+        value = struct.unpack('L', a)[0]
     except IOError:
         print("IOError: ADC Get Semaphore.")
         raise
@@ -840,7 +841,7 @@ def adc_clock_count_per_pps_get(dev_hand=None):
 
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_CLOCK_COUNT_PER_PPS, "1234")
-        value = struct.unpack('l', a)[0]
+        value = struct.unpack('L', a)[0]
     except IOError:
         print("IOError: Get ADC Clock Counter Per PPS.")
         raise
