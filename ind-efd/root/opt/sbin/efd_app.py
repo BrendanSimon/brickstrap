@@ -1618,7 +1618,7 @@ class EFD_App(object):
 
             #! FIXME: this could be done in the cloud thread !!
             #! Save sample data and send SMS if a trigger event detected.
-            if trigger_phase:
+            if trigger_phase is not None:
                 print("PD Event Detected @ {} UTC, {} LOCAL", self.capture_datetime_utc, self.capture_datetime_local)
                 self.save_data(phase=trigger_phase)
                 self.send_sms()
