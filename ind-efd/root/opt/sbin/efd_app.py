@@ -424,6 +424,7 @@ class EFD_App(object):
 
     def adc_semaphore_wait(self):
         #print("ADC Semaphore Wait")
+        ret = True
         delay = 0.01
         count_max = 1 / delay
         count = 0
@@ -440,14 +441,19 @@ class EFD_App(object):
                 sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
                 print("DEBUG: status = 0x{:08X}".format(status))
                 print("DEBUG: semaphore = 0x{:08X}".format(sem))
+                ret = False
                 break;
+
+        return ret
 
     def adc_select_wait(self):
         #print("ADC Select Wait")
 
         #!
-        #!  Using select.  NOTE: very simple and it works :)
+        #! Using select.  NOTE: very simple and it works :)
+        #! FIXME: Use `selectors` module !!
         #!
+        ret = True
         while True:
             r = select.select([self.dev_hand], [], [], 1)
             if r[0]:
@@ -457,25 +463,10 @@ class EFD_App(object):
             sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
             print("DEBUG: status = 0x{:08X}".format(status))
             print("DEBUG: semaphore = 0x{:08X}".format(sem))
-        return
+            ret = False
+            break
 
-        #!
-        #!  Using epoll.  NOTE: doesn't work yet :(
-        #!
-        epoll = select.epoll()
-        #! If not provided, event-mask defaults to (POLLIN | POLLPRI | POLLOUT).
-        #! It can be modified later with modify().
-        fileno = self.dev_hand.fileno()
-        epoll.register(fileno)
-        try:
-            while True:
-                #events = epoll.poll(3)  #! 3 second timeout
-                events = epoll.poll()
-                #for fd, event_type in events:
-                #    _handle_inotify_event(e, s, fd, event_type)
-        finally:
-            epoll.unregister(fileno)
-            epoll.close()
+        return ret
 
     def adc_trigger(self):
         #print("ADC Manual Trigger")
@@ -485,19 +476,23 @@ class EFD_App(object):
         #print("ADC Data Ready Wait")
         if self.config.capture_mode == 'manual':
             self.adc_trigger()
-            self.adc_semaphore_wait()
+            ret = self.adc_semaphore_wait()
         else:
-            self.adc_select_wait()
+            ret = self.adc_select_wait()
+
+        return ret
 
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
         self.adc_semaphore_set(0)
-        self.adc_data_ready_wait()
+        ret = self.adc_data_ready_wait()
+        return ret
 
     def get_sample_data(self):
         '''Get sample data from memory mapped buffer or capture files.'''
         '''FIXME: capture files not implemented !!'''
-        self.get_mmap_sample_data()
+        ret = self.get_mmap_sample_data()
+        return ret
 
     def get_capture_datetime(self):
         '''Get the datetime stamp .'''
@@ -1407,7 +1402,7 @@ class EFD_App(object):
             sys.stdout.flush()
 
             self.running_led_off()
-            self.get_sample_data()          #! wait for data to be available.
+            data_ok = self.get_sample_data()    #! wait for data to be available, with timeout.
             self.running_led_on()
 
             select_datetime_utc = arrow.utcnow()

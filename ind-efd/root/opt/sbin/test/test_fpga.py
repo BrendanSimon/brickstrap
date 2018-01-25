@@ -374,50 +374,50 @@ class Read_Capture_Buffers_App(object):
 
     def adc_semaphore_wait(self):
         print("ADC Semaphore Wait")
-        sem = self.adc_semaphore_get()
-        print("DEBUG: semaphore = 0x{:08X}".format(sem))
+        ret = True
+        delay = 0.01
+        count_max = 1 / delay
+        count = 0
         while True:
             sem = self.adc_semaphore_get()
             if sem:
-                print("DEBUG: semaphore = 0x{:08X}".format(sem))
+                #time.sleep(1)
                 break
-            time.sleep(0.01)
+            time.sleep(delay)
+            count += 1
+            if count > count_max:
+                print("DEBUG: TIMEOUT: adc_semaphore_wait()")
+                status = ind.status_get(dev_hand=self.dev_hand)
+                sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
+                print("DEBUG: status = 0x{:08X}".format(status))
+                print("DEBUG: semaphore = 0x{:08X}".format(sem))
+                ret = False
+                break;
+
+        return ret
 
     def adc_select_wait(self):
-        #print("ADC Select Wait")
+        print("ADC Select Wait")
 
-        ##
-        ##  Using select.  NOTE: very simple and it works :)
-        ##
+        #!
+        #! Using select.  NOTE: very simple and it works :)
+        #! FIXME: Use `selectors` module !!
+        #!
+        ret = True
         while True:
             r = select.select([self.dev_hand], [], [], 1)
             if r[0]:
-                print("DEBUG: adc_select_wait(): select() returned ok")
+                #print("DEBUG: adc_select_wait(): select() returned ok")
                 break
             print("DEBUG: TIMEOUT: adc_select_wait()")
             status = ind.status_get(dev_hand=self.dev_hand)
             sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
             print("DEBUG: status = 0x{:08X}".format(status))
             print("DEBUG: semaphore = 0x{:08X}".format(sem))
-        return
+            ret = False
+            break
 
-        ##
-        ##  Using epoll.  NOTE: doesn't work yet :(
-        ##
-        epoll = select.epoll()
-        ## If not provided, event-mask defaults to (POLLIN | POLLPRI | POLLOUT).
-        ## It can be modified later with modify().
-        fileno = self.dev_hand.fileno()
-        epoll.register(fileno)
-        try:
-            while True:
-                #events = epoll.poll(3)  ## 3 second timeout
-                events = epoll.poll()
-                #for fd, event_type in events:
-                #    _handle_inotify_event(e, s, fd, event_type)
-        finally:
-            epoll.unregister(fileno)
-            epoll.close()
+        return ret
 
     def adc_trigger(self):
         print("ADC Manual Trigger")
@@ -427,21 +427,24 @@ class Read_Capture_Buffers_App(object):
         print("ADC Data Ready Wait")
         if self.config.capture_mode == 'manual':
             self.adc_trigger()
-            self.adc_semaphore_wait()
+            ret = self.adc_semaphore_wait()
         else:
-            self.adc_select_wait()
+            ret = self.adc_select_wait()
+        return ret
 
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
 
         self.adc_semaphore_set(0)
-        self.adc_data_ready_wait()
+        ret = self.adc_data_ready_wait()
+        return ret
 
     def get_sample_data(self):
         '''Get sample data from memory mapped buffer or capture files.'''
         '''FIXME: capture files not implemented !!'''
 
-        self.get_mmap_sample_data()
+        ret = self.get_mmap_sample_data()
+        return ret
 
     def get_capture_datetime(self):
         '''Get the datetime stamp .'''
@@ -1248,7 +1251,10 @@ class Read_Capture_Buffers_App(object):
 
             #self.running_led_off()
 
-            self.get_sample_data()          ## wait for data to be available.
+            data_ok = self.get_sample_data()    ## wait for data to be available, with timeout.
+
+            if data_ok:
+                self.capture_trigger_count += 1
 
             #self.running_led_on()
             self.running_led_toggle()
@@ -1270,14 +1276,21 @@ class Read_Capture_Buffers_App(object):
 
             self.get_capture_datetime()
 
-            self.capture_trigger_count += 1
-
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
 
             if config.show_capture_debug:
-                print("\n========================================")
+                print
+                #print("========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
+
+            if config.peak_detect_fpga_debug:
+                print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
+                print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
+                print("\nDEBUG: adc_clock_count_per_pps = {:10} (0x{:08X})".format(adc_clock_count_per_pps, adc_clock_count_per_pps))
+
+            if not data_ok:
+                continue
 
             ##
             ## Show capture data / phase arrays
@@ -1289,10 +1302,6 @@ class Read_Capture_Buffers_App(object):
                 #self.show_phase_arrays(phase_index=0)
                 #self.show_phase_arrays(phase_index=1)
                 self.show_phase_arrays()
-
-            if config.peak_detect_fpga_debug:
-                print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
-                print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
 
             self.spare_led_on()
 
@@ -1426,7 +1435,7 @@ class Read_Capture_Buffers_App(object):
             ## Show ADC Clock Count Per PPS.
             ##
             if 1:
-                self.adc_clock_count_now = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
+                self.adc_clock_count_now = adc_clock_count_per_pps
                 ## Check if in valid range.
                 if self.adc_clock_count_valid_min <= self.adc_clock_count_now <= self.adc_clock_count_valid_max:
                     if self.adc_clock_count_now < self.adc_clock_count_min:
