@@ -1705,7 +1705,8 @@ def app_main(capture_count=0,
              show_measurements=False,
              show_capture_buffers=False,
              show_capture_debug=False,
-             append_gps_data=False):
+             append_gps_data=False,
+             debug=False):
 
     """Main entry for application."""
 
@@ -1741,6 +1742,11 @@ def app_main(capture_count=0,
 
     if append_gps_data:
         config.set_append_gps_data(append_gps_data)
+
+    if debug:
+        config.peak_detect_numpy_debug  = True
+        config.peak_detect_fpga_debug   = True
+        config.peak_detect_debug        = True
 
     config.show_all()
 

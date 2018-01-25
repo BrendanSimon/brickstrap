@@ -1471,8 +1471,8 @@ config.peak_detect_numpy_debug  = False
 config.peak_detect_fpga         = True
 config.peak_detect_fpga_debug   = False
 
-config.peak_detect           = True
-config.peak_detect_debug     = False
+config.peak_detect              = True
+config.peak_detect_debug        = False
 
 config.peak_detect_normal       = True
 config.peak_detect_squared      = True
@@ -1491,7 +1491,7 @@ def app_main(capture_count=0,
              peak_detect_squared=True,
              show_measurements=False,
              show_capture_buffers=False,
-             show_capture_debug=False,
+             show_capture_debug=True,
              debug=False):
 
     """Main entry if running this module directly."""
