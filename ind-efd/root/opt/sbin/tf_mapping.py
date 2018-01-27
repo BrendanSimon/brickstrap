@@ -299,6 +299,14 @@ def tf_map_calculate(tdata, ydata, sample_freq, fft_length=0):
 
 #!============================================================================
 
+#!FIXME: stubbed out function to suppress pylint error.
+def get_mmap_sample_data(path):
+    xdata = np.array([], dtype=np.int16)
+    ydata = np.array([], dtype=np.int16)
+    return ( xdata, ydata )
+
+#!============================================================================
+
 def main():
     """Main entry if running this module directly."""
 
