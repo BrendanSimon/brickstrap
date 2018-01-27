@@ -284,6 +284,13 @@ class Config(object):
 
     #!========================================================================
 
+    def set_show_capture_buffers(self, show_capture_buffers=None):
+        if show_capture_buffers != None:
+            self.show_capture_buffers = show_capture_buffers
+            print("INFO: `show_capture_buffers` set to {}".format(self.show_capture_buffers))
+
+    #!========================================================================
+
     def set_adc_offset(self, adc_offset=None):
         if adc_offset != None:
             self.adc_offset = adc_offset
