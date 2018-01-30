@@ -1,59 +1,128 @@
 #!/bin/bash
 
-## The modem python script removes power to the modem.
+#=============================================================================
+
+device="cdc-wdm0"
+
+dev_file="/dev/${device}"
+
+retries=10
+
+#=============================================================================
+#! Power OFF the modem (takes approximately 2-3 seconds).
+#!
+#! NOTE: be careful calling this repeatedly !!
+#!       This will actually:
+#!          * turn OFF the modem if it is ON.
+#!          * turn ON  the modem if it is OFF.
+#=============================================================================
 function modem_power_off
 {
     /opt/sbin/modem.py power-off
 }
 
-## The modem python script restores power to the modem.
+#=============================================================================
+#! Power ON the modem (takes approximately 4-5 seconds).
+#=============================================================================
 function modem_power_on
 {
     /opt/sbin/modem.py power-on
 }
 
-## The modem python script toggles the modem power line
+#=============================================================================
+#! The modem python script toggles the modem power line
+#=============================================================================
 function modem_power_cycle
 {
     /opt/sbin/modem.py power-cycle
 }
 
-## period to wait before checking results of a command.
-delay=0.5
+#=============================================================================
+#! Turn Modem LED off
+#=============================================================================
+function modem_led_off
+{
+    /opt/sbin/modem_led.py off
+}
 
-device=cdc-wdm0
-dev_file=/dev/${device}
+#=============================================================================
+#! Turn Modem LED on
+#=============================================================================
+function modem_led_on
+{
+    /opt/sbin/modem_led.py on
+}
 
-## Turn Modem LED off
-/opt/sbin/modem_led.py off
+#=============================================================================
+#! Display error message and exit with an error code
+#=============================================================================
+function fatal_error
+{
+    local code="${1:--1}"
+    local mesg="ERROR: $2"
+    echo "${mesg}"
+    exit ${code}
+}
 
-# If the modem is already ON, we need to power it down first to
-# start it in a known state
-while [ -e ${dev_file} ];
-do
+#=============================================================================
+#! Main
+#=============================================================================
+
+modem_led_off
+
+#!
+#! If modem is already on, turn it off to start it in a known state.
+#! NOTE: should only be done once as another attempt will turn the modem on !!
+#!
+if [ ! -e "${dev_file}" ] ; then
+    echo "Modem already off"
+else
     modem_power_off
-    sleep ${delay}
-done
-
-
-while [ ! -e ${dev_file} ];
-do
-    modem_power_on
-    sleep ${delay}
-done
-
-# Bring up the network connection once the network interface
-# is available
-until nmcli d | grep ${device}
-do
-    sleep ${delay}
-done
-
-nmcli d connect cdc-wdm0
-if [ $? -ne 0 ] ; then
-    exit -1
+    for i in $(seq ${retries}) ; do
+        #echo "DEBUG: check modem is off: '${device}' (attempt: ${i})"
+        if [ ! -e "${dev_file}" ] ; then
+            break
+        fi
+        sleep 1
+    done || fatal_error 1 "Modem did not turn off !!"
+    echo "Modem is off"
 fi
 
-## Turn Modem LED on
-/opt/sbin/modem_led.py on
+#!
+#! Turn on the modem.
+#!
+modem_power_on
+for i in $(seq ${retries}) ; do
+    #echo "DEBUG: check modem is on: '${device}' (attempt: ${i})"
+    if [ -e "${dev_file}" ] ; then
+        break
+    fi
+    sleep 1
+done || fatal_error 2 "Modem did not turn on !!"
+echo "Modem is on"
 
+#!
+#! Wait until the network interface is available
+#!
+for i in $(seq ${retries}) ; do
+    #echo "DEBUG: detect NetworkManager device: ${device} (attempt: ${i})"
+    nmcli d | grep --quiet "${device}"
+    if [ $? -eq 0 ] ; then
+        break
+    fi
+    sleep 1
+done || fatal_error 3 "could not detect NetworkManager device: '${device}' !!"
+
+#!
+#! Bring up the network connection.
+#!
+nmcli d connect "${device}"
+if [ $? -ne 0 ] ; then
+    fatal_error 4 "NetworkManager failed to connect device: '${device}' !!"
+fi
+
+#!
+#! Done
+#!
+echo "Modem connected to Internet"
+modem_led_on
