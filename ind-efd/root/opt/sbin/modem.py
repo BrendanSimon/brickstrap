@@ -21,14 +21,22 @@ DEBUG = False
 #!============================================================================
 
 def power_off():
-    """Power off the modem."""
+    """Power off the modem (takes approximately 2-3 seconds).
+
+    NOTE: be careful calling this repeatedly !!
+    This will actually:
+        * turn OFF the modem if it is ON.
+        * turn ON  the modem if it is OFF.
+    """
+
     print("Turning modem 'off'")
     ind.modem_power_off(dev_hand=dev_hand)
 
 #!----------------------------------------------------------------------------
 
 def power_on():
-    """Power on the modem."""
+    """Power on the modem (takes approximately 4-5 seconds)."""
+
     print("Turning modem 'on'")
     ind.modem_power_on(dev_hand=dev_hand)
 
