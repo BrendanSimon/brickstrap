@@ -1288,16 +1288,9 @@ class Read_Capture_Buffers_App(object):
             #self.running_led_on()
             self.running_led_toggle()
 
-            #! Get time that `selector` returns and determine the capture time.
-            if 0:
-                self.get_capture_datetime()
-            else:
-                #! get the time now.
-                select_datetime_utc = arrow.utcnow()
-                select_datetime_local = select_datetime_utc.to(self.config.timezone)
-
-                #! set the capture time (truncate to seconds).
-                self.set_capture_datetime(select_datetime_utc.floor('second'))
+            #! Get time that `selector` returns.
+            select_datetime_utc = arrow.utcnow()
+            select_datetime_local = select_datetime_utc.to(self.config.timezone)
 
             ## Retrieve info from FPGA registers first (especially if not double buffered).
             ## Would be better to double buffer in the interrupt routine and save
@@ -1322,7 +1315,13 @@ class Read_Capture_Buffers_App(object):
             self.adc_capture_buffer_next()  #! use next capture buffer for ping-pong
 
             timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
-            self.irq_capture_datetime_utc = arrow.get(timestamp)
+            irq_capture_datetime_utc = arrow.get(timestamp)
+
+            #! set the capture time (truncate to seconds).
+            if 1:
+                self.set_capture_datetime(irq_capture_datetime_utc.floor('second'))
+            else:
+                self.set_capture_datetime(select_datetime_utc.floor('second'))
 
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
@@ -1331,7 +1330,7 @@ class Read_Capture_Buffers_App(object):
                 print
                 #print("========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
-                print("irq_capture_datetime_utc = {}".format(self.irq_capture_datetime_utc))
+                print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
                 print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
                 print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
 
@@ -1593,7 +1592,7 @@ def app_main(capture_count=0,
     if show_capture_buffers:
         config.set_show_capture_buffers(show_capture_buffers)
 
-    if show_capture_debug:
+    if not show_capture_debug:
         config.set_show_capture_debug(show_capture_debug)
 
     ## add `save_capture_data` config item.

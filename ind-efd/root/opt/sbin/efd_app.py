@@ -1444,15 +1444,8 @@ class EFD_App(object):
                 self.capture_trigger_count += 1
 
             #! Get time that `selector` returns and determine the capture time.
-            if 0:
-                self.get_capture_datetime()
-            else:
-                #! get the time now.
-                select_datetime_utc = arrow.utcnow()
-                select_datetime_local = select_datetime_utc.to(self.config.timezone)
-
-                #! set the capture time (truncate to seconds).
-                self.set_capture_datetime(select_datetime_utc.floor('second'))
+            select_datetime_utc = arrow.utcnow()
+            select_datetime_local = select_datetime_utc.to(self.config.timezone)
 
             #! Retrieve info from FPGA registers first (especially if not double buffered).
             #! Would be better to double buffer in the interrupt routine and save
@@ -1477,7 +1470,13 @@ class EFD_App(object):
             self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
 
             timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
-            self.irq_capture_datetime_utc = arrow.get(timestamp)
+            irq_capture_datetime_utc = arrow.get(timestamp)
+
+            #! set the capture time (truncate to seconds).
+            if 1:
+                self.set_capture_datetime(irq_capture_datetime_utc.floor('second'))
+            else:
+                self.set_capture_datetime(select_datetime_utc.floor('second'))
 
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
@@ -1485,6 +1484,9 @@ class EFD_App(object):
             if config.show_capture_debug:
                 print("\n========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
+                print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
+                print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
+                print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
 
             #!
             #! Show capture data / phase arrays
@@ -1678,8 +1680,22 @@ class EFD_App(object):
                     self.show_phase_arrays()
                     #self.show_all_capture_buffers()
 
+            #! Get time when "real processing" has completed.
+            end_process_datetime_utc = arrow.utcnow()
+            end_process_datetime_local = end_process_datetime_utc.to(self.config.timezone)
+
+            process_duration = end_process_datetime_utc - select_datetime_utc
+
+            if config.show_capture_debug:
+                print
+                print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
+                print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
+                print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
+                print("end_process_datetime_utc = {}".format(end_process_datetime_utc))
+                print("process_duration = {} seconds".format(process_duration.total_seconds()))
+
             if self.config.show_measurements:
-                print('----------------------------------------')
+                print('\n----------------------------------------')
                 print
                 print('select datetime utc    : {}'.format(select_datetime_utc))
                 print('select datetime local  : {}'.format(select_datetime_local))
@@ -1692,14 +1708,23 @@ class EFD_App(object):
                 print('time utc  : {}'.format(self.gpsd.utc))
                 print('fix time  : {}'.format(self.gpsd.fix.time))
                 print
-                print('peak_max_red : {}'.format(self.peak_normal_max_red))
-                print('peak_min_red : {}'.format(self.peak_normal_min_red))
+                print('peak_normal_max_red : {}'.format(self.peak_normal_max_red))
+                print('peak_normal_min_red : {}'.format(self.peak_normal_min_red))
                 print
-                print('peak_max_wht : {}'.format(self.peak_normal_max_wht))
-                print('peak_min_wht : {}'.format(self.peak_normal_min_wht))
+                print('peak_normal_max_wht : {}'.format(self.peak_normal_max_wht))
+                print('peak_normal_min_wht : {}'.format(self.peak_normal_min_wht))
                 print
-                print('peak_max_blu : {}'.format(self.peak_normal_max_blu))
-                print('peak_min_blu : {}'.format(self.peak_normal_min_blu))
+                print('peak_normal_max_blu : {}'.format(self.peak_normal_max_blu))
+                print('peak_normal_min_blu : {}'.format(self.peak_normal_min_blu))
+                print
+                print('peak_squared_max_red : {}'.format(self.peak_squared_max_red))
+                print('peak_squared_min_red : {}'.format(self.peak_squared_min_red))
+                print
+                print('peak_squared_max_wht : {}'.format(self.peak_squared_max_wht))
+                print('peak_squared_min_wht : {}'.format(self.peak_squared_min_wht))
+                print
+                print('peak_squared_max_blu : {}'.format(self.peak_squared_max_blu))
+                print('peak_squared_min_blu : {}'.format(self.peak_squared_min_blu))
                 print
                 print('temperature    : {}'.format(self.ws_info.temperature))
                 print('humidity       : {}'.format(self.ws_info.humidity))
@@ -1803,6 +1828,7 @@ def app_main(capture_count=0,
         config.peak_detect_numpy_debug  = True
         config.peak_detect_fpga_debug   = True
         config.peak_detect_debug        = True
+        config.set_show_capture_debug(True)
 
     config.show_all()
 
