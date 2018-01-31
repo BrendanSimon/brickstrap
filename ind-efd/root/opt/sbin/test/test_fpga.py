@@ -389,7 +389,6 @@ class Read_Capture_Buffers_App(object):
         while True:
             sem = self.adc_semaphore_get()
             if sem:
-                #time.sleep(1)
                 break
             time.sleep(delay)
             count += 1
@@ -437,6 +436,10 @@ class Read_Capture_Buffers_App(object):
     def adc_data_ready_wait(self):
         print("ADC Data Ready Wait")
         if self.config.capture_mode == 'manual':
+            #! fake pps delay
+            if self.config.pps_delay:
+                time.sleep(self.config.pps_delay)
+
             self.adc_trigger()
             ret = self.adc_semaphore_wait()
         else:
@@ -1500,6 +1503,7 @@ config.peak_detect_squared      = True
 
 def app_main(capture_count=0,
              pps_mode=True,
+             pps_delay=1.0,
              adc_offset=0,
              peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
              peak_detect_normal=True,
@@ -1516,6 +1520,9 @@ def app_main(capture_count=0,
 
     if not pps_mode:
         config.set_capture_mode('manual')
+
+    if pps_delay != 1.0:
+        config.set_pps_delay(pps_delay)
 
     if adc_offset:
         config.set_adc_offset(adc_offset)

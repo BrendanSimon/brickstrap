@@ -77,6 +77,9 @@ class Config(object):
     #! 'manual' : oneshot software triggered.
     capture_mode = 'auto'
 
+    #! delay between samples in in manual mode (fake pps).
+    pps_delay = 1.0
+
     total_count = sample_frequency * 50 // 1000         #! total of 50ms between start of channel sampling.
 
     delay_count = total_count - capture_count
@@ -277,6 +280,13 @@ class Config(object):
 
     #!========================================================================
 
+    def set_pps_delay(self, pps_delay=None):
+        if pps_delay != None:
+            self.pps_delay = pps_delay
+            print("INFO: `pps_delay` set to {}".format(self.pps_delay))
+
+    #!========================================================================
+
     def set_show_capture_debug(self, show_capture_debug=None):
         if show_capture_debug != None:
             self.show_capture_debug = show_capture_debug
@@ -465,6 +475,7 @@ class Config(object):
 
 def app_main(capture_count=0,
              pps_mode=True,
+             pps_delay=1.0,
              adc_offset=0,
              peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
              peak_detect_normal=True,
@@ -485,6 +496,9 @@ def app_main(capture_count=0,
 
     if not pps_mode:
         config.set_capture_mode('manual')
+
+    if pps_delay != 1.0:
+        config.set_pps_delay(pps_delay)
 
     if adc_offset:
         config.set_adc_offset(adc_offset)
