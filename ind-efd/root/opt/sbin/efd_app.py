@@ -335,9 +335,9 @@ class EFD_App(object):
         print("Queues empty.")
 
         print("Stopping Threads...")
-        self.gps_poller.cleanup()
-        self.ws_thread.cleanup()
         self.cloud_thread.cleanup()
+        self.ws_thread.cleanup()
+        self.gps_poller.cleanup()
         print("Threads Stopped.")
 
         self.sensors.cleanup()
