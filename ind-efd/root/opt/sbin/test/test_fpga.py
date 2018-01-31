@@ -1593,11 +1593,15 @@ def app_main(capture_count=0,
     try:
         app.main_loop()
     except (KeyboardInterrupt):
-        ## ctrl+c key press.
+        #! ctrl+c key press.
         print("KeyboardInterrupt -- exiting ...")
     except (SystemExit):
-        ## sys.exit() called.
+        #! sys.exit() called.
         print("SystemExit -- exiting ...")
+    except (Exception) as ex:
+        #! An unhandled exception !!
+        print("Exception: {}".format(ex.message))
+        print("Unhandled Exception -- exiting...")
     finally:
         print("Cleaning up.")
         app.cleanup()
