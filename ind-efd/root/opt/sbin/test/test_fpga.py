@@ -1357,6 +1357,20 @@ class Read_Capture_Buffers_App(object):
                 #self.show_phase_arrays(phase_index=1)
                 self.show_phase_arrays()
 
+            ## save phase data to disk.
+            if config.save_capture_data:
+                loc_dt = self.capture_datetime_local
+                loc_dt_str = loc_dt.format('YYYYMMDDTHHmmssZ')
+                ## red
+                filename = 'sampledata-{}-red'.format(loc_dt_str)
+                np.save(filename, self.red_phase)
+                ## white
+                filename = 'sampledata-{}-wht'.format(loc_dt_str)
+                np.save(filename, self.wht_phase)
+                ## blue
+                filename = 'sampledata-{}-blu'.format(loc_dt_str)
+                np.save(filename, self.blu_phase)
+
             self.spare_led_on()
 
             buffer_errors = 0
@@ -1547,6 +1561,7 @@ def app_main(capture_count=0,
              show_measurements=False,
              show_capture_buffers=False,
              show_capture_debug=True,
+             save_capture_data=False,
              debug=False):
 
     """Main entry if running this module directly."""
@@ -1580,6 +1595,9 @@ def app_main(capture_count=0,
 
     if show_capture_debug:
         config.set_show_capture_debug(show_capture_debug)
+
+    ## add `save_capture_data` config item.
+    config.save_capture_data = save_capture_data
 
     if debug:
         config.peak_detect_numpy_debug  = True
