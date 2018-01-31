@@ -130,6 +130,7 @@ class EFD_App(object):
         self.peak_squared_max_blu = PEAK_DEFAULT
         self.peak_squared_min_blu = PEAK_DEFAULT
 
+        self.bank = 0
         self.adc_capture_buffer_offset = 0
         self.adc_capture_buffer_offset_half = None     #! should be set to 64MB (128MB / 2)
 
@@ -187,7 +188,7 @@ class EFD_App(object):
     def set_phases(self):
         '''Set phase arrays to the current capture buffer.'''
 
-        if self.adc_capture_buffer_offset == 0:
+        if self.bank == 0:
             #! set phase arrays to associated arrays at start of capture buffer.
             self.red_phase = self.red_phase_0
             self.wht_phase = self.wht_phase_0
@@ -387,8 +388,12 @@ class EFD_App(object):
 
         self.set_phases()
 
-        curr_offset = self.adc_capture_buffer_offset
-        next_offset = self.adc_capture_buffer_offset_half if curr_offset == 0 else 0
+        if self.bank == 0:
+            self.bank = 1
+            next_offset = self.adc_capture_buffer_offset_half
+        else:
+            self.bank = 0
+            next_offset = 0
         #print("DEBUG: next_capture_buffer: curr_offset={:X}, next_offset={:X}".format(curr_offset, next_offset))
         self.adc_capture_buffer_offset = next_offset
 
@@ -439,7 +444,6 @@ class EFD_App(object):
         while True:
             sem = self.adc_semaphore_get()
             if sem:
-                time.sleep(1)
                 break
             time.sleep(delay)
             count += 1
@@ -512,14 +516,21 @@ class EFD_App(object):
         ret = self.get_mmap_sample_data()
         return ret
 
-    def get_capture_datetime(self):
-        '''Get the datetime stamp .'''
-        utc_dt = arrow.utcnow().floor('second')
+    def set_capture_datetime(self, utc_dt):
+        '''Set the datetime stamp from utc'''
+
         self.capture_datetime_utc = utc_dt
         self.capture_datetime_local = utc_dt.to(self.config.timezone)
 
+    def get_capture_datetime(self):
+        '''Get the datetime stamp .'''
+
+        utc_dt = arrow.utcnow().floor('second')
+        self.set_capture_datetime(utc_dt)
+
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
+
         for channel in range(self.config.num_channels):
             buf = self.adc_capture_array[channel*self.config.capture_count+offset:]
             #buf = self.adc_capture_array[channel*self.config.capture_count:]
@@ -1424,30 +1435,49 @@ class EFD_App(object):
             sys.stdout.flush()
 
             self.running_led_off()
+
             data_ok = self.get_sample_data()    #! wait for data to be available, with timeout.
+
             self.running_led_on()
 
-            select_datetime_utc = arrow.utcnow()
-            select_datetime_local = select_datetime_utc.to(self.config.timezone)
+            if data_ok:
+                self.capture_trigger_count += 1
 
-            #! Retrieve info from FPGA registers (especially if not double buffered).
+            #! Get time that `selector` returns and determine the capture time.
+            if 0:
+                self.get_capture_datetime()
+            else:
+                #! get the time now.
+                select_datetime_utc = arrow.utcnow()
+                select_datetime_local = select_datetime_utc.to(self.config.timezone)
+
+                #! set the capture time (truncate to seconds).
+                self.set_capture_datetime(select_datetime_utc.floor('second'))
+
+            #! Retrieve info from FPGA registers first (especially if not double buffered).
             #! Would be better to double buffer in the interrupt routine and save
             #! to kernel memory, then retrieve via a single IOCTL (BB#105).
 
-            #! Read the normal maxmin registers from the fpga.
-            self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
+            capture_info = ind.adc_capture_info_get(self.bank, dev_hand=self.dev_hand)
 
-            #! Read the squared maxmin registers from the fpga.
-            self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
+            if 1:
+                self.maxmin_normal      = capture_info.maxmin_normal
+                self.maxmin_squared     = capture_info.maxmin_squared
+                adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
+            else:
+                ## Read the normal maxmin registers from the fpga.
+                self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
+                ##
+                ## Read the squared maxmin registers from the fpga.
+                self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
-            #! Read the `adc_clock_count_per_pps` register from the fpga.
-            adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
+                #! Read the `adc_clock_count_per_pps` register from the fpga.
+                adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
 
-            self.adc_capture_buffer_next()  #! use next capture buffer for ping-pong
+            self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
 
-            self.get_capture_datetime()
-
-            self.capture_trigger_count += 1
+            timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
+            self.irq_capture_datetime_utc = arrow.get(timestamp)
 
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
@@ -1562,7 +1592,7 @@ class EFD_App(object):
             self.measurements['datetime_utc']               = self.capture_datetime_utc
             self.measurements['datetime_local']             = self.capture_datetime_local
 
-            #! FIXME: should use a class to encapsulate measumenets for each phase (red, white, blue).
+            #! FIXME: should use a class to encapsulate measurements for each phase (red, white, blue).
             phase = self.red_phase
             self.measurements['max_volt_red']                   = self.peak_normal_max_red.voltage
             self.measurements['min_volt_red']                   = self.peak_normal_min_red.voltage

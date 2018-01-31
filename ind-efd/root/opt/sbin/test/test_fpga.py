@@ -72,6 +72,7 @@ class Read_Capture_Buffers_App(object):
         self.peak_squared_max_blu = PEAK_DEFAULT
         self.peak_squared_min_blu = PEAK_DEFAULT
 
+        self.bank = 0
         self.adc_capture_buffer_offset = 0
         self.adc_capture_buffer_offset_half = None     ## should be set to 64MB (128MB / 2)
 
@@ -99,7 +100,7 @@ class Read_Capture_Buffers_App(object):
     def set_phases(self):
         '''Set phase arrays to the current capture buffer.'''
 
-        if self.adc_capture_buffer_offset == 0:
+        if self.bank == 0:
             ## set phase arrays to associated arrays at start of capture buffer.
             self.red_phase = self.red_phase_0
             self.wht_phase = self.wht_phase_0
@@ -264,8 +265,13 @@ class Read_Capture_Buffers_App(object):
         self.set_phases()
 
         curr_offset = self.adc_capture_buffer_offset
-        next_offset = self.adc_capture_buffer_offset_half if curr_offset == 0 else 0
-        print("DEBUG: next_capture_buffer: curr_offset={:X}, next_offset={:X}".format(curr_offset, next_offset))
+        if self.bank == 0:
+            self.bank = 1
+            next_offset = self.adc_capture_buffer_offset_half
+        else:
+            self.bank = 0
+            next_offset = 0
+        #print("DEBUG: next_capture_buffer: curr_offset={:X}, next_offset={:X}".format(curr_offset, next_offset))
         self.adc_capture_buffer_offset = next_offset
 
         ind.adc_capture_address(address=next_offset, dev_hand=self.dev_hand)
@@ -460,12 +466,17 @@ class Read_Capture_Buffers_App(object):
         ret = self.get_mmap_sample_data()
         return ret
 
+    def set_capture_datetime(self, utc_dt):
+        '''Set the datetime stamp from utc'''
+
+        self.capture_datetime_utc = utc_dt
+        self.capture_datetime_local = utc_dt.to(self.config.timezone)
+
     def get_capture_datetime(self):
         '''Get the datetime stamp .'''
 
         utc_dt = arrow.utcnow().floor('second')
-        self.capture_datetime_utc = utc_dt
-        self.capture_datetime_local = utc_dt.to(self.config.timezone)
+        self.set_capture_datetime(utc_dt)
 
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
@@ -1277,22 +1288,41 @@ class Read_Capture_Buffers_App(object):
             #self.running_led_on()
             self.running_led_toggle()
 
-            ## Retrieve info from FPGA registers (especially if not double buffered).
+            #! Get time that `selector` returns and determine the capture time.
+            if 0:
+                self.get_capture_datetime()
+            else:
+                #! get the time now.
+                select_datetime_utc = arrow.utcnow()
+                select_datetime_local = select_datetime_utc.to(self.config.timezone)
+
+                #! set the capture time (truncate to seconds).
+                self.set_capture_datetime(select_datetime_utc.floor('second'))
+
+            ## Retrieve info from FPGA registers first (especially if not double buffered).
             ## Would be better to double buffer in the interrupt routine and save
             ## to kernel memory, then retrieve via a single IOCTL (BB#105).
             ##
-            ## Read the normal maxmin registers from the fpga.
-            self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
-            ##
-            ## Read the squared maxmin registers from the fpga.
-            self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
+            capture_info = ind.adc_capture_info_get(self.bank, dev_hand=self.dev_hand)
 
-            #! Read the `adc_clock_count_per_pps` register from the fpga.
-            adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
+            if 1:
+                self.maxmin_normal      = capture_info.maxmin_normal
+                self.maxmin_squared     = capture_info.maxmin_squared
+                adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
+            else:
+                ## Read the normal maxmin registers from the fpga.
+                self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
+                ##
+                ## Read the squared maxmin registers from the fpga.
+                self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
-            #self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
+                #! Read the `adc_clock_count_per_pps` register from the fpga.
+                adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
 
-            self.get_capture_datetime()
+            self.adc_capture_buffer_next()  #! use next capture buffer for ping-pong
+
+            timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
+            self.irq_capture_datetime_utc = arrow.get(timestamp)
 
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
@@ -1301,11 +1331,17 @@ class Read_Capture_Buffers_App(object):
                 print
                 #print("========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
+                print("irq_capture_datetime_utc = {}".format(self.irq_capture_datetime_utc))
+                print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
+                print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
 
             if config.peak_detect_fpga_debug:
                 print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
                 print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
                 print("\nDEBUG: adc_clock_count_per_pps = {:10} (0x{:08X})".format(adc_clock_count_per_pps, adc_clock_count_per_pps))
+                #print("\nDEBUG: capture_info_0 = {}".format(capture_info_0))
+                #print("\nDEBUG: capture_info_1 = {}".format(capture_info_1))
+                print("\nDEBUG: capture_info = {}".format(capture_info))
 
             if not data_ok:
                 continue
