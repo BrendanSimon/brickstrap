@@ -306,7 +306,7 @@ else:
 
 #=============================================================================
 
-class MaxMinBase(ctypes.Structure):
+class Struct_Base(ctypes.Structure):
 
     def __repr__(self):
         s = ', '.join("{}={}".format(t[0],getattr(self,t[0])) for t in self._fields_)
@@ -314,7 +314,7 @@ class MaxMinBase(ctypes.Structure):
 
 #=============================================================================
 
-class MaxMin(MaxMinBase):
+class MaxMin(Struct_Base):
     _fields_ = [
         #! version 1 : peak values and indices.
         ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
@@ -351,7 +351,7 @@ class MaxMin(MaxMinBase):
 
 #=============================================================================
 
-class MaxMin2(MaxMinBase):
+class MaxMin2(Struct_Base):
     _fields_ = [
         #! version 1 : peak values and indices.
         ('max_ch0_data',    ctypes.c_int32),        #! __i16 max_ch0_data
@@ -378,6 +378,28 @@ class MaxMin2(MaxMinBase):
 
         ('max_ch2_count',   ctypes.c_uint32),       #! __u32 max_ch2_count
         ('min_ch2_count',   ctypes.c_uint32),       #! __u32 min_ch2_count
+    ]
+
+#=============================================================================
+
+class TimeSpec(Struct_Base):
+    _fields_ = [
+        ('tv_sec',    ctypes.c_long),
+        ('tv_nsec',   ctypes.c_long),
+    ]
+
+#=============================================================================
+
+class CaptureInfo(Struct_Base):
+    _fields_ = [
+        ('irq_time',                TimeSpec),          #! struct timespec irq_time
+        ('int_status',              ctypes.c_uint32),   #! __u32 status
+        ('irq_count',               ctypes.c_uint32),   #! __u32 irq_count
+        ('semaphore',               ctypes.c_int32),    #! __u32 semaphore
+        ('adc_clock_count_per_pps', ctypes.c_uint32),   #! __u32 adc_clock_count_per_pps
+        ('bank',                    ctypes.c_int32),    #! __u32 bank
+        ('maxmin_normal',           MaxMin),            #! IND_maxmin_struct maxmin_normal
+        ('maxmin_squared',          MaxMin2),           #! IND_maxmin_struct maxmin_squared
     ]
 
 #=============================================================================
@@ -475,6 +497,8 @@ class IOCTL:
     IND_USER_ADC_OFFSET_SET             = _IOW( 0x15, structure=ctypes.c_int32)
     IND_USER_ADC_OFFSET_GET             = _IOR( 0x16, structure=ctypes.c_int32)
     IND_USER_READ_MAXMIN_SQUARED        = _IOR( 0x17, structure=MaxMin2)
+    IND_USER_CAPTURE_INFO_0_GET         = _IOR( 0x18, structure=CaptureInfo)
+    IND_USER_CAPTURE_INFO_1_GET         = _IOR( 0x19, structure=CaptureInfo)
 
 #!===========================================================================
 #!  Library functions.
@@ -752,6 +776,24 @@ def adc_capture_maxmin_squared_get(dev_hand=None):
         raise
 
     return maxmin
+
+def adc_capture_info_get(bank, dev_hand=None):
+    '''Get the capture info from the kernel driver.'''
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    ioctl_id = IOCTL.IND_USER_CAPTURE_INFO_0_GET if bank == 0 else IOCTL.IND_USER_CAPTURE_INFO_1_GET
+
+    capture_info = CaptureInfo()
+    try:
+        #! set mutable flag to true to place data in our object.
+        fcntl.ioctl(dev_hand, ioctl_id, capture_info, True)
+    except IOError:
+        print("IOError: ADC Capture Info Get.")
+        raise
+
+    return capture_info
 
 def status_get(dev_hand=None):
     '''Get FPGA Status.'''
