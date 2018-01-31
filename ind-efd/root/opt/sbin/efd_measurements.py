@@ -71,36 +71,13 @@ class Measurements_Log(object):
         #! so copy the necessary measurements to the appropriate csv fields.
         #! This was chosen by IND to minimise changing the web backend API !!
         #!
-# measurements_log_field_names = [
-#     'datetime_utc', 'datetime_local',
-#     'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
-#     't2_red', 'w2_red',
-#     'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
-#     't2_wht', 'w2_wht',
-#     'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
-#     't2_blu', 'w2_blu',
-#     'temperature', 'humidity', 'rain_intensity',
-#     'alert',
-#     'adc_clock_count_per_pps',
-#
-#     measurements['max_volt_red']
-#     measurements['min_volt_red']
-#     measurements['max_time_offset_red']
-#     measurements['min_time_offset_red']
-#     measurements['max_volt_count_red']
-#     measurements['min_volt_count_red']
-#     measurements['t2_red']
-#     measurements['w2_red']
-#     measurements['max_volt_squared_red']
-#     measurements['min_volt_squared_red']
-#     measurements['max_time_offset_squared_red']
-#     measurements['min_time_offset_squared_red']
-#     measurements['max_volt_squared_count_red']
-#     measurements['min_volt_squared_count_red']
 
         if peak_detect_mode == PeakDetectMode.NORMAL:
             pass
 
+# Uncomment to enable Absolute peak detection mode (WIP, needs testing !!)
+# Note: has not been formally asked for or quoted !!
+#
 #         elif peak_detect_mode == PeakDetectMode.ABSOLUTE:
 #             #! Work out if min or max has largest magnitude.
 #             #! (important for correct time index/offset !!)

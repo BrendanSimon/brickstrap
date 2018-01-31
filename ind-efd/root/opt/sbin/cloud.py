@@ -18,7 +18,6 @@ import time
 import arrow
 import mmap
 import csv
-import copy
 import requests
 import Queue as queue
 
@@ -182,9 +181,7 @@ class Cloud(object):
 
             self.spare_led_on()
 
-            #! work with a true copy of the measurement data
-            #! (so we can modify it for posting if necessary).
-            measurements = copy.deepcopy(item)
+            measurements = item
 
             #!
             #! Notify the queue that we have processed the retrieved item.
