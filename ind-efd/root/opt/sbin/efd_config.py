@@ -29,7 +29,15 @@ class PeakDetectMode(enum.Enum):
 
 #!============================================================================
 
-class Config(object):
+class ConfigDefault(object):
+    """
+    Default Configuration Settings.
+
+    This should be used as read-only a singleton
+    (i.e. don't read settings file or overwrite attributes, etc)
+    This should be enforced by some mechanism (__slots__ perhaps?).
+    Applications can instantiate their own Config objects and modify.
+    """
 
     #!
     #! Default values.  Can be overridden by settings file or command line.
@@ -95,8 +103,8 @@ class Config(object):
     capture_index_offset_wht = total_count
     capture_index_offset_blu = total_count * 2
 
-    fft_size = 1 << 8      #! 256 bins.  Was 1 << 16 (65,536)
-    fft_size_half = fft_size >> 1
+    fft_size = 256
+    fft_size_half = fft_size // 2
 
     show_phase_arrays               = False
     show_phase_arrays_on_pd_event   = False
@@ -166,42 +174,11 @@ class Config(object):
     #!========================================================================
 
     def __init__(self):
-        self.read_settings_file()
-
+#         pass
         self.set_efd_ping_uris()
         self.set_web_uris()
 
     ##========================================================================
-
-    def read_settings_file(self):
-        #! Using 'import' is quick and dirty method to read in settings from a file.
-        #! It relies on settings.py being available in the python path to load the 'module'
-        #! Currently a symlink is used from settings.py in app directory to the settings file.
-        import settings
-
-        self.serial_number                       =            getattr(settings, 'SERIAL_NUMBER',                       self.serial_number)
-        self.site_name                           =            getattr(settings, 'SITE_NAME',                           self.site_name)
-        self.reporting_sms_phone_numbers         = list(      getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',         self.reporting_sms_phone_numbers) )
-        self.pd_event_trigger_voltage            = float(     getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',            self.pd_event_trigger_voltage) )
-        self.pd_event_reporting_interval         = int(       getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',         self.pd_event_reporting_interval) )
-        self.efd_ping_servers                    = list(      getattr(settings, 'EFD_PING_SERVERS',                    self.efd_ping_servers) )
-        self.web_server                          =            getattr(settings, 'WEB_SERVER',                          self.web_server)
-        self.timezone                            =            getattr(settings, 'TIMEZONE',                            self.timezone)
-        self.append_gps_data_to_measurements_log = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
-        self.fft_size                            = int(       getattr(settings, 'FFT_SIZE',                            self.fft_size) )
-        self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
-
-        peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
-        self.set_peak_detect_mode(peak_detect_mode)
-
-        self.set_capture_count()
-        self.set_fft_size()
-        #self.set_serial_number()
-        self.set_efd_ping_uris()
-        self.set_web_uris()
-        self.set_measurements_log_field_names()
-
-    #!========================================================================
 
     def set_efd_ping_uris(self):
 
@@ -245,13 +222,17 @@ class Config(object):
 
     #!========================================================================
 
-    def set_fft_size(self, fft_size=None):
-        if fft_size != None:
+#     def set_fft_size(self, fft_size=None):
+    def set_fft_size(self, fft_size):
+#         if fft_size != None:
+        if fft_size != self.fft_size:
             self.fft_size = fft_size
-            #print("INFO: fft_size set to {}".format(self.fft_size))
+            print("INFO: fft_size set to {}".format(self.fft_size))
 
-        self.fft_size_half = self.fft_size // 2
-        #print("INFO: fft_size_half set to {}".format(self.fft_size_half))
+        fft_size_half = self.fft_size // 2
+        if fft_size_half != self.fft_size_half:
+            self.fft_size_half = fft_size_half
+            print("INFO: fft_size_half set to {}".format(self.fft_size_half))
 
     #!========================================================================
 
@@ -471,67 +452,121 @@ class Config(object):
 
         print("-------------------------------------------------------------")
 
+#!============================================================================
+
+class Config(ConfigDefault):
+
+    #!
+    #! Default values.  Can be overridden by settings file or command line.
+    #!
+
+    #!========================================================================
+
+    def __init__(self):
+        super(Config, self).__init__()
+
+    ##========================================================================
+
+    def read_settings_file(self):
+        #! Using 'import' is quick and dirty method to read in settings from a file.
+        #! It relies on settings.py being available in the python path to load the 'module'
+        #! Currently a symlink is used from settings.py in app directory to the settings file.
+        import settings
+
+        self.serial_number                       =            getattr(settings, 'SERIAL_NUMBER',                       self.serial_number)
+        self.site_name                           =            getattr(settings, 'SITE_NAME',                           self.site_name)
+        self.reporting_sms_phone_numbers         = list(      getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',         self.reporting_sms_phone_numbers) )
+        self.pd_event_trigger_voltage            = float(     getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',            self.pd_event_trigger_voltage) )
+        self.pd_event_reporting_interval         = int(       getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',         self.pd_event_reporting_interval) )
+        self.efd_ping_servers                    = list(      getattr(settings, 'EFD_PING_SERVERS',                    self.efd_ping_servers) )
+        self.web_server                          =            getattr(settings, 'WEB_SERVER',                          self.web_server)
+        self.timezone                            =            getattr(settings, 'TIMEZONE',                            self.timezone)
+        self.append_gps_data_to_measurements_log = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
+        fft_size                                 = int(       getattr(settings, 'FFT_SIZE',                            ConfigDefault.fft_size) )
+        self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
+        peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
+
+        self.set_capture_count()
+        #self.set_serial_number()
+        self.set_fft_size(fft_size)
+        self.set_efd_ping_uris()
+        self.set_web_uris()
+        self.set_measurements_log_field_names()
+        self.set_peak_detect_mode(peak_detect_mode)
+
 ##############################################################################
 
-def app_main(capture_count=0,
-             pps_mode=True,
-             pps_delay=1.0,
-             adc_offset=0,
-             peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
-             peak_detect_normal=True,
-             peak_detect_squared=True,
-             web_server=None,
-             show_measurements=False,
-             show_capture_buffers=False,
-             show_capture_debug=False,
-             append_gps_data=False):
-    """Main entry if running this module directly."""
-
-    print(__name__)
+def argh_main():
 
     config = Config()
 
-    if capture_count:
-        config.set_capture_count(capture_count)
+    #! override defaults with settings in user settings file.
+    config.read_settings_file()
 
-    if not pps_mode:
-        config.set_capture_mode('manual')
+    #!------------------------------------------------------------------------
 
-    if pps_delay != 1.0:
-        config.set_pps_delay(pps_delay)
+    def app_main(capture_count          = config.capture_count,
+                 capture_mode           = config.capture_mode,
+                 pps_delay              = config.pps_delay,
+                 adc_offset             = config.adc_offset,
+                 peak_detect_mode       = config.peak_detect_mode.name.lower(),
+                 peak_detect_normal     = config.peak_detect_normal,
+                 peak_detect_squared    = config.peak_detect_squared,
+                 fft_size               = config.fft_size,
+                 web_server             = config.web_server,
+                 show_measurements      = config.show_measurements,
+                 show_capture_buffers   = config.show_capture_buffers,
+                 show_capture_debug     = config.show_capture_debug,
+                 append_gps_data        = config.append_gps_data_to_measurements_log,
+                 ):
+        """Main entry if running this module directly."""
 
-    if adc_offset:
-        config.set_adc_offset(adc_offset)
+        print(__name__)
 
-    if peak_detect_mode != 'default':
-        config.set_peak_detect_mode(peak_detect_mode)
+        #! override user settings file if command line argument differs.
 
-    if not peak_detect_normal:
-        config.set_peak_detect_normal(peak_detect_normal)
+        if capture_count != config.capture_count:
+            config.set_capture_count(capture_count)
 
-    if not peak_detect_squared:
-        config.set_peak_detect_squared(peak_detect_squared)
+        if capture_mode != config.capture_mode:
+            config.set_capture_mode(capture_mode)
 
-    if web_server:
-        config.set_web_server(web_server)
+        if pps_delay != config.pps_delay:
+            config.set_pps_delay(pps_delay)
 
-    if show_measurements:
-        config.set_show_measurements(show_measurements)
+        if adc_offset != config.adc_offset:
+            config.set_adc_offset(adc_offset)
 
-    if show_capture_buffers:
-        config.set_show_capture_buffers(show_capture_buffers)
+        if peak_detect_mode != config.peak_detect_mode.name.lower():
+            config.set_peak_detect_mode(peak_detect_mode)
 
-    if show_capture_debug:
-        config.set_show_capture_debug(show_capture_debug)
+        if peak_detect_normal != config.peak_detect_normal:
+            config.set_peak_detect_normal(peak_detect_normal)
 
-    if append_gps_data:
-        config.set_append_gps_data(append_gps_data)
+        if peak_detect_squared != config.peak_detect_squared:
+            config.set_peak_detect_squared(peak_detect_squared)
 
-    config.show_all()
+        if fft_size != config.fft_size:
+            config.set_fft_size(fft_size)
 
-#!============================================================================
+        if web_server != config.web_server:
+            config.set_web_server(web_server)
 
-def argh_main():
+        if show_measurements != config.show_measurements:
+            config.set_show_measurements(show_measurements)
+
+        if show_capture_buffers != config.show_capture_buffers:
+            config.set_show_capture_buffers(show_capture_buffers)
+
+        if show_capture_debug != config.show_capture_debug:
+            config.set_show_capture_debug(show_capture_debug)
+
+        if append_gps_data != config.append_gps_data_to_measurements_log:
+            config.set_append_gps_data(append_gps_data)
+
+        config.show_all()
+
+    #!------------------------------------------------------------------------
 
     argh.dispatch_command(app_main)
 
