@@ -20,6 +20,7 @@ import math
 import time
 import arrow
 import selectors2 as selectors
+import traceback
 
 from collections import namedtuple
 
@@ -202,7 +203,75 @@ class Read_Capture_Buffers_App(object):
         self.adc_capture_array = self.adc_numpy_array()
         if self.config.initialise_capture_memory:
             print("Initialise capture array : filling with 0x6141")
+
+            time0 = time.time()
             self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
+            delta = time.time() - time0
+            print("DEBUG: time to initialise capture array = {} seconds".format(delta))
+
+            time0 = time.time()
+            self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
+            delta = time.time() - time0
+            print("DEBUG: time to initialise capture array = {} seconds".format(delta))
+
+            time0 = time.time()
+            self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
+            delta = time.time() - time0
+            print("DEBUG: time to initialise capture array = {} seconds".format(delta))
+
+            time0 = time.time()
+            temp1 = np.copy(self.adc_capture_array)
+            delta = time.time() - time0
+            print("DEBUG: time to copy capture array = {} seconds".format(delta))
+            time0 = time.time()
+            same = np.array_equal(temp1, self.adc_capture_array)
+            delta = time.time() - time0
+            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+
+            time0 = time.time()
+            temp2 = np.copy(self.adc_capture_array)
+            delta = time.time() - time0
+            print("DEBUG: time to copy capture array = {} seconds".format(delta))
+            time0 = time.time()
+            same = np.array_equal(temp2, self.adc_capture_array)
+            delta = time.time() - time0
+            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+
+            time0 = time.time()
+            temp3 = np.copy(self.adc_capture_array)
+            delta = time.time() - time0
+            print("DEBUG: time to copy capture array = {} seconds".format(delta))
+            time0 = time.time()
+            same = np.array_equal(temp3, self.adc_capture_array)
+            delta = time.time() - time0
+            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+
+            time0 = time.time()
+            temp11 = np.copy(temp1)
+            delta = time.time() - time0
+            print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
+            time0 = time.time()
+            same = np.array_equal(temp11, temp1)
+            delta = time.time() - time0
+            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+
+            time0 = time.time()
+            temp12 = np.copy(temp2)
+            delta = time.time() - time0
+            print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
+            time0 = time.time()
+            same = np.array_equal(temp12, temp2)
+            delta = time.time() - time0
+            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+
+            time0 = time.time()
+            temp13 = np.copy(temp3)
+            delta = time.time() - time0
+            print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
+            time0 = time.time()
+            same = np.array_equal(temp13, temp3)
+            delta = time.time() - time0
+            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
         if self.config.show_intialised_capture_buffers:
             self.show_all_capture_buffers()
@@ -613,10 +682,19 @@ class Read_Capture_Buffers_App(object):
         '''Value is converted from sample level to volts.'''
 
         peak_data = data[self.peak_detect_start_count:self.peak_detect_stop_count]
+        time0 = time.time()
         idx = func(peak_data) + self.peak_detect_start_count
+        delta = time.time() - time0
+        print("DEBUG: np.min/np.max() took {} seconds".format(delta))
         value = data[idx]
+        time0 = time.time()
         condition = (data == value)
+        delta = time.time() - time0
+        print("DEBUG: condition compare took {} seconds".format(delta))
+        time0 = time.time()
         count = np.count_nonzero(condition)
+        delta = time.time() - time0
+        print("DEBUG: np.count_nonzero took {} seconds".format(delta))
         peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count)
         return peak
 
@@ -642,6 +720,10 @@ class Read_Capture_Buffers_App(object):
         '''Perform peak detection on normal current phases using numpy.'''
 
         phase = self.red_phase
+        if 0:
+            #! FIXME: copy from device memory (non-cached) to normal (cached) memory.
+            #! FIXME: for testing only !!
+            phase = np.copy(phase)
         offset = self.config.capture_index_offset_red
         t1 = time.time()
         peak_max_red = self.peak_max(phase, index_offset=offset)
@@ -655,11 +737,19 @@ class Read_Capture_Buffers_App(object):
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
         phase = self.wht_phase
+        if 0:
+            #! FIXME: copy from device memory (non-cached) to normal (cached) memory.
+            #! FIXME: for testing only !!
+            phase = np.copy(phase)
         offset = self.config.capture_index_offset_wht
         peak_max_wht = self.peak_max(phase, index_offset=offset)
         peak_min_wht = self.peak_min(phase, index_offset=offset)
 
         phase = self.blu_phase
+        if 0:
+            #! FIXME: copy from device memory (non-cached) to normal (cached) memory.
+            #! FIXME: for testing only !!
+            phase = np.copy(phase)
         offset = self.config.capture_index_offset_blu
         peak_max_blu = self.peak_max(phase, index_offset=offset)
         peak_min_blu = self.peak_min(phase, index_offset=offset)
@@ -805,7 +895,9 @@ class Read_Capture_Buffers_App(object):
 
         ## Do FPGA first, as minmax registers are not double buffered.
         if self.config.peak_detect_fpga:
+            time0 = time.time()
             ret = self.peak_detect_normal_fpga()
+            time1 = time.time()
 
             ## Maintain reference to FPGA peak values.
             fpga_peak_normal_max_red = self.peak_normal_max_red
@@ -824,9 +916,13 @@ class Read_Capture_Buffers_App(object):
                 print("DEBUG: peak_normal_min_wht = {}".format(fpga_peak_normal_min_wht))
                 print("DEBUG: peak_normal_max_blu = {}".format(fpga_peak_normal_max_blu))
                 print("DEBUG: peak_normal_min_blu = {}".format(fpga_peak_normal_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
         if self.config.peak_detect_numpy:
+            time0 = time.time()
             ret = self.peak_detect_normal_numpy()
+            time1 = time.time()
 
             ## Maintain reference to numpy peak values.
             numpy_peak_normal_max_red = self.peak_normal_max_red
@@ -845,6 +941,8 @@ class Read_Capture_Buffers_App(object):
                 print("DEBUG: peak_normal_min_wht = {}".format(numpy_peak_normal_min_wht))
                 print("DEBUG: peak_normal_max_blu = {}".format(numpy_peak_normal_max_blu))
                 print("DEBUG: peak_normal_min_blu = {}".format(numpy_peak_normal_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
             if fpga_peak_normal_max_red is numpy_peak_normal_max_red:
                 print("ERROR: SAME OBJECT: fpga_peak_normal_max_red is numpy_peak_normal_max_red !!")
@@ -981,7 +1079,9 @@ class Read_Capture_Buffers_App(object):
 
         ## Do FPGA first, as minmax registers are not double buffered.
         if self.config.peak_detect_fpga:
+            time0 = time.time()
             ret = self.peak_detect_squared_fpga()
+            time1 = time.time()
 
             ## Maintain reference to FPGA peak values.
             fpga_peak_squared_max_red = self.peak_squared_max_red
@@ -1000,9 +1100,13 @@ class Read_Capture_Buffers_App(object):
                 print("DEBUG: peak_squared_min_wht = {}".format(fpga_peak_squared_min_wht))
                 print("DEBUG: peak_squared_max_blu = {}".format(fpga_peak_squared_max_blu))
                 print("DEBUG: peak_squared_min_blu = {}".format(fpga_peak_squared_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
         if self.config.peak_detect_numpy:
+            time0 = time.time()
             ret = self.peak_detect_squared_numpy()
+            time1 = time.time()
 
             ## Maintain reference to numpy peak values.
             numpy_peak_squared_max_red = self.peak_squared_max_red
@@ -1021,6 +1125,8 @@ class Read_Capture_Buffers_App(object):
                 print("DEBUG: peak_squared_min_wht = {}".format(numpy_peak_squared_min_wht))
                 print("DEBUG: peak_squared_max_blu = {}".format(numpy_peak_squared_max_blu))
                 print("DEBUG: peak_squared_min_blu = {}".format(numpy_peak_squared_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
             if fpga_peak_squared_max_red is numpy_peak_squared_max_red:
                 print("ERROR: SAME OBJECT: fpga_peak_squared_max_red is numpy_peak_squared_max_red !!")
@@ -1523,110 +1629,131 @@ class Read_Capture_Buffers_App(object):
 
 ##############################################################################
 
-## Make config object global.
-config = Config()
-
-##
-## set config defaults for test_fpga app.
-##
-config.show_capture_debug       = True
-
-config.peak_detect_numpy_capture_count_limit = 1*1000*1000
-config.peak_detect_numpy        = True
-config.peak_detect_numpy_debug  = False
-
-config.peak_detect_fpga         = True
-config.peak_detect_fpga_debug   = False
-
-config.peak_detect              = True
-config.peak_detect_debug        = False
-
-config.peak_detect_normal       = True
-config.peak_detect_squared      = True
-
-#config.show_capture_buffers = True
-
-#config.sample_offset = 0x8000       ## 0x8000 => unsigned samples
-
-##############################################################################
-
-def app_main(capture_count=0,
-             pps_mode=True,
-             pps_delay=1.0,
-             adc_offset=0,
-             peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
-             peak_detect_normal=True,
-             peak_detect_squared=True,
-             show_measurements=False,
-             show_capture_buffers=False,
-             show_capture_debug=True,
-             save_capture_data=False,
-             debug=False):
-
-    """Main entry if running this module directly."""
-
-    if capture_count:
-        config.set_capture_count(capture_count)
-
-    if not pps_mode:
-        config.set_capture_mode('manual')
-
-    if pps_delay != 1.0:
-        config.set_pps_delay(pps_delay)
-
-    if adc_offset:
-        config.set_adc_offset(adc_offset)
-
-    if peak_detect_mode != 'default':
-        config.set_peak_detect_mode(peak_detect_mode)
-
-    if not peak_detect_normal:
-        config.set_peak_detect_normal(peak_detect_normal)
-
-    if not peak_detect_squared:
-        config.set_peak_detect_squared(peak_detect_squared)
-
-    if show_measurements:
-        config.set_show_measurements(show_measurements)
-
-    if show_capture_buffers:
-        config.set_show_capture_buffers(show_capture_buffers)
-
-    if not show_capture_debug:
-        config.set_show_capture_debug(show_capture_debug)
-
-    ## add `save_capture_data` config item.
-    config.save_capture_data = save_capture_data
-
-    if debug:
-        config.peak_detect_numpy_debug  = True
-        config.peak_detect_fpga_debug   = True
-        config.peak_detect_debug        = True
-
-    config.show_all()
-
-    app = Read_Capture_Buffers_App(config=config)
-    app.init()
-    try:
-        app.main_loop()
-    except (KeyboardInterrupt):
-        #! ctrl+c key press.
-        print("KeyboardInterrupt -- exiting ...")
-    except (SystemExit):
-        #! sys.exit() called.
-        print("SystemExit -- exiting ...")
-    except (Exception) as ex:
-        #! An unhandled exception !!
-        print("Exception: {}".format(ex.message))
-        print("Unhandled Exception -- exiting...")
-    finally:
-        print("Cleaning up.")
-        app.cleanup()
-        print("Done.  Exiting.")
-
-##============================================================================
 
 def argh_main():
+
+    config = Config()
+
+    #! override defaults with settings in user settings file.
+    config.read_settings_file()
+
+    #!
+    #! override config defaults for test_fpga app.
+    #!
+
+    config.capture_mode             = 'manual'
+
+    config.show_capture_debug       = True
+
+    config.peak_detect_numpy_capture_count_limit = 1*1000*1000
+    config.peak_detect_numpy        = True
+    config.peak_detect_numpy_debug  = False
+
+    config.peak_detect_fpga         = True
+    config.peak_detect_fpga_debug   = False
+
+    config.peak_detect              = True
+    config.peak_detect_debug        = False
+
+    config.peak_detect_normal       = True
+    config.peak_detect_squared      = True
+
+    #config.show_capture_buffers = True
+
+    #config.sample_offset = 0x8000       ## 0x8000 => unsigned samples
+
+    #!------------------------------------------------------------------------
+
+    def app_main(capture_count          = config.capture_count,
+                 capture_mode           = config.capture_mode,
+                 pps_delay              = config.pps_delay,
+                 adc_offset             = config.adc_offset,
+                 peak_detect_mode       = config.peak_detect_mode.name.lower(),
+                 peak_detect_normal     = config.peak_detect_normal,
+                 peak_detect_squared    = config.peak_detect_squared,
+                 fft_size               = config.fft_size,
+                 web_server             = config.web_server,
+                 show_measurements      = config.show_measurements,
+                 show_capture_buffers   = config.show_capture_buffers,
+                 show_capture_debug     = config.show_capture_debug,
+                 append_gps_data        = config.append_gps_data_to_measurements_log,
+                 debug                  = False,
+                 ):
+        """Main entry if running this module directly."""
+
+        print(__name__)
+
+        #! override user settings file if command line argument differs.
+
+        if capture_count != config.capture_count:
+            config.set_capture_count(capture_count)
+
+        if capture_mode != config.capture_mode:
+            config.set_capture_mode(capture_mode)
+
+        if pps_delay != config.pps_delay:
+            config.set_pps_delay(pps_delay)
+
+        if adc_offset != config.adc_offset:
+            config.set_adc_offset(adc_offset)
+
+        if peak_detect_mode != config.peak_detect_mode.name.lower():
+            config.set_peak_detect_mode(peak_detect_mode)
+
+        if peak_detect_normal != config.peak_detect_normal:
+            config.set_peak_detect_normal(peak_detect_normal)
+
+        if peak_detect_squared != config.peak_detect_squared:
+            config.set_peak_detect_squared(peak_detect_squared)
+
+        if fft_size != config.fft_size:
+            config.set_fft_size(fft_size)
+
+        if web_server != config.web_server:
+            config.set_web_server(web_server)
+
+        if show_measurements != config.show_measurements:
+            config.set_show_measurements(show_measurements)
+
+        if show_capture_buffers != config.show_capture_buffers:
+            config.set_show_capture_buffers(show_capture_buffers)
+
+        if show_capture_debug != config.show_capture_debug:
+            config.set_show_capture_debug(show_capture_debug)
+
+        if append_gps_data != config.append_gps_data_to_measurements_log:
+            config.set_append_gps_data(append_gps_data)
+
+        if debug:
+            config.peak_detect_numpy_debug  = True
+            config.peak_detect_fpga_debug   = True
+            config.peak_detect_debug        = True
+
+        config.show_all()
+
+        #!--------------------------------------------------------------------
+
+        app = Read_Capture_Buffers_App(config=config)
+        app.init()
+        try:
+            app.main_loop()
+        except (KeyboardInterrupt):
+            #! ctrl+c key press.
+            print("KeyboardInterrupt -- exiting ...")
+        except (SystemExit):
+            #! sys.exit() called.
+            print("SystemExit -- exiting ...")
+        except (Exception) as exc:
+            #! An unhandled exception !!
+            print(traceback.format_exc())
+            print("Exception: {}".format(exc.message))
+            print("Unhandled Exception -- exiting...")
+        finally:
+            print("Cleaning up.")
+            app.cleanup()
+            print("Done.  Exiting.")
+
+    #!------------------------------------------------------------------------
 
     argh.dispatch_command(app_main)
 
