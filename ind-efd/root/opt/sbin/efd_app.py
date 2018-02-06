@@ -1765,95 +1765,108 @@ class EFD_App(object):
             #! FIXME: DEBUG: exit after one cycle.
             #break
 
-##----------------------------------------------------------------------------
-
 #############################################################################!
 
-#! Make config object global.
-config = Config()
-
-def app_main(capture_count=0,
-             pps_mode=True,
-             pps_delay=1.0,
-             adc_offset=0,
-             peak_detect_mode='default',        #! kludge to get around bug in `argh` with empty strings.
-             peak_detect_normal=True,
-             peak_detect_squared=True,
-             web_server=None,
-             show_measurements=False,
-             show_capture_buffers=False,
-             show_capture_debug=False,
-             append_gps_data=False,
-             debug=False):
-
-    """Main entry for application."""
-
-    if capture_count:
-        config.set_capture_count(capture_count)
-
-    if not pps_mode:
-        config.set_capture_mode('manual')
-
-    if pps_delay != 1.0:
-        config.set_pps_delay(pps_delay)
-
-    if adc_offset:
-        config.set_adc_offset(adc_offset)
-
-    if peak_detect_mode != 'default':
-        config.set_peak_detect_mode(peak_detect_mode)
-
-    if not peak_detect_normal:
-        config.set_peak_detect_normal(peak_detect_normal)
-
-    if not peak_detect_squared:
-        config.set_peak_detect_squared(peak_detect_squared)
-
-    if web_server:
-        config.set_web_server(web_server)
-
-    if show_measurements:
-        config.set_show_measurements(show_measurements)
-
-    if show_capture_buffers:
-        config.set_show_capture_buffers(show_capture_buffers)
-
-    if show_capture_debug:
-        config.set_show_capture_debug(show_capture_debug)
-
-    if append_gps_data:
-        config.set_append_gps_data(append_gps_data)
-
-    if debug:
-        config.peak_detect_numpy_debug  = True
-        config.peak_detect_fpga_debug   = True
-        config.peak_detect_debug        = True
-        config.set_show_capture_debug(True)
-
-    config.show_all()
-
-    app = EFD_App(config=config)
-    app.init()
-    try:
-        app.main_loop()
-    except (KeyboardInterrupt):
-        #! ctrl+c key press.
-        print("KeyboardInterrupt -- exiting ...")
-    except (SystemExit):
-        #! sys.exit() called.
-        print("SystemExit -- exiting ...")
-    except (Exception) as ex:
-        #! An unhandled exception !!
-        print("Exception: {}".format(ex.message))
-        print("Unhandled Exception -- exiting...")
-    finally:
-        print("Cleaning up.")
-        app.cleanup()
-        print("Done.  Exiting.")
-
-#!============================================================================
-
 def argh_main():
+
+    config = Config()
+
+    #! override defaults with settings in user settings file.
+    config.read_settings_file()
+
+    #!------------------------------------------------------------------------
+
+    def app_main(capture_count          = config.capture_count,
+                 capture_mode           = config.capture_mode,
+                 pps_delay              = config.pps_delay,
+                 adc_offset             = config.adc_offset,
+                 peak_detect_mode       = config.peak_detect_mode.name.lower(),
+                 peak_detect_normal     = config.peak_detect_normal,
+                 peak_detect_squared    = config.peak_detect_squared,
+                 fft_size               = config.fft_size,
+                 web_server             = config.web_server,
+                 show_measurements      = config.show_measurements,
+                 show_capture_buffers   = config.show_capture_buffers,
+                 show_capture_debug     = config.show_capture_debug,
+                 append_gps_data        = config.append_gps_data_to_measurements_log,
+                 debug                  = False,
+                 ):
+        """Main entry if running this module directly."""
+
+        print(__name__)
+
+        #! override user settings file if command line argument differs.
+
+        if capture_count != config.capture_count:
+            config.set_capture_count(capture_count)
+
+        if capture_mode != config.capture_mode:
+            config.set_capture_mode(capture_mode)
+
+        if pps_delay != config.pps_delay:
+            config.set_pps_delay(pps_delay)
+
+        if adc_offset != config.adc_offset:
+            config.set_adc_offset(adc_offset)
+
+        if peak_detect_mode != config.peak_detect_mode.name.lower():
+            config.set_peak_detect_mode(peak_detect_mode)
+
+        if peak_detect_normal != config.peak_detect_normal:
+            config.set_peak_detect_normal(peak_detect_normal)
+
+        if peak_detect_squared != config.peak_detect_squared:
+            config.set_peak_detect_squared(peak_detect_squared)
+
+        if fft_size != config.fft_size:
+            config.set_fft_size(fft_size)
+
+        if web_server != config.web_server:
+            config.set_web_server(web_server)
+
+        if show_measurements != config.show_measurements:
+            config.set_show_measurements(show_measurements)
+
+        if show_capture_buffers != config.show_capture_buffers:
+            config.set_show_capture_buffers(show_capture_buffers)
+
+        if show_capture_debug != config.show_capture_debug:
+            config.set_show_capture_debug(show_capture_debug)
+
+        if append_gps_data != config.append_gps_data_to_measurements_log:
+            config.set_append_gps_data(append_gps_data)
+
+        if debug:
+            config.peak_detect_numpy_debug  = True
+            config.peak_detect_fpga_debug   = True
+            config.peak_detect_debug        = True
+            config.set_show_capture_debug(True)
+
+        config.show_all()
+
+        #!--------------------------------------------------------------------
+
+        app = EFD_App(config=config)
+        app.init()
+        try:
+            app.main_loop()
+        except (KeyboardInterrupt):
+            #! ctrl+c key press.
+            print("KeyboardInterrupt -- exiting ...")
+        except (SystemExit):
+            #! sys.exit() called.
+            print("SystemExit -- exiting ...")
+        except (Exception) as exc:
+            #! An unhandled exception !!
+            print(traceback.format_exc())
+            print("Exception: {}".format(exc.message))
+            print("Unhandled Exception -- exiting...")
+        finally:
+            print("Cleaning up.")
+            app.cleanup()
+            print("Done.  Exiting.")
+
+        #!--------------------------------------------------------------------
 
     argh.dispatch_command(app_main)
 
