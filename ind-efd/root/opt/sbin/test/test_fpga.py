@@ -829,16 +829,16 @@ class Read_Capture_Buffers_App(object):
         maxmin = self.maxmin_normal
 
         #! channel 0 (red)
-        peak_max_red = self.peak_convert(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
-        peak_min_red = self.peak_convert(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
+        peak_max_red = self.peak_convert(index=(maxmin.max_ch0_addr & 0xffffff), value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
+        peak_min_red = self.peak_convert(index=(maxmin.min_ch0_addr & 0xffffff), value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
 
         ## channel 1 (white)
-        peak_max_wht = self.peak_convert(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
-        peak_min_wht = self.peak_convert(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
+        peak_max_wht = self.peak_convert(index=(maxmin.max_ch1_addr & 0xffffff), value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
+        peak_min_wht = self.peak_convert(index=(maxmin.min_ch1_addr & 0xffffff), value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
 
         ## channel 2 (blue)
-        peak_max_blu = self.peak_convert(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
-        peak_min_blu = self.peak_convert(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
+        peak_max_blu = self.peak_convert(index=(maxmin.max_ch2_addr & 0xffffff), value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
+        peak_min_blu = self.peak_convert(index=(maxmin.min_ch2_addr & 0xffffff), value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
@@ -851,7 +851,7 @@ class Read_Capture_Buffers_App(object):
         self.peak_normal_min_blu = peak_min_blu
 
         t_delta_2 = time.time() - t1
-        if config.peak_detect_fpga_debug:
+        if self.config.peak_detect_fpga_debug:
             print
             print("DEBUG: Peak Detect Normal FPGA: maxmin = {}".format(maxmin))
             print("DEBUG: Peak Detect Normal FPGA: t_delta_1 = {}".format(t_delta_1))
@@ -889,7 +889,7 @@ class Read_Capture_Buffers_App(object):
         self.peak_squared_min_blu = peak_min_blu
 
         t_delta_2 = time.time() - t1
-        if config.peak_detect_fpga_debug:
+        if self.config.peak_detect_fpga_debug:
             print
             print("DEBUG: Peak Detect Squared FPGA: maxmin = {}".format(maxmin))
             print("DEBUG: Peak Detect Squared FPGA: t_delta_1 = {}".format(t_delta_1))
@@ -1451,7 +1451,7 @@ class Read_Capture_Buffers_App(object):
                 print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
                 print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
 
-            if config.peak_detect_fpga_debug:
+            if self.config.peak_detect_fpga_debug:
                 print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
                 print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
                 print("\nDEBUG: adc_clock_count_per_pps = {:10} (0x{:08X})".format(adc_clock_count_per_pps, adc_clock_count_per_pps))
@@ -1668,6 +1668,7 @@ def argh_main():
 
     config.peak_detect_normal       = True
     config.peak_detect_squared      = True
+#     config.peak_detect_squared      = False
 
     #!
     #! additional config items for this app only !!
