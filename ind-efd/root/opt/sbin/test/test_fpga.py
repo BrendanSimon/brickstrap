@@ -213,69 +213,70 @@ class Read_Capture_Buffers_App(object):
             delta = time.time() - time0
             print("DEBUG: time to initialise capture array = {} seconds".format(delta))
 
-            time0 = time.time()
-            self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
-            delta = time.time() - time0
-            print("DEBUG: time to initialise capture array = {} seconds".format(delta))
+            if 0:
+                time0 = time.time()
+                self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
+                delta = time.time() - time0
+                print("DEBUG: time to initialise capture array = {} seconds".format(delta))
 
-            time0 = time.time()
-            self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
-            delta = time.time() - time0
-            print("DEBUG: time to initialise capture array = {} seconds".format(delta))
+                time0 = time.time()
+                self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
+                delta = time.time() - time0
+                print("DEBUG: time to initialise capture array = {} seconds".format(delta))
 
-            time0 = time.time()
-            temp1 = np.copy(self.adc_capture_array)
-            delta = time.time() - time0
-            print("DEBUG: time to copy capture array = {} seconds".format(delta))
-            time0 = time.time()
-            same = np.array_equal(temp1, self.adc_capture_array)
-            delta = time.time() - time0
-            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+                time0 = time.time()
+                temp1 = np.copy(self.adc_capture_array)
+                delta = time.time() - time0
+                print("DEBUG: time to copy capture array = {} seconds".format(delta))
+                time0 = time.time()
+                same = np.array_equal(temp1, self.adc_capture_array)
+                delta = time.time() - time0
+                print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-            time0 = time.time()
-            temp2 = np.copy(self.adc_capture_array)
-            delta = time.time() - time0
-            print("DEBUG: time to copy capture array = {} seconds".format(delta))
-            time0 = time.time()
-            same = np.array_equal(temp2, self.adc_capture_array)
-            delta = time.time() - time0
-            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+                time0 = time.time()
+                temp2 = np.copy(self.adc_capture_array)
+                delta = time.time() - time0
+                print("DEBUG: time to copy capture array = {} seconds".format(delta))
+                time0 = time.time()
+                same = np.array_equal(temp2, self.adc_capture_array)
+                delta = time.time() - time0
+                print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-            time0 = time.time()
-            temp3 = np.copy(self.adc_capture_array)
-            delta = time.time() - time0
-            print("DEBUG: time to copy capture array = {} seconds".format(delta))
-            time0 = time.time()
-            same = np.array_equal(temp3, self.adc_capture_array)
-            delta = time.time() - time0
-            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+                time0 = time.time()
+                temp3 = np.copy(self.adc_capture_array)
+                delta = time.time() - time0
+                print("DEBUG: time to copy capture array = {} seconds".format(delta))
+                time0 = time.time()
+                same = np.array_equal(temp3, self.adc_capture_array)
+                delta = time.time() - time0
+                print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-            time0 = time.time()
-            temp11 = np.copy(temp1)
-            delta = time.time() - time0
-            print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
-            time0 = time.time()
-            same = np.array_equal(temp11, temp1)
-            delta = time.time() - time0
-            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+                time0 = time.time()
+                temp11 = np.copy(temp1)
+                delta = time.time() - time0
+                print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
+                time0 = time.time()
+                same = np.array_equal(temp11, temp1)
+                delta = time.time() - time0
+                print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-            time0 = time.time()
-            temp12 = np.copy(temp2)
-            delta = time.time() - time0
-            print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
-            time0 = time.time()
-            same = np.array_equal(temp12, temp2)
-            delta = time.time() - time0
-            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+                time0 = time.time()
+                temp12 = np.copy(temp2)
+                delta = time.time() - time0
+                print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
+                time0 = time.time()
+                same = np.array_equal(temp12, temp2)
+                delta = time.time() - time0
+                print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-            time0 = time.time()
-            temp13 = np.copy(temp3)
-            delta = time.time() - time0
-            print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
-            time0 = time.time()
-            same = np.array_equal(temp13, temp3)
-            delta = time.time() - time0
-            print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
+                time0 = time.time()
+                temp13 = np.copy(temp3)
+                delta = time.time() - time0
+                print("DEBUG: time to copy copy of capture array = {} seconds".format(delta))
+                time0 = time.time()
+                same = np.array_equal(temp13, temp3)
+                delta = time.time() - time0
+                print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
 #         if self.config.show_intialised_capture_buffers:
         if self.config.show_capture_buffers:
@@ -696,16 +697,16 @@ class Read_Capture_Buffers_App(object):
         time0 = time.time()
         idx = func(peak_data) + self.peak_detect_start_count
         delta = time.time() - time0
-        print("DEBUG: np.min/np.max() took {} seconds".format(delta))
+        #print("DEBUG: np.min/np.max() took {} seconds".format(delta))
         value = data[idx]
         time0 = time.time()
         condition = (data == value)
         delta = time.time() - time0
-        print("DEBUG: condition compare took {} seconds".format(delta))
+        #print("DEBUG: condition compare took {} seconds".format(delta))
         time0 = time.time()
         count = np.count_nonzero(condition)
         delta = time.time() - time0
-        print("DEBUG: np.count_nonzero took {} seconds".format(delta))
+        #print("DEBUG: np.count_nonzero took {} seconds".format(delta))
         peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count)
         return peak
 
@@ -1443,7 +1444,7 @@ class Read_Capture_Buffers_App(object):
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
 
-            if config.show_capture_debug:
+            if self.config.show_capture_debug:
                 print
                 #print("========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
