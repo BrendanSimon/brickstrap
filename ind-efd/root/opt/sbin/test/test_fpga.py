@@ -74,8 +74,8 @@ class Read_Capture_Buffers_App(object):
         self.peak_squared_min_blu = PEAK_DEFAULT
 
         self.bank = 0
-        self.adc_capture_buffer_offset = 0
-        self.adc_capture_buffer_offset_half = None     ## should be set to 64MB (128MB / 2)
+        self.next_bank = 0
+        self.adc_capture_buffer_offset = [ 0 ] * self.config.bank_count
 
         self.capture_datetime_utc = None
         self.capture_datetime_local = None
@@ -114,10 +114,12 @@ class Read_Capture_Buffers_App(object):
 
         ## DEBUG output.
         if 1:
-            print("set_phases(): adc_capture_buffer_offset={:08X}:".format(self.adc_capture_buffer_offset))
-            print("set_phases(): red_phase @ {:08X}:".format(self.red_phase.__array_interface__['data'][0]))
-            print("set_phases(): wht_phase @ {:08X}:".format(self.wht_phase.__array_interface__['data'][0]))
-            print("set_phases(): blu_phase @ {:08X}:".format(self.blu_phase.__array_interface__['data'][0]))
+            adc_cap_buf_offset = self.adc_capture_buffer_offset[self.bank]
+            print("set_phases(): bank={}".format(self.bank))
+            print("set_phases(): adc_capture_buffer_offset=0x{:08X}".format(adc_cap_buf_offset))
+            print("set_phases(): red_phase @ 0x{:08X}".format(self.red_phase.__array_interface__['data'][0]))
+            print("set_phases(): wht_phase @ 0x{:08X}".format(self.wht_phase.__array_interface__['data'][0]))
+            print("set_phases(): blu_phase @ 0x{:08X}".format(self.blu_phase.__array_interface__['data'][0]))
             print
 
     def init_phase_arrays(self):
@@ -277,7 +279,8 @@ class Read_Capture_Buffers_App(object):
             self.show_all_capture_buffers()
 
         self.init_phase_arrays()
-        if self.config.show_intialised_phase_arrays:
+#         if self.config.show_intialised_phase_arrays:
+        if self.config.show_phase_arrays:
             self.show_phase_arrays()
 
         # setup the selector for adc (uses `selectors2` module instead of `select`)
@@ -309,7 +312,8 @@ class Read_Capture_Buffers_App(object):
         np_array = np.ndarray(shape=shape, dtype=dtype, buffer=mem)
 
         ## the memory offset for half the capture buffer.
-        self.adc_capture_buffer_offset_half = mem_size // 2
+        bank_size = mem_size // self.config.bank_count
+        self.adc_capture_buffer_offset = [ bank_size * i for i in range(self.config.bank_count) ]
 
         return np_array
 
@@ -331,19 +335,21 @@ class Read_Capture_Buffers_App(object):
     def adc_capture_buffer_next(self):
         '''Set next capture buffer for next dma acquisition -- use for ping-pong buffering.'''
 
-        self.set_phases()
+        print("DEBUG: next_capture_buffer: old_bank={}, old_next_bank={}".format(self.bank, self.next_bank))
 
-        curr_offset = self.adc_capture_buffer_offset
-        if self.bank == 0:
-            self.bank = 1
-            next_offset = self.adc_capture_buffer_offset_half
-        else:
-            self.bank = 0
-            next_offset = 0
-        #print("DEBUG: next_capture_buffer: curr_offset={:X}, next_offset={:X}".format(curr_offset, next_offset))
-        self.adc_capture_buffer_offset = next_offset
+        self.bank = self.next_bank
+
+        self.next_bank = (self.next_bank + 1) % self.config.bank_count
+
+        curr_offset = self.adc_capture_buffer_offset[self.bank]
+        next_offset = self.adc_capture_buffer_offset[self.next_bank]
+
+        print("DEBUG: next_capture_buffer: new_bank={}, new_next_bank={}".format(self.bank, self.next_bank))
+        print("DEBUG: next_capture_buffer: curr_offset=0x{:X}, next_offset=0x{:X}".format(curr_offset, next_offset))
 
         ind.adc_capture_address(address=next_offset, dev_hand=self.dev_hand)
+
+        self.set_phases()
 
     def adc_stop(self):
         print("ADC Stop")
@@ -437,7 +443,7 @@ class Read_Capture_Buffers_App(object):
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count = peak_detect_stop_count
 
-        ind.adc_capture_start(address=0,
+        ind.adc_capture_start(address=self.adc_capture_buffer_offset[self.next_bank],
                               capture_count=self.config.capture_count,
                               delay_count=self.config.delay_count,
                               capture_mode=self.config.capture_mode,
@@ -1399,6 +1405,9 @@ class Read_Capture_Buffers_App(object):
             select_datetime_utc = arrow.utcnow()
             select_datetime_local = select_datetime_utc.to(self.config.timezone)
 
+            #! use next capture buffer for ping-pong.  Updates self.bank to captured buffer bank.
+            self.adc_capture_buffer_next()
+
             ## Retrieve info from FPGA registers first (especially if not double buffered).
             ## Would be better to double buffer in the interrupt routine and save
             ## to kernel memory, then retrieve via a single IOCTL (BB#105).
@@ -1418,8 +1427,6 @@ class Read_Capture_Buffers_App(object):
 
                 #! Read the `adc_clock_count_per_pps` register from the fpga.
                 adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
-
-            self.adc_capture_buffer_next()  #! use next capture buffer for ping-pong
 
             timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
             irq_capture_datetime_utc = arrow.get(timestamp)
