@@ -8,6 +8,8 @@ IND_FPGA_API = 1
 
 from enum import IntEnum
 
+from efd_config import TestMode
+
 import ioctl
 import ctypes
 import fcntl
@@ -52,7 +54,7 @@ class Config(IntEnum):
     DMA_Halt                = 1 << 2
     DMA_Reset               = 1 << 3
     FPGA_Reset              = 1 << 4
-    ADC_Test_Data           = 1 << 5
+    ADC_Test_Data_Post_Fifo = 1 << 5
     PPS_Debug_Mode          = 1 << 6
     DMA_Debug_Mode          = 1 << 7
     Debug_Select_Ch_0       = 0
@@ -62,15 +64,17 @@ class Config(IntEnum):
     Debug_Select_Active     = 1 << 11
     Unsigned_Data           = 0
     Signed_Data             = 1 << 12
+    ADC_Test_Data_Pre_Fifo  = 1 << 13
 
     All                     = PPS_Generate \
                             | Debug_DMA_Start | DMA_Halt | DMA_Reset \
-                            | FPGA_Reset | ADC_Test_Data \
+                            | FPGA_Reset | ADC_Test_Data_Post_Fifo \
                             | PPS_Debug_Mode | DMA_Debug_Mode \
                             | Debug_Select_Ch_0 | Debug_Select_Ch_1 \
                             | Debug_Select_Ch_2 | Debug_Select_Ch_Off \
                             | Debug_Select_Active \
-                            | Unsigned_Data | Signed_Data
+                            | Unsigned_Data | Signed_Data \
+                            | ADC_Test_Data_Pre_Fifo
 
     Mode_Normal             = 0
     Mode_DMA_Debug          = DMA_Debug_Mode
@@ -705,6 +709,7 @@ def adc_capture_start(address,
                       peak_detect_start_count=Config.Peak_Start_Disable,
                       peak_detect_stop_count=Config.Peak_Stop_Disable,
                       adc_offset=Config.ADC_Offset,
+                      test_mode=TestMode.NORMAL,
                       dev_hand=None):
     '''Start ADC Capture.'''
 

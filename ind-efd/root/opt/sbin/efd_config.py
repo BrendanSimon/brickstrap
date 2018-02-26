@@ -29,6 +29,19 @@ class PeakDetectMode(enum.Enum):
 
 #!============================================================================
 
+class TestMode(enum.Enum):
+    NORMAL          = 1
+    ADC_POST_FIFO   = 2
+    ADC_PRE_FIFO    = 3
+
+#!============================================================================
+
+class ADC_Polarity(enum.Enum):
+    SIGNED      = 1
+    UNSIGNED    = 2
+
+#!============================================================================
+
 class ConfigDefault(object):
     """
     Default Configuration Settings.
@@ -58,7 +71,9 @@ class ConfigDefault(object):
     web_server = 'http://portal.efdweb.com'
     web_server_measurements_log = '{ws}/api/AddEFDLog/{sn}/'.format(ws=web_server, sn=serial_number)
 
-    num_channels = 3
+    bank_count = 2
+
+    channel_count = 3
 
     #! 16-bits
     sample_bits = 16
@@ -66,8 +81,9 @@ class ConfigDefault(object):
     #! Sample Frequency 250 MS/s
     sample_frequency = 250 * 1000 * 1000
 
+    adc_polarity = ADC_Polarity.SIGNED
     #! 0x8000 if using offset-binary, 0 if using signed-binary.
-    sample_offset = 0
+    sample_offset = 0 if adc_polarity == ADC_Polarity.SIGNED else 0x8000
 
     #! ADC offset applied to compensate for DC offset in the system.
     #! Signed value (in sample units).
@@ -171,6 +187,8 @@ class ConfigDefault(object):
     #! FIXME: this is likely to be temporary !!
     append_gps_data_to_measurements_log = False
 
+    test_mode = TestMode.NORMAL
+
     #!========================================================================
 
     def __init__(self):
@@ -236,11 +254,6 @@ class ConfigDefault(object):
 
     #!========================================================================
 
-    def capture_data_polarity_is_signed(self):
-        return self.sample_offset == 0
-
-    #!========================================================================
-
     def set_capture_mode(self, capture_mode='auto'):
         if capture_mode not in ['auto', 'manual']:
             msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
@@ -279,6 +292,28 @@ class ConfigDefault(object):
         if show_capture_buffers != None:
             self.show_capture_buffers = show_capture_buffers
             print("INFO: `show_capture_buffers` set to {}".format(self.show_capture_buffers))
+
+    #!========================================================================
+
+    def set_adc_polarity(self, adc_polarity=None):
+        if adc_polarity != None:
+            try:
+                value = adc_polarity.upper()
+                self.adc_polarity = ADC_Polarity[value]
+                print("INFO: `adc_polarity` set to {}".format(self.adc_polarity))
+            except KeyError as ex:
+                print("ERROR: invalid `adc_polarity`: {!r}".format(adc_polarity))
+            except Exception as ex:
+                print(ex.message)
+            else:
+                #self.sample_offset = 0 if self.adc_polarity == ADC_Polarity.SIGNED else 0x8000
+                print("INFO: `sample_offset` set to 0x{:X}".format(self.sample_offset))
+
+    #!========================================================================
+
+    def adc_polarity_is_signed(self):
+        #return self.sample_offset == 0
+        return self.adc_polarity == ADC_Polarity.SIGNED
 
     #!========================================================================
 
@@ -356,6 +391,19 @@ class ConfigDefault(object):
 
     #!========================================================================
 
+    def set_test_mode(self, test_mode=None):
+        if test_mode != None:
+            try:
+                value = test_mode.upper()
+                self.test_mode = TestMode[value]
+                print("INFO: `test_mode` set to {}".format(self.test_mode))
+            except KeyError as ex:
+                print("ERROR: invalid `test_mode`: {!r}".format(test_mode))
+            except Exception as ex:
+                print(ex.message)
+
+    #!========================================================================
+
     def show_all(self):
         print("-------------------------------------------------------------")
         print("Config values")
@@ -372,12 +420,14 @@ class ConfigDefault(object):
         print("web_server = {}".format(self.web_server))
         print("web_server_measurements_log = {}".format(self.web_server_measurements_log))
 
-        print("num_channels = {}".format(self.num_channels))
+        print("bank_count = {}".format(self.bank_count))
+        print("channel_count = {}".format(self.channel_count))
 
         print("sample_bits = {}".format(self.sample_bits))
 
         print("sample_frequency = {}".format(self.sample_frequency))
 
+        print("adc_polarity = {}".format(self.adc_polarity))
         print("sample_offset = {}".format(self.sample_offset))
         print("adc_offset = {}".format(self.adc_offset))
 
@@ -449,6 +499,8 @@ class ConfigDefault(object):
         print("timezone = {}".format(self.timezone))
 
         print("append_gps_data_to_measurements_log = {}".format(self.append_gps_data_to_measurements_log))
+
+        print("test_mode = {}".format(self.test_mode))
 
         print("-------------------------------------------------------------")
 

@@ -26,7 +26,7 @@ from collections import namedtuple
 
 sys.path.append('..')
 
-from efd_config import Config, PeakDetectMode
+from efd_config import Config, PeakDetectMode, TestMode, ADC_Polarity
 from efd_app import Peak, PEAK_DEFAULT
 from efd_app import Sample, sample_min, sample_max
 
@@ -299,7 +299,7 @@ class Read_Capture_Buffers_App(object):
         print("ADC Memory: {!r}".format(mem))
         print("ADC Memory: {}".format(mem))
         ## Numpy array holds little-endian 16-bit integers.
-        signed = self.config.capture_data_polarity_is_signed()
+        signed = self.config.adc_polarity_is_signed()
         dtype = np.dtype('<i2') if signed else np.dtype('<u2')
         dtype_size = dtype.itemsize
         mem_size = len(mem)
@@ -352,7 +352,7 @@ class Read_Capture_Buffers_App(object):
     def adc_start(self):
         print("ADC Start")
 
-        signed = self.config.capture_data_polarity_is_signed()
+        signed = self.config.adc_polarity_is_signed()
         print("DEBUG: signed = {!r}".format(signed))
 
         ##
@@ -444,6 +444,7 @@ class Read_Capture_Buffers_App(object):
                               peak_detect_start_count=peak_detect_start_count,
                               peak_detect_stop_count=peak_detect_stop_count,
                               adc_offset=self.config.adc_offset,
+                              test_mode=self.config.test_mode,
                               dev_hand=self.dev_hand)
 
     def adc_semaphore_get(self):
@@ -1667,6 +1668,7 @@ def argh_main():
     def app_main(capture_count          = config.capture_count,
                  capture_mode           = config.capture_mode,
                  pps_delay              = config.pps_delay,
+                 adc_polarity           = config.adc_polarity.name.lower(),
                  adc_offset             = config.adc_offset,
                  peak_detect_mode       = config.peak_detect_mode.name.lower(),
                  peak_detect_normal     = config.peak_detect_normal,
@@ -1677,6 +1679,7 @@ def argh_main():
                  show_capture_buffers   = config.show_capture_buffers,
                  show_capture_debug     = config.show_capture_debug,
                  append_gps_data        = config.append_gps_data_to_measurements_log,
+                 test_mode              = config.test_mode.name.lower(),
                  debug                  = False,
                  ):
         """Main entry if running this module directly."""
@@ -1693,6 +1696,9 @@ def argh_main():
 
         if pps_delay != config.pps_delay:
             config.set_pps_delay(pps_delay)
+
+        if adc_polarity != config.adc_polarity.name.lower():
+            config.set_adc_polarity(adc_polarity)
 
         if adc_offset != config.adc_offset:
             config.set_adc_offset(adc_offset)
@@ -1723,6 +1729,9 @@ def argh_main():
 
         if append_gps_data != config.append_gps_data_to_measurements_log:
             config.set_append_gps_data(append_gps_data)
+
+        if test_mode != config.test_mode.name.lower():
+            config.set_test_mode(test_mode)
 
         if debug:
             config.peak_detect_numpy_debug  = True
