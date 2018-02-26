@@ -195,12 +195,14 @@ class Read_Capture_Buffers_App(object):
         ## FIXME: except possibly when the driver is probed ??
         #self.fpga_reset()
 
-        #self.adc_dma_reset()
+#         self.adc_dma_reset()
 
         fpga_version = self.fpga_version_get()
         print("IND FPGA Version = {}.{}".format(fpga_version.major, fpga_version.minor))
 
         self.adc_stop()
+
+        self.adc_dma_reset()
 
         self.adc_capture_array = self.adc_numpy_array()
         if self.config.initialise_capture_memory:
