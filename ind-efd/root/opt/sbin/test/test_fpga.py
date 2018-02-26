@@ -440,6 +440,7 @@ class Read_Capture_Buffers_App(object):
         ind.adc_capture_start(address=0,
                               capture_count=self.config.capture_count,
                               delay_count=self.config.delay_count,
+                              capture_mode=self.config.capture_mode,
                               signed=signed,
                               peak_detect_start_count=peak_detect_start_count,
                               peak_detect_stop_count=peak_detect_stop_count,
@@ -1338,10 +1339,9 @@ class Read_Capture_Buffers_App(object):
         ## Start the analog acquisition.
         if self.config.capture_mode == 'manual':
             print("Starting Analog Data Acquisition -- Manual Trigger")
-            self.adc_start()
         else:
             print("Starting Analog Data Acquisition -- Auto PPS Trigger")
-            self.adc_start()
+        self.adc_start()
 
         ## Read back ADC Offset register to see if it was stored correctly.
         adc_offset = ind.adc_offset_get(dev_hand=self.dev_hand)
@@ -1375,8 +1375,8 @@ class Read_Capture_Buffers_App(object):
         ## Suppresses an error on the first pass where `get_sample_data()`
         ## returns immediately with no data written to the capture buffers.
         ## Only affects manual trigger mode.
-        if self.config.capture_mode == 'manual':
-            self.get_sample_data()          ## wait for data to be available.
+#         if self.config.capture_mode == 'manual':
+#             self.get_sample_data()          ## wait for data to be available.
 
         ## main sampling and testing loop.
         while True:

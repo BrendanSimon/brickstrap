@@ -90,10 +90,11 @@ class Config(IntEnum):
     Mode_Ch_2               = Debug_Select_Active | Debug_Select_Ch_2
     Mode_Ch_Off             = Debug_Select_Active | Debug_Select_Ch_Off
 
-    Mode_Start_Unsigned     = Mode_Normal | Unsigned_Data
-    Mode_Start_Signed       = Mode_Normal | Signed_Data
-    Mode_Manual_Unsigned    = Mode_PPS_Trigger | Unsigned_Data
-    Mode_Manual_Signed      = Mode_PPS_Trigger | Signed_Data
+#     Mode_Start_Unsigned     = Mode_Normal | Unsigned_Data
+#     Mode_Start_Signed       = Mode_Normal | Signed_Data
+#     Mode_Manual_Unsigned    = Mode_PPS_Trigger | Unsigned_Data
+#     Mode_Manual_Signed      = Mode_PPS_Trigger | Signed_Data
+    Mode_Auto_Trigger       = Mode_Normal
     Mode_Manual_Trigger     = Mode_PPS_Trigger
     Mode_Stop               = Mode_System_Halt
 
@@ -620,6 +621,7 @@ def modem_power_on(dev_hand=None):
 
 def adc_memory_map(size=0, dev_hand=None):
     '''Get ADC Memory Map.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -637,6 +639,7 @@ def adc_memory_map(size=0, dev_hand=None):
 
 def adc_dma_reset(dev_hand=None):
     '''Reset ADC DMA engine.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -648,6 +651,7 @@ def adc_dma_reset(dev_hand=None):
 
 def adc_capture_address(address=0, dev_hand=None):
     '''Set capture offset address.  Use for ping-pong capture.  Should be either 0 or half the buffer size.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -682,7 +686,7 @@ def adc_capture_set_mode(address=0,
     cmd.peak_detect_stop_count = peak_detect_stop_count
     cmd.adc_offset = adc_offset
 
-    if 0:
+    if 1:
         print("DEBUG: adc_capture_mode_set: cmd.config=0x{:08x}".format(cmd.config))
         print("DEBUG: adc_capture_mode_set: cmd.interrupt=0x{:08x}".format(cmd.interrupt))
         print("DEBUG: adc_capture_mode_set: cmd.address=0x{:08x}".format(cmd.address))
@@ -691,7 +695,7 @@ def adc_capture_set_mode(address=0,
         print("DEBUG: adc_capture_mode_set: cmd.peak_detect_start_count=0x{:08x}".format(cmd.peak_detect_start_count))
         print("DEBUG: adc_capture_mode_set: cmd.peak_detect_stop_count=0x{:08x}".format(cmd.peak_detect_stop_count))
 
-    status = status_get(dev_hand=dev_hand)
+    #status = status_get(dev_hand=dev_hand)
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_MODE, cmd)
@@ -713,13 +717,23 @@ def adc_capture_start(address,
                       dev_hand=None):
     '''Start ADC Capture.'''
 
-    if capture_mode == 'manual':
-        mode_start = Config.Mode_Manual_Signed if signed else Config.Mode_Manual_Unsigned
-    elif capture_mode == 'auto':
-        mode_start = Config.Mode_Start_Signed if signed else Config.Mode_Start_Unsigned
-    else:
+    if capture_mode not in [ 'auto', 'manual' ]:
         msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
         raise ValueError(msg)
+
+    mode_start = 0
+
+    mode_start |= Config.Mode_Manual_Trigger if capture_mode == 'manual' else 0
+    mode_start |= Config.Mode_Auto_Trigger   if capture_mode == 'auto'   else 0
+
+    mode_start |= Config.Signed_Data if signed else Config.Unsigned_Data
+
+    mode_start |= Config.ADC_Test_Data_Post_Fifo if test_mode == TestMode.ADC_POST_FIFO else 0
+    mode_start |= Config.ADC_Test_Data_Pre_Fifo  if test_mode == TestMode.ADC_PRE_FIFO  else 0
+
+    print("DEBUG: adc_capture_start: capture_mode={}".format(capture_mode))
+    print("DEBUG: adc_capture_start: test_mode={}".format(test_mode))
+    print("DEBUG: adc_capture_start: mode_start=0x{:08x}".format(mode_start))
 
     adc_capture_set_mode(address=address,
                          mode=mode_start,
