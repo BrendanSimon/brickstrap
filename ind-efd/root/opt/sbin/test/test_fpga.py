@@ -1474,7 +1474,7 @@ class Read_Capture_Buffers_App(object):
                 self.show_phase_arrays()
 
             ## save phase data to disk.
-            if config.save_capture_data:
+            if self.config.save_capture_data:
                 loc_dt = self.capture_datetime_local
                 loc_dt_str = loc_dt.format('YYYYMMDDTHHmmssZ')
                 ## red
@@ -1669,7 +1669,11 @@ def argh_main():
     config.peak_detect_normal       = True
     config.peak_detect_squared      = True
 
-    #config.show_capture_buffers = True
+    #!
+    #! additional config items for this app only !!
+    #!
+
+    config.save_capture_data        = False
 
     #!------------------------------------------------------------------------
 
@@ -1687,6 +1691,7 @@ def argh_main():
                  show_capture_buffers   = config.show_capture_buffers,
                  show_capture_debug     = config.show_capture_debug,
                  append_gps_data        = config.append_gps_data_to_measurements_log,
+                 save_capture_data      = config.save_capture_data,
                  test_mode              = config.test_mode.name.lower(),
                  debug                  = False,
                  ):
@@ -1737,6 +1742,9 @@ def argh_main():
 
         if append_gps_data != config.append_gps_data_to_measurements_log:
             config.set_append_gps_data(append_gps_data)
+
+        if save_capture_data != config.save_capture_data:
+            config.save_capture_data = config.save_capture_data
 
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
