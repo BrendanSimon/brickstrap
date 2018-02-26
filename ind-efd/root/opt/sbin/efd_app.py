@@ -777,7 +777,7 @@ class EFD_App(object):
 
         message = self.generate_sms_message()
 
-        for phone_number in config.reporting_sms_phone_numbers:
+        for phone_number in self.config.reporting_sms_phone_numbers:
             #! Call script to send SMS.
             cmd = "/opt/sbin/send-sms.sh {phone_number} '{message}' &".format(phone_number=phone_number, message=message)
             print("DEBUG: send_sms: cmd = {}".format(cmd))
@@ -942,7 +942,7 @@ class EFD_App(object):
         self.peak_normal_min_blu = peak_min_blu
 
         t_delta_2 = time.time() - t1
-        if config.peak_detect_fpga_debug:
+        if self.config.peak_detect_fpga_debug:
             print
             print("DEBUG: Peak Detect Normal FPGA: maxmin = {}".format(maxmin))
             print("DEBUG: Peak Detect Normal FPGA: t_delta_1 = {}".format(t_delta_1))
@@ -980,7 +980,7 @@ class EFD_App(object):
         self.peak_squared_min_blu = peak_min_blu
 
         t_delta_2 = time.time() - t1
-        if config.peak_detect_fpga_debug:
+        if self.config.peak_detect_fpga_debug:
             print
             print("DEBUG: Peak Detect Squared FPGA: maxmin = {}".format(maxmin))
             print("DEBUG: Peak Detect Squared FPGA: t_delta_1 = {}".format(t_delta_1))
@@ -1482,7 +1482,7 @@ class EFD_App(object):
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
 
-            if config.show_capture_debug:
+            if self.config.show_capture_debug:
                 print("\n========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
                 print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
@@ -1500,7 +1500,7 @@ class EFD_App(object):
                 #self.show_phase_arrays(phase_index=1)
                 self.show_phase_arrays()
 
-            if config.peak_detect_fpga_debug:
+            if self.config.peak_detect_fpga_debug:
                 print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
                 print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
 
@@ -1572,9 +1572,9 @@ class EFD_App(object):
             max_volt = max( (self.peak_normal_max_red.voltage, self.peak_normal_max_wht.voltage, self.peak_normal_max_blu.voltage) )
 
             if max_volt >= self.config.pd_event_trigger_voltage:
-                if config.pd_event_reporting_interval:
+                if self.config.pd_event_reporting_interval:
                     delta_dt = self.capture_datetime_utc - self.last_pd_event_report_datetime_utc
-                    if delta_dt.total_seconds() >= config.pd_event_reporting_interval:
+                    if delta_dt.total_seconds() >= self.config.pd_event_reporting_interval:
                         if self.peak_normal_max_red.voltage == max_volt:
                             trigger_phase = self.red_phase
                             trigger_alert = 'R'
@@ -1687,7 +1687,7 @@ class EFD_App(object):
 
             process_duration = end_process_datetime_utc - select_datetime_utc
 
-            if config.show_capture_debug:
+            if self.config.show_capture_debug:
                 print
                 print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
                 print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
