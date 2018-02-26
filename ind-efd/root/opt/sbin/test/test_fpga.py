@@ -275,7 +275,8 @@ class Read_Capture_Buffers_App(object):
             delta = time.time() - time0
             print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-        if self.config.show_intialised_capture_buffers:
+#         if self.config.show_intialised_capture_buffers:
+        if self.config.show_capture_buffers:
             self.show_all_capture_buffers()
 
         self.init_phase_arrays()
@@ -557,7 +558,7 @@ class Read_Capture_Buffers_App(object):
 
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
-        for channel in range(self.config.num_channels):
+        for channel in range(self.config.channel_count):
             buf = self.adc_capture_array[channel*self.config.capture_count+offset:]
             #buf = self.adc_capture_array[channel*self.config.capture_count:]
             #print("Channel {}: {!r}:".format(channel, buf.__array_interface__))
@@ -1667,8 +1668,6 @@ def argh_main():
     config.peak_detect_squared      = True
 
     #config.show_capture_buffers = True
-
-    #config.sample_offset = 0x8000       ## 0x8000 => unsigned samples
 
     #!------------------------------------------------------------------------
 

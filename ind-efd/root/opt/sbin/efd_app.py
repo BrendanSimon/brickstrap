@@ -298,7 +298,7 @@ class EFD_App(object):
         #! - one past last valid capture value of second array => half index + capture count
         #! - last index of second capture array => -1
         #!
-        ccx = self.config.capture_count * self.config.num_channels
+        ccx = self.config.capture_count * self.config.channel_count
         self.adc_capture_array_test_indices = [ ccx, (half_index - 1), (half_index + ccx), -1 ]
 
         if self.config.initialise_capture_memory:
@@ -347,7 +347,7 @@ class EFD_App(object):
         mem = ind.adc_memory_map(dev_hand=self.dev_hand)
         print("ADC Memory: {!r}".format(mem))
         #! Numpy array holds little-endian 16-bit integers.
-        signed = self.config.capture_data_polarity_is_signed()
+        signed = self.config.adc_polarity_is_signed()
         dtype = np.dtype('<i2') if signed else np.dtype('<u2')
         dtype_size = dtype.itemsize
         mem_size = len(mem)
@@ -388,6 +388,7 @@ class EFD_App(object):
 
         self.set_phases()
 
+        curr_offset = self.adc_capture_buffer_offset
         if self.bank == 0:
             self.bank = 1
             next_offset = self.adc_capture_buffer_offset_half
@@ -406,7 +407,7 @@ class EFD_App(object):
     def adc_start(self):
         print("ADC Start")
 
-        signed = self.config.capture_data_polarity_is_signed()
+        signed = self.config.adc_polarity_is_signed()
         print("DEBUG: signed = {!r}".format(signed))
 
         #peak_detect_start_count=ind.Config.Peak_Start_Disable
@@ -417,7 +418,7 @@ class EFD_App(object):
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count  = peak_detect_stop_count
 
-        ind.adc_capture_start(address=0,
+        ind.adc_capture_start(address=self.adc_capture_buffer_offset,
                               capture_count=self.config.capture_count,
                               delay_count=self.config.delay_count,
                               signed=signed,
@@ -531,7 +532,7 @@ class EFD_App(object):
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
 
-        for channel in range(self.config.num_channels):
+        for channel in range(self.config.channel_count):
             buf = self.adc_capture_array[channel*self.config.capture_count+offset:]
             #buf = self.adc_capture_array[channel*self.config.capture_count:]
             #print("Channel {}: {!r}:".format(channel, buf.__array_interface__))
