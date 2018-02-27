@@ -36,6 +36,12 @@ reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
 SECONDS=0
 
 while true ; do
+    #! get modem number.
+    modem=$(mmcli -L | grep -oP '/Modem/\K\d+(?= )')
+    #! get modem signal quality.
+    signal_quality=$(mmcli -m ${modem} | grep -oP 'signal quality.*')
+    echo "modem: ${modem}, ${signal_quality}"
+
     echo "Pinging ${ping_server} (count=${ping_count})"
     ping -c ${ping_count} ${ping_server} > /dev/null
     if (( $? == 0 )); then
