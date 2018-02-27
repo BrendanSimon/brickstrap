@@ -11,7 +11,7 @@ Create rootfs for your version (only required if it doesn't exist already)
 
 Enter the brickstrap (qemu) shell and run `tar` command.
 
-    $ ../bricstrap/ind-efd/build.sh shell
+    $ ../brickstrap/ind-efd/build.sh shell
     # tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/xxx.tgz \
         <list-of-files>
     # exit
