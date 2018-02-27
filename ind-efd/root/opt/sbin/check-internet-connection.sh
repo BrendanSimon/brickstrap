@@ -16,10 +16,6 @@
 source /mnt/data/etc/settings
 
 #!
-#! FIXME: get ping server info from user settings file.
-#!
-
-#!
 #! Ping servers.
 #! -------------
 #! 8.8.8.8      => Google nameserver.
@@ -27,13 +23,32 @@ source /mnt/data/etc/settings
 #! 203.14.0.251 => Telstra ntp server (toc.ntp.telstra.net).
 #!
 
+#! get ping server info from user settings file.
 ping_server="${PING_SERVER:-203.14.0.251}"
 
+#! number of ping packets to send (default is 10)
+ping_count="${PING_COUNT:-10}"
+
+#! ping reboot timeout (default is 10 minutes => 600 seconds)
+reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
+
+#! use the BASH special builtin `SECONDS` variable to track elapsed time.
+SECONDS=0
+
 while true ; do
-    echo "Pinging ${ping_server}"
-    ping -c 3 ${ping_server} > /dev/null
-    if [ $? -ne 0 ]; then
-        echo "Ping failed.  Attempting to restart modem connection ..."
+    echo "Pinging ${ping_server} (count=${ping_count})"
+    ping -c ${ping_count} ${ping_server} > /dev/null
+    if (( $? == 0 )); then
+        #! got a response => reset timer.
+        SECONDS=0
+        echo "Got ping response (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout})"
+    elif (( SECONDS > reboot_timeout )); then
+        #! no reponse for a long time => time to reboot.
+        echo "REBOOT: Ping server reboot timeout (SECONDS=${SECONDS} > reboot_timeout=${reboot_timeout})"
+        reboot
+    else
+        #! no reponse => try power cycling modem.
+        echo "Ping failed (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout}).  Attempting to restart modem and internet connection..."
         /opt/sbin/modem-power-enable.sh
     fi
 
