@@ -50,8 +50,8 @@ while true ; do
         echo "Got ping response (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout})"
     elif (( SECONDS > reboot_timeout )); then
         #! no reponse for a long time => time to reboot.
-        echo "REBOOT: Ping server reboot timeout (SECONDS=${SECONDS} > reboot_timeout=${reboot_timeout})"
-        reboot
+        echo "POWEROFF: Ping server reboot timeout (SECONDS=${SECONDS} > reboot_timeout=${reboot_timeout})"
+        /sbin/poweroff
     else
         #! no reponse => try power cycling modem.
         echo "Ping failed (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout}).  Attempting to restart modem and internet connection..."
