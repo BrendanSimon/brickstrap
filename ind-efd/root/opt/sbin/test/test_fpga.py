@@ -278,12 +278,10 @@ class Read_Capture_Buffers_App(object):
                 delta = time.time() - time0
                 print("DEBUG: same = {} , time compare = {} seconds".format(same, delta))
 
-#         if self.config.show_intialised_capture_buffers:
         if self.config.show_capture_buffers:
             self.show_all_capture_buffers()
 
         self.init_phase_arrays()
-#         if self.config.show_intialised_phase_arrays:
         if self.config.show_phase_arrays:
             self.show_phase_arrays()
 
@@ -315,7 +313,7 @@ class Read_Capture_Buffers_App(object):
         shape = (length,)
         np_array = np.ndarray(shape=shape, dtype=dtype, buffer=mem)
 
-        ## the memory offset for half the capture buffer.
+        #! the memory offset for each bank of the capture buffer.
         bank_size = mem_size // self.config.bank_count
         self.adc_capture_buffer_offset = [ bank_size * i for i in range(self.config.bank_count) ]
 
@@ -561,6 +559,7 @@ class Read_Capture_Buffers_App(object):
 
     def show_capture_buffer_part(self, beg, end, offset):
         '''Show partial contents in capture buffer.'''
+
         for channel in range(self.config.channel_count):
             buf = self.adc_capture_array[channel*self.config.capture_count+offset:]
             #buf = self.adc_capture_array[channel*self.config.capture_count:]
@@ -694,19 +693,23 @@ class Read_Capture_Buffers_App(object):
         '''Value is converted from sample level to volts.'''
 
         peak_data = data[self.peak_detect_start_count:self.peak_detect_stop_count]
+
         time0 = time.time()
         idx = func(peak_data) + self.peak_detect_start_count
         delta = time.time() - time0
         #print("DEBUG: np.min/np.max() took {} seconds".format(delta))
         value = data[idx]
+
         time0 = time.time()
         condition = (data == value)
         delta = time.time() - time0
         #print("DEBUG: condition compare took {} seconds".format(delta))
+
         time0 = time.time()
         count = np.count_nonzero(condition)
         delta = time.time() - time0
         #print("DEBUG: np.count_nonzero took {} seconds".format(delta))
+
         peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count)
         return peak
 
@@ -779,14 +782,8 @@ class Read_Capture_Buffers_App(object):
         '''Perform peak detection on squared current phases using numpy.'''
 
         phase = self.red_phase
-        if 0:
-            print("RED phase (normal):")
-            self.show_phase(phase)
-#         phase = np.square(phase)
-        phase = np.square(phase.astype(np.int32))
-        if 0:
-            print("RED phase (squared):")
-            self.show_phase(phase)
+        phase = phase.astype(np.int32)
+        phase = np.square(phase)
         offset = self.config.capture_index_offset_red
         t1 = time.time()
         peak_max_red = self.peak_max(phase, index_offset=offset)
@@ -800,15 +797,16 @@ class Read_Capture_Buffers_App(object):
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
         phase = self.wht_phase
-#         phase = np.square(phase)
         phase = np.square(phase.astype(np.int32))
+        phase = phase.astype(np.int32)
+        phase = np.square(phase)
         offset = self.config.capture_index_offset_wht
         peak_max_wht = self.peak_max(phase, index_offset=offset)
         peak_min_wht = self.peak_min(phase, index_offset=offset)
 
         phase = self.blu_phase
-#         phase = np.square(phase)
-        phase = np.square(phase.astype(np.int32))
+        phase = phase.astype(np.int32)
+        phase = np.square(phase)
         offset = self.config.capture_index_offset_blu
         peak_max_blu = self.peak_max(phase, index_offset=offset)
         peak_min_blu = self.peak_min(phase, index_offset=offset)
@@ -905,13 +903,13 @@ class Read_Capture_Buffers_App(object):
         peak_value_errors = 0
         peak_count_errors = 0
 
-        ## Do FPGA first, as minmax registers are not double buffered.
+        #! Do FPGA first (if minmax registers are not double buffered).
         if self.config.peak_detect_fpga:
             time0 = time.time()
             ret = self.peak_detect_normal_fpga()
             time1 = time.time()
 
-            ## Maintain reference to FPGA peak values.
+            #! Maintain reference to FPGA peak values.
             fpga_peak_normal_max_red = self.peak_normal_max_red
             fpga_peak_normal_min_red = self.peak_normal_min_red
             fpga_peak_normal_max_wht = self.peak_normal_max_wht
@@ -936,7 +934,7 @@ class Read_Capture_Buffers_App(object):
             ret = self.peak_detect_normal_numpy()
             time1 = time.time()
 
-            ## Maintain reference to numpy peak values.
+            #! Maintain reference to numpy peak values.
             numpy_peak_normal_max_red = self.peak_normal_max_red
             numpy_peak_normal_min_red = self.peak_normal_min_red
             numpy_peak_normal_max_wht = self.peak_normal_max_wht
@@ -962,7 +960,7 @@ class Read_Capture_Buffers_App(object):
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
             print("\nDEBUG: Peak Detect Check FPGA v Numpy")
 
-            ## Red Max
+            #! Red Max
             if fpga_peak_normal_max_red.value != numpy_peak_normal_max_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_red.value={:+8} numpy_peak_normal_max_red.value={:+8}".format(fpga_peak_normal_max_red.value, numpy_peak_normal_max_red.value))
                 peak_value_errors += 1
@@ -979,7 +977,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_red.count={:8} numpy_peak_normal_max_red.count={:8}".format(fpga_peak_normal_max_red.count, numpy_peak_normal_max_red.count))
                 peak_count_errors += 1
 
-            ## Red Min
+            #! Red Min
             if fpga_peak_normal_min_red.value != numpy_peak_normal_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_red.value={:+8} numpy_peak_normal_min_red.value={:+8}".format(fpga_peak_normal_min_red.value, numpy_peak_normal_min_red.value))
                 peak_value_errors += 1
@@ -996,8 +994,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_red.count={:8} numpy_peak_normal_min_red.count={:8}".format(fpga_peak_normal_min_red.count, numpy_peak_normal_min_red.count))
                 peak_count_errors += 1
 
-
-            ## White Max
+            #! White Max
             if fpga_peak_normal_max_wht.value != numpy_peak_normal_max_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_wht.value={:+8} numpy_peak_normal_max_wht.value={:+8}".format(fpga_peak_normal_max_wht.value, numpy_peak_normal_max_wht.value))
                 peak_value_errors += 1
@@ -1014,8 +1011,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_wht.count={:8} numpy_peak_normal_max_wht.count={:8}".format(fpga_peak_normal_max_wht.count, numpy_peak_normal_max_wht.count))
                 peak_count_errors += 1
 
-
-            ## White Min
+            #! White Min
             if fpga_peak_normal_min_wht.value != numpy_peak_normal_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_wht.value={:+8} numpy_peak_normal_min_wht.value={:+8}".format(fpga_peak_normal_min_wht.value, numpy_peak_normal_min_wht.value))
                 peak_value_errors += 1
@@ -1032,8 +1028,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_wht.count={:8} numpy_peak_normal_min_wht.count={:8}".format(fpga_peak_normal_min_wht.count, numpy_peak_normal_min_wht.count))
                 peak_count_errors += 1
 
-
-            ## Blue Max
+            #! Blue Max
             if fpga_peak_normal_max_blu.value != numpy_peak_normal_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_blu.value={:+8} numpy_peak_normal_max_blu.value={:+8}".format(fpga_peak_normal_max_blu.value, numpy_peak_normal_max_blu.value))
                 peak_value_errors += 1
@@ -1050,8 +1045,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_blu.count={:8} numpy_peak_normal_max_blu.count={:8}".format(fpga_peak_normal_max_blu.count, numpy_peak_normal_max_blu.count))
                 peak_count_errors += 1
 
-
-            ## Blue Min
+            #! Blue Min
             if fpga_peak_normal_min_blu.value != numpy_peak_normal_min_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_blu.value={:+8} numpy_peak_normal_min_blu.value={:+8}".format(fpga_peak_normal_min_blu.value, numpy_peak_normal_min_blu.value))
                 peak_value_errors += 1
@@ -1089,13 +1083,13 @@ class Read_Capture_Buffers_App(object):
         peak_value_errors = 0
         peak_count_errors = 0
 
-        ## Do FPGA first, as minmax registers are not double buffered.
+        #! Do FPGA first (if minmax registers are not double buffered).
         if self.config.peak_detect_fpga:
             time0 = time.time()
             ret = self.peak_detect_squared_fpga()
             time1 = time.time()
 
-            ## Maintain reference to FPGA peak values.
+            #! Maintain reference to FPGA peak values.
             fpga_peak_squared_max_red = self.peak_squared_max_red
             fpga_peak_squared_min_red = self.peak_squared_min_red
             fpga_peak_squared_max_wht = self.peak_squared_max_wht
@@ -1120,7 +1114,7 @@ class Read_Capture_Buffers_App(object):
             ret = self.peak_detect_squared_numpy()
             time1 = time.time()
 
-            ## Maintain reference to numpy peak values.
+            #! Maintain reference to numpy peak values.
             numpy_peak_squared_max_red = self.peak_squared_max_red
             numpy_peak_squared_min_red = self.peak_squared_min_red
             numpy_peak_squared_max_wht = self.peak_squared_max_wht
@@ -1146,7 +1140,7 @@ class Read_Capture_Buffers_App(object):
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
             print("\nDEBUG: Peak Detect Check FPGA v Numpy")
 
-            ## Red Max
+            #! Red Max
             if fpga_peak_squared_max_red.value != numpy_peak_squared_max_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_red.value={:+8} numpy_peak_squared_max_red.value={:+8}".format(fpga_peak_squared_max_red.value, numpy_peak_squared_max_red.value))
                 peak_value_errors += 1
@@ -1163,8 +1157,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_red.count={:8} numpy_peak_squared_max_red.count={:8}".format(fpga_peak_squared_max_red.count, numpy_peak_squared_max_red.count))
                 peak_count_errors += 1
 
-
-            ## Red Min
+            #! Red Min
             if fpga_peak_squared_min_red.value != numpy_peak_squared_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_red.value={:+8} numpy_peak_squared_min_red.value={:+8}".format(fpga_peak_squared_min_red.value, numpy_peak_squared_min_red.value))
                 peak_value_errors += 1
@@ -1181,8 +1174,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_red.count={:8} numpy_peak_squared_min_red.count={:8}".format(fpga_peak_squared_min_red.count, numpy_peak_squared_min_red.count))
                 peak_count_errors += 1
 
-
-            ## White Max
+            #! White Max
             if fpga_peak_squared_max_wht.value != numpy_peak_squared_max_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_wht.value={:+8} numpy_peak_squared_max_wht.value={:+8}".format(fpga_peak_squared_max_wht.value, numpy_peak_squared_max_wht.value))
                 peak_value_errors += 1
@@ -1199,8 +1191,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_wht.count={:8} numpy_peak_squared_max_wht.count={:8}".format(fpga_peak_squared_max_wht.count, numpy_peak_squared_max_wht.count))
                 peak_count_errors += 1
 
-
-            ## White Min
+            #! White Min
             if fpga_peak_squared_min_wht.value != numpy_peak_squared_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_wht.value={:+8} numpy_peak_squared_min_wht.value={:+8}".format(fpga_peak_squared_min_wht.value, numpy_peak_squared_min_wht.value))
                 peak_value_errors += 1
@@ -1217,8 +1208,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_wht.count={:8} numpy_peak_squared_min_wht.count={:8}".format(fpga_peak_squared_min_wht.count, numpy_peak_squared_min_wht.count))
                 peak_count_errors += 1
 
-
-            ## Blue Max
+            #! Blue Max
             if fpga_peak_squared_max_blu.value != numpy_peak_squared_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_blu.value={:+8} numpy_peak_squared_max_blu.value={:+8}".format(fpga_peak_squared_max_blu.value, numpy_peak_squared_max_blu.value))
                 peak_value_errors += 1
@@ -1235,8 +1225,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_blu.count={:8} numpy_peak_squared_max_blu.count={:8}".format(fpga_peak_squared_max_blu.count, numpy_peak_squared_max_blu.count))
                 peak_count_errors += 1
 
-
-            ## Blue Min
+            #! Blue Min
             if fpga_peak_squared_min_blu.value != numpy_peak_squared_min_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_blu.value={:+8} numpy_peak_squared_min_blu.value={:+8}".format(fpga_peak_squared_min_blu.value, numpy_peak_squared_min_blu.value))
                 peak_value_errors += 1
@@ -1354,11 +1343,11 @@ class Read_Capture_Buffers_App(object):
         self.adc_start()
 
         ## Read back ADC Offset register to see if it was stored correctly.
-        adc_offset = ind.adc_offset_get(dev_hand=self.dev_hand)
-        print("read back: adc_offset = {} ({})".format(adc_offset, hex(adc_offset)))
-        if adc_offset != self.config.adc_offset:
-            cao = self.config.adc_offset
-            print("ERROR: adc_offset does not match config setting {} ({})".format(cao, hex(cao)))
+#         adc_offset = ind.adc_offset_get(dev_hand=self.dev_hand)
+#         print("read back: adc_offset = {} ({})".format(adc_offset, hex(adc_offset)))
+#         if adc_offset != self.config.adc_offset:
+#             cao = self.config.adc_offset
+#             print("ERROR: adc_offset does not match config setting {} ({})".format(cao, hex(cao)))
 
         capture_count = self.config.capture_count
         self.adc_clock_count_now = 0
@@ -1381,16 +1370,9 @@ class Read_Capture_Buffers_App(object):
 
         self.capture_trigger_count = 0
 
-        ## flush buffers with a few samples before actual testing.
-        ## Suppresses an error on the first pass where `get_sample_data()`
-        ## returns immediately with no data written to the capture buffers.
-        ## Only affects manual trigger mode.
-#         if self.config.capture_mode == 'manual':
-#             self.get_sample_data()          ## wait for data to be available.
-
-        ## main sampling and testing loop.
+        #! main sampling loop.
         while True:
-            if 1:
+            if self.config.show_capture_debug:
                 print("\n========================================")
 
             sys.stdout.flush()
@@ -1399,11 +1381,11 @@ class Read_Capture_Buffers_App(object):
 
             data_ok = self.get_sample_data()    ## wait for data to be available, with timeout.
 
-            if data_ok:
-                self.capture_trigger_count += 1
-
             #self.running_led_on()
             self.running_led_toggle()
+
+            if data_ok:
+                self.capture_trigger_count += 1
 
             #! Get time that `selector` returns.
             select_datetime_utc = arrow.utcnow()
@@ -1412,10 +1394,7 @@ class Read_Capture_Buffers_App(object):
             #! use next capture buffer for ping-pong.  Updates self.bank to captured buffer bank.
             self.adc_capture_buffer_next()
 
-            ## Retrieve info from FPGA registers first (especially if not double buffered).
-            ## Would be better to double buffer in the interrupt routine and save
-            ## to kernel memory, then retrieve via a single IOCTL (BB#105).
-            ##
+            #! Retrieve info from FPGA registers first (especially if not double buffered).
             capture_info = ind.adc_capture_info_get(self.bank, dev_hand=self.dev_hand)
 
             if 1:
@@ -1423,15 +1402,14 @@ class Read_Capture_Buffers_App(object):
                 self.maxmin_squared     = capture_info.maxmin_squared
                 adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
             else:
-                ## Read the normal maxmin registers from the fpga.
+                #! Read the maxmin registers from the fpga.
                 self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
-                ##
-                ## Read the squared maxmin registers from the fpga.
                 self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
                 #! Read the `adc_clock_count_per_pps` register from the fpga.
                 adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
 
+            #! convert fpga capture time to Arrow datetime object.
             timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
             irq_capture_datetime_utc = arrow.get(timestamp)
 
@@ -1446,7 +1424,6 @@ class Read_Capture_Buffers_App(object):
 
             if self.config.show_capture_debug:
                 print
-                #print("========================================")
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
                 print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
                 print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
@@ -1463,9 +1440,9 @@ class Read_Capture_Buffers_App(object):
             if not data_ok:
                 continue
 
-            ##
-            ## Show capture data / phase arrays
-            ##
+            #!
+            #! Show capture data / phase arrays
+            #!
             if self.config.show_capture_buffers:
                 self.show_all_capture_buffers()
 
@@ -1474,17 +1451,17 @@ class Read_Capture_Buffers_App(object):
                 #self.show_phase_arrays(phase_index=1)
                 self.show_phase_arrays()
 
-            ## save phase data to disk.
+            #! save phase data to disk.
             if self.config.save_capture_data:
                 loc_dt = self.capture_datetime_local
                 loc_dt_str = loc_dt.format('YYYYMMDDTHHmmssZ')
-                ## red
+                #! red
                 filename = 'sampledata-{}-red'.format(loc_dt_str)
                 np.save(filename, self.red_phase)
-                ## white
+                #! white
                 filename = 'sampledata-{}-wht'.format(loc_dt_str)
                 np.save(filename, self.wht_phase)
-                ## blue
+                #! blue
                 filename = 'sampledata-{}-blu'.format(loc_dt_str)
                 np.save(filename, self.blu_phase)
 
@@ -1495,10 +1472,9 @@ class Read_Capture_Buffers_App(object):
             self.peak_value_errors = 0
             self.peak_count_errors = 0
 
-            ##
-            ## Read capture memory
-            ## NOTE: with non-cache memory, CANNOT copy/memcpy large arrays (within PPS one second period)
-            ##
+            #!
+            #! Read capture memory
+            #!
             if 0:
                 print("\nCopying adc_capture_array_0 to tmp_array_0")
                 tmp_array_0 = np.array(adc_capture_array_0[0:(capture_count*3+1)])
@@ -1516,9 +1492,9 @@ class Read_Capture_Buffers_App(object):
 
             self.spare_led_off()
 
-            ##
-            ## Check that read was ok.
-            ##
+            #!
+            #! Check that read was ok.
+            #!
             if 0:
                 for index in [0, (capture_count*1)-1, (capture_count*1), (capture_count*2)-1, (capture_count*2), (capture_count*3)-1, (capture_count*4)]:
                     print("\nChecking adc_capture_array_0 and tmp_array_0 at index={:8}".format(index))
@@ -1528,9 +1504,9 @@ class Read_Capture_Buffers_App(object):
                         print("ERROR: adc_capture_array_0 ({:+8}) does not match tmp_array_0 ({:+8}) at index={:8} !!".format(value, temp, index))
                         buffer_errors += 1
 
-            ##
-            ## Check for buffer overrun in initialise_capture_memory config is set.
-            ##
+            #!
+            #! Check for buffer overrun in initialise_capture_memory config is set.
+            #!
             if self.config.initialise_capture_memory:
                 magic_value = self.config.initialise_capture_memory_magic_value
 
@@ -1595,9 +1571,9 @@ class Read_Capture_Buffers_App(object):
                 self.buffer_errors_total += buffer_errors
                 print("Total Capture Buffer Errors = {}".format(self.buffer_errors_total))
 
-            ##
-            ## Peak Detection Test
-            ##
+            #!
+            #! Peak Detection Test
+            #!
             if self.config.peak_detect:
                 peak_errors = self.peak_detect()
                 self.peak_errors_total += peak_errors
