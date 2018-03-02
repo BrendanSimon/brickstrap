@@ -499,7 +499,7 @@ class Read_Capture_Buffers_App(object):
         ret = True
         while True:
             have_data = False
-            events = self.adc_selector.select(timeout=1.0)
+            events = self.adc_selector.select(timeout=10.0)
             for key, event in events:
                 if event & selectors.EVENT_READ:
                     have_data = True
