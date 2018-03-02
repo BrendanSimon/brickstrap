@@ -16,29 +16,20 @@ import argh
 import sys
 import os
 import numpy as np
-import math
 import time
 import arrow
 import selectors2 as selectors
 import Queue as queue       #! Python 3 renames Queue module as queue.
-import threading
-import gps
-import csv
-import requests
-import shelve
 import traceback
 
-from cStringIO import StringIO
 from collections import namedtuple
-
-from persistent_dict import PersistentDict
 
 from weather import Weather_Station_Thread
 from cloud import Cloud, Cloud_Thread
 from efd_gps import GPS_Poller_Thread
 
 from efd_measurements import Measurements_Log
-from efd_config import Config, PeakDetectMode
+from efd_config import Config, PeakDetectMode, TestMode, ADC_Polarity
 
 from efd_sensors import Sensors
 
@@ -131,8 +122,8 @@ class EFD_App(object):
         self.peak_squared_min_blu = PEAK_DEFAULT
 
         self.bank = 0
-        self.adc_capture_buffer_offset = 0
-        self.adc_capture_buffer_offset_half = None     #! should be set to 64MB (128MB / 2)
+        self.next_bank = 0
+        self.adc_capture_buffer_offset = [ 0 ] * self.config.bank_count
 
         self.gps_poller = None      #! will be assigned a thread, that polls gpsd info.
         self.gpsd = None            #! will be assigned the gpsd data object.
@@ -201,9 +192,12 @@ class EFD_App(object):
 
         #! DEBUG output.
         if 0:
-            print("set_phases(): red_phase @ {:08X}:".format(self.red_phase.__array_interface__['data'][0]))
-            print("set_phases(): wht_phase @ {:08X}:".format(self.wht_phase.__array_interface__['data'][0]))
-            print("set_phases(): blu_phase @ {:08X}:".format(self.blu_phase.__array_interface__['data'][0]))
+            adc_cap_buf_offset = self.adc_capture_buffer_offset[self.bank]
+            print("set_phases(): bank={}".format(self.bank))
+            print("set_phases(): adc_capture_buffer_offset=0x{:08X}".format(adc_cap_buf_offset))
+            print("set_phases(): red_phase @ 0x{:08X}".format(self.red_phase.__array_interface__['data'][0]))
+            print("set_phases(): wht_phase @ 0x{:08X}".format(self.wht_phase.__array_interface__['data'][0]))
+            print("set_phases(): blu_phase @ 0x{:08X}".format(self.blu_phase.__array_interface__['data'][0]))
             print
 
     def init_phase_arrays(self):
@@ -286,41 +280,43 @@ class EFD_App(object):
 
         self.adc_stop()
 
-        self.adc_capture_array = self.adc_numpy_array()
-        half_index = len(self.adc_capture_array) // 2
-        self.adc_capture_array_0 = self.adc_capture_array[:half_index]
-        self.adc_capture_array_1 = self.adc_capture_array[half_index:]
+        self.adc_dma_reset()
 
-        #!
-        #! test capture array values at the following indices for correct magic value.
-        #! - one past last valid capture value of first array => zero + capture count
-        #! - last index of first capture array => half index of full array - 1
-        #! - one past last valid capture value of second array => half index + capture count
-        #! - last index of second capture array => -1
-        #!
-        ccx = self.config.capture_count * self.config.channel_count
-        self.adc_capture_array_test_indices = [ ccx, (half_index - 1), (half_index + ccx), -1 ]
+        self.adc_capture_array = self.adc_numpy_array()
+
+#         #!
+#         #! test capture array values at the following indices for correct magic value.
+#         #! - one past last valid capture value of first array => zero + capture count
+#         #! - last index of first capture array => half index of full array - 1
+#         #! - one past last valid capture value of second array => half index + capture count
+#         #! - last index of second capture array => -1
+#         #!
+#         ccx = self.config.capture_count * self.config.channel_count
+#         self.adc_capture_array_test_indices = [ ccx, (half_index - 1), (half_index + ccx), -1 ]
 
         if self.config.initialise_capture_memory:
             print("Initialise capture array : filling with 0x6141")
+            time0 = time.time()
             self.adc_capture_array.fill(self.config.initialise_capture_memory_magic_value)
+            delta = time.time() - time0
+            print("DEBUG: time to initialise capture array = {} seconds".format(delta))
 
-        if self.config.show_intialised_capture_buffers:
+        if self.config.show_capture_buffers:
             self.show_all_capture_buffers()
 
         self.init_phase_arrays()
-        if self.config.show_intialised_phase_arrays:
+        if self.config.show_phase_arrays:
             self.show_phase_arrays()
-
-        self.sensors.init()
-
-        #! Initialise the meausrements_log object.
-        self.measurements_log.init()
 
         # setup the selector for adc (uses `selectors2` module instead of `select`)
         # register the IND device for read events.
         self.adc_selector = selectors.DefaultSelector()
         self.adc_selector.register(self.dev_hand, selectors.EVENT_READ)
+
+        self.sensors.init()
+
+        #! Initialise the meausrements_log object.
+        self.measurements_log.init()
 
     def cleanup(self):
         '''Cleanup application before exit.'''
@@ -356,8 +352,9 @@ class EFD_App(object):
         shape = (length,)
         np_array = np.ndarray(shape=shape, dtype=dtype, buffer=mem)
 
-        #! the memory offset for half the capture buffer.
-        self.adc_capture_buffer_offset_half = mem_size // 2
+        #! the memory offset for each bank of the capture buffer.
+        bank_size = mem_size // self.config.bank_count
+        self.adc_capture_buffer_offset = [ bank_size * i for i in range(self.config.bank_count) ]
 
         return np_array
 
@@ -386,19 +383,21 @@ class EFD_App(object):
     def adc_capture_buffer_next(self):
         '''Set next capture buffer for next dma acquisition -- use for ping-pong buffering.'''
 
-        self.set_phases()
+        #print("DEBUG: next_capture_buffer: old_bank={}, old_next_bank={}".format(self.bank, self.next_bank))
 
-        curr_offset = self.adc_capture_buffer_offset
-        if self.bank == 0:
-            self.bank = 1
-            next_offset = self.adc_capture_buffer_offset_half
-        else:
-            self.bank = 0
-            next_offset = 0
-        #print("DEBUG: next_capture_buffer: curr_offset={:X}, next_offset={:X}".format(curr_offset, next_offset))
-        self.adc_capture_buffer_offset = next_offset
+        self.bank = self.next_bank
+
+        self.next_bank = (self.next_bank + 1) % self.config.bank_count
+
+        curr_offset = self.adc_capture_buffer_offset[self.bank]
+        next_offset = self.adc_capture_buffer_offset[self.next_bank]
+
+        #print("DEBUG: next_capture_buffer: new_bank={}, new_next_bank={}".format(self.bank, self.next_bank))
+        #print("DEBUG: next_capture_buffer: curr_offset=0x{:X}, next_offset=0x{:X}".format(curr_offset, next_offset))
 
         ind.adc_capture_address(address=next_offset, dev_hand=self.dev_hand)
+
+        self.set_phases()
 
     def adc_stop(self):
         print("ADC Stop")
@@ -421,10 +420,12 @@ class EFD_App(object):
         ind.adc_capture_start(address=self.adc_capture_buffer_offset,
                               capture_count=self.config.capture_count,
                               delay_count=self.config.delay_count,
+                              capture_mode=self.config.capture_mode,
                               signed=signed,
                               peak_detect_start_count=peak_detect_start_count,
                               peak_detect_stop_count=peak_detect_stop_count,
                               adc_offset=self.config.adc_offset,
+                              test_mode=self.config.test_mode,
                               dev_hand=self.dev_hand)
 
     def adc_semaphore_get(self):
@@ -546,7 +547,7 @@ class EFD_App(object):
                     val = buf[idx]
                     #print(" 0x{:04x},".format(val)),
                     val -= self.config.sample_offset
-                    print(" {:6},".format(val)),
+                    print(" {:7},".format(val)),
                 print
 
     def show_capture_buffer(self, offset):
@@ -591,7 +592,7 @@ class EFD_App(object):
                 val = buf[idx]
                 #print(" 0x{:04x},".format(val)),
                 val -= self.config.sample_offset
-                print(" {:6},".format(val)),
+                print(" {:+11},".format(val)),
             print
 
     def show_phase(self, phase):
@@ -805,10 +806,23 @@ class EFD_App(object):
         '''Value is converted from sample level to volts.'''
 
         peak_data = data[self.peak_detect_start_count:self.peak_detect_stop_count]
+
+        time0 = time.time()
         idx = func(peak_data) + self.peak_detect_start_count
+        delta = time.time() - time0
+        #print("DEBUG: np.min/np.max() took {} seconds".format(delta))
         value = data[idx]
+
+        time0 = time.time()
         condition = (data == value)
+        delta = time.time() - time0
+        #print("DEBUG: condition compare took {} seconds".format(delta))
+
+        time0 = time.time()
         count = np.count_nonzero(condition)
+        delta = time.time() - time0
+        #print("DEBUG: np.count_nonzero took {} seconds".format(delta))
+
         peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count)
         return peak
 
@@ -834,6 +848,10 @@ class EFD_App(object):
         '''Perform peak detection on normal current phases using numpy.'''
 
         phase = self.red_phase
+        if 0:
+            #! FIXME: copy from device memory (non-cached) to normal (cached) memory.
+            #! FIXME: for testing only !!
+            phase = np.copy(phase)
         offset = self.config.capture_index_offset_red
         t1 = time.time()
         peak_max_red = self.peak_max(phase, index_offset=offset)
@@ -847,11 +865,19 @@ class EFD_App(object):
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
         phase = self.wht_phase
+        if 0:
+            #! FIXME: copy from device memory (non-cached) to normal (cached) memory.
+            #! FIXME: for testing only !!
+            phase = np.copy(phase)
         offset = self.config.capture_index_offset_wht
         peak_max_wht = self.peak_max(phase, index_offset=offset)
         peak_min_wht = self.peak_min(phase, index_offset=offset)
 
         phase = self.blu_phase
+        if 0:
+            #! FIXME: copy from device memory (non-cached) to normal (cached) memory.
+            #! FIXME: for testing only !!
+            phase = np.copy(phase)
         offset = self.config.capture_index_offset_blu
         peak_max_blu = self.peak_max(phase, index_offset=offset)
         peak_min_blu = self.peak_min(phase, index_offset=offset)
@@ -869,14 +895,8 @@ class EFD_App(object):
         '''Perform peak detection on squared current phases using numpy.'''
 
         phase = self.red_phase
-        if 0:
-            print("RED phase (normal):")
-            self.show_phase(phase)
-#         phase = np.square(phase)
-        phase = np.square(phase.astype(np.int32))
-        if 0:
-            print("RED phase (squared):")
-            self.show_phase(phase)
+        phase = phase.astype(np.int32)
+        phase = np.square(phase)
         offset = self.config.capture_index_offset_red
         t1 = time.time()
         peak_max_red = self.peak_max(phase, index_offset=offset)
@@ -890,15 +910,16 @@ class EFD_App(object):
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
         phase = self.wht_phase
-#         phase = np.square(phase)
         phase = np.square(phase.astype(np.int32))
+        phase = phase.astype(np.int32)
+        phase = np.square(phase)
         offset = self.config.capture_index_offset_wht
         peak_max_wht = self.peak_max(phase, index_offset=offset)
         peak_min_wht = self.peak_min(phase, index_offset=offset)
 
         phase = self.blu_phase
-#         phase = np.square(phase)
-        phase = np.square(phase.astype(np.int32))
+        phase = phase.astype(np.int32)
+        phase = np.square(phase)
         offset = self.config.capture_index_offset_blu
         peak_max_blu = self.peak_max(phase, index_offset=offset)
         peak_min_blu = self.peak_min(phase, index_offset=offset)
@@ -920,16 +941,16 @@ class EFD_App(object):
         maxmin = self.maxmin_normal
 
         #! channel 0 (red)
-        peak_max_red = self.peak_convert(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
-        peak_min_red = self.peak_convert(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
+        peak_max_red = self.peak_convert(index=(maxmin.max_ch0_addr & 0xffffff), value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
+        peak_min_red = self.peak_convert(index=(maxmin.min_ch0_addr & 0xffffff), value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
 
         ## channel 1 (white)
-        peak_max_wht = self.peak_convert(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
-        peak_min_wht = self.peak_convert(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
+        peak_max_wht = self.peak_convert(index=(maxmin.max_ch1_addr & 0xffffff), value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
+        peak_min_wht = self.peak_convert(index=(maxmin.min_ch1_addr & 0xffffff), value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
 
         ## channel 2 (blue)
-        peak_max_blu = self.peak_convert(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
-        peak_min_blu = self.peak_convert(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
+        peak_max_blu = self.peak_convert(index=(maxmin.max_ch2_addr & 0xffffff), value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
+        peak_min_blu = self.peak_convert(index=(maxmin.min_ch2_addr & 0xffffff), value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
@@ -995,9 +1016,11 @@ class EFD_App(object):
         peak_value_errors = 0
         peak_count_errors = 0
 
-        ## Do FPGA first, as minmax registers are not double buffered.
+        ## Do FPGA first (if minmax registers are not double buffered).
         if self.config.peak_detect_fpga:
+            time0 = time.time()
             ret = self.peak_detect_normal_fpga()
+            time1 = time.time()
 
             ## Maintain reference to FPGA peak values.
             fpga_peak_normal_max_red = self.peak_normal_max_red
@@ -1016,9 +1039,13 @@ class EFD_App(object):
                 print("DEBUG: peak_normal_min_wht = {}".format(fpga_peak_normal_min_wht))
                 print("DEBUG: peak_normal_max_blu = {}".format(fpga_peak_normal_max_blu))
                 print("DEBUG: peak_normal_min_blu = {}".format(fpga_peak_normal_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
         if self.config.peak_detect_numpy:
+            time0 = time.time()
             ret = self.peak_detect_normal_numpy()
+            time1 = time.time()
 
             ## Maintain reference to numpy peak values.
             numpy_peak_normal_max_red = self.peak_normal_max_red
@@ -1037,6 +1064,8 @@ class EFD_App(object):
                 print("DEBUG: peak_normal_min_wht = {}".format(numpy_peak_normal_min_wht))
                 print("DEBUG: peak_normal_max_blu = {}".format(numpy_peak_normal_max_blu))
                 print("DEBUG: peak_normal_min_blu = {}".format(numpy_peak_normal_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
             if fpga_peak_normal_max_red is numpy_peak_normal_max_red:
                 print("ERROR: SAME OBJECT: fpga_peak_normal_max_red is numpy_peak_normal_max_red !!")
@@ -1167,9 +1196,11 @@ class EFD_App(object):
         peak_value_errors = 0
         peak_count_errors = 0
 
-        ## Do FPGA first, as minmax registers are not double buffered.
+        ## Do FPGA first (if minmax registers are not double buffered).
         if self.config.peak_detect_fpga:
+            time0 = time.time()
             ret = self.peak_detect_squared_fpga()
+            time1 = time.time()
 
             ## Maintain reference to FPGA peak values.
             fpga_peak_squared_max_red = self.peak_squared_max_red
@@ -1188,9 +1219,13 @@ class EFD_App(object):
                 print("DEBUG: peak_squared_min_wht = {}".format(fpga_peak_squared_min_wht))
                 print("DEBUG: peak_squared_max_blu = {}".format(fpga_peak_squared_max_blu))
                 print("DEBUG: peak_squared_min_blu = {}".format(fpga_peak_squared_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
         if self.config.peak_detect_numpy:
+            time0 = time.time()
             ret = self.peak_detect_squared_numpy()
+            time1 = time.time()
 
             ## Maintain reference to numpy peak values.
             numpy_peak_squared_max_red = self.peak_squared_max_red
@@ -1209,6 +1244,8 @@ class EFD_App(object):
                 print("DEBUG: peak_squared_min_wht = {}".format(numpy_peak_squared_min_wht))
                 print("DEBUG: peak_squared_max_blu = {}".format(numpy_peak_squared_max_blu))
                 print("DEBUG: peak_squared_min_blu = {}".format(numpy_peak_squared_min_blu))
+                delta = time1 - time0
+                print("DEBUG: duration = {} seconds".format(delta))
 
             if fpga_peak_squared_max_red is numpy_peak_squared_max_red:
                 print("ERROR: SAME OBJECT: fpga_peak_squared_max_red is numpy_peak_squared_max_red !!")
@@ -1233,7 +1270,6 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_red.count={:8} numpy_peak_squared_max_red.count={:8}".format(fpga_peak_squared_max_red.count, numpy_peak_squared_max_red.count))
                 peak_count_errors += 1
 
-
             ## Red Min
             if fpga_peak_squared_min_red.value != numpy_peak_squared_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_red.value={:+8} numpy_peak_squared_min_red.value={:+8}".format(fpga_peak_squared_min_red.value, numpy_peak_squared_min_red.value))
@@ -1250,7 +1286,6 @@ class EFD_App(object):
             if fpga_peak_squared_min_red.count != numpy_peak_squared_min_red.count:
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_red.count={:8} numpy_peak_squared_min_red.count={:8}".format(fpga_peak_squared_min_red.count, numpy_peak_squared_min_red.count))
                 peak_count_errors += 1
-
 
             ## White Max
             if fpga_peak_squared_max_wht.value != numpy_peak_squared_max_wht.value:
@@ -1269,7 +1304,6 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_wht.count={:8} numpy_peak_squared_max_wht.count={:8}".format(fpga_peak_squared_max_wht.count, numpy_peak_squared_max_wht.count))
                 peak_count_errors += 1
 
-
             ## White Min
             if fpga_peak_squared_min_wht.value != numpy_peak_squared_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_wht.value={:+8} numpy_peak_squared_min_wht.value={:+8}".format(fpga_peak_squared_min_wht.value, numpy_peak_squared_min_wht.value))
@@ -1287,7 +1321,6 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_wht.count={:8} numpy_peak_squared_min_wht.count={:8}".format(fpga_peak_squared_min_wht.count, numpy_peak_squared_min_wht.count))
                 peak_count_errors += 1
 
-
             ## Blue Max
             if fpga_peak_squared_max_blu.value != numpy_peak_squared_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_blu.value={:+8} numpy_peak_squared_max_blu.value={:+8}".format(fpga_peak_squared_max_blu.value, numpy_peak_squared_max_blu.value))
@@ -1304,7 +1337,6 @@ class EFD_App(object):
             if fpga_peak_squared_max_blu.count != numpy_peak_squared_max_blu.count:
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_blu.count={:8} numpy_peak_squared_max_blu.count={:8}".format(fpga_peak_squared_max_blu.count, numpy_peak_squared_max_blu.count))
                 peak_count_errors += 1
-
 
             ## Blue Min
             if fpga_peak_squared_min_blu.value != numpy_peak_squared_min_blu.value:
@@ -1370,10 +1402,10 @@ class EFD_App(object):
             end = index + size_half
 
         if 0:
-            print("DEBUG: phase_array_around_index: index={}".format(index))
+            print("DEBUG: phase_array_around_index: index={:8}".format(index))
             print("DEBUG: phase_array_around_index: size_half={}".format(size_half))
-            print("DEBUG: phase_array_around_index: beg={}".format(beg))
-            print("DEBUG: phase_array_around_index: end={}".format(end))
+            print("DEBUG: phase_array_around_index: beg={:8}".format(beg))
+            print("DEBUG: phase_array_around_index: end={:8}".format(end))
 
         return phase[beg:end]
 
@@ -1427,12 +1459,46 @@ class EFD_App(object):
 
         self.cloud_thread.start()
 
-        print("DEBUG: capture_count = {}".format(self.config.capture_count))
-        print("DEBUG: delay_count   = {}".format(self.config.delay_count))
         #! Start the analog acquisition.
+        if self.config.capture_mode == 'manual':
+            print("Starting Analog Data Acquisition -- Manual Trigger")
+        else:
+            print("Starting Analog Data Acquisition -- Auto PPS Trigger")
         self.adc_start()
 
+        ## Read back ADC Offset register to see if it was stored correctly.
+#         adc_offset = ind.adc_offset_get(dev_hand=self.dev_hand)
+#         print("read back: adc_offset = {} ({})".format(adc_offset, hex(adc_offset)))
+#         if adc_offset != self.config.adc_offset:
+#             cao = self.config.adc_offset
+#             print("ERROR: adc_offset does not match config setting {} ({})".format(cao, hex(cao)))
+
+        capture_count = self.config.capture_count
+        self.adc_clock_count_now = 0
+        self.adc_clock_count_min = 1000*1000*1000  ## a number > 250MHz + 50ppm
+        self.adc_clock_count_max = 0
+        self.adc_clock_count_valid_delta = int(self.config.sample_frequency * 0.01)
+        self.adc_clock_count_valid_min = self.config.sample_frequency - self.adc_clock_count_valid_delta
+        self.adc_clock_count_valid_max = self.config.sample_frequency + self.adc_clock_count_valid_delta
+
+        self.buffer_errors_total = 0
+
+        self.peak_index_errors = 0
+        self.peak_value_errors = 0
+        self.peak_count_errors = 0
+
+        self.peak_index_errors_total = 0
+        self.peak_value_errors_total = 0
+        self.peak_count_errors_total = 0
+        self.peak_errors_total = 0
+
+        self.capture_trigger_count = 0
+
+        ## main sampling loop.
         while True:
+            if self.config.show_capture_debug:
+                print("\n========================================")
+
             sys.stdout.flush()
 
             self.running_led_off()
@@ -1449,9 +1515,6 @@ class EFD_App(object):
             select_datetime_local = select_datetime_utc.to(self.config.timezone)
 
             #! Retrieve info from FPGA registers first (especially if not double buffered).
-            #! Would be better to double buffer in the interrupt routine and save
-            #! to kernel memory, then retrieve via a single IOCTL (BB#105).
-
             capture_info = ind.adc_capture_info_get(self.bank, dev_hand=self.dev_hand)
 
             if 1:
@@ -1459,10 +1522,8 @@ class EFD_App(object):
                 self.maxmin_squared     = capture_info.maxmin_squared
                 adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
             else:
-                ## Read the normal maxmin registers from the fpga.
+                #! Read the maxmin registers from the fpga.
                 self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
-                ##
-                ## Read the squared maxmin registers from the fpga.
                 self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
 
                 #! Read the `adc_clock_count_per_pps` register from the fpga.
@@ -1470,6 +1531,7 @@ class EFD_App(object):
 
             self.adc_capture_buffer_next()  ## use next capture buffer for ping-pong
 
+            #! convert fpga capture time to Arrow datetime object.
             timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
             irq_capture_datetime_utc = arrow.get(timestamp)
 
@@ -1483,11 +1545,22 @@ class EFD_App(object):
             #print("\033c")
 
             if self.config.show_capture_debug:
-                print("\n========================================")
+                print
                 print("Total Capture Trigger Count = {}".format(self.capture_trigger_count))
                 print("irq_capture_datetime_utc = {}".format(irq_capture_datetime_utc))
                 print("sel_capture_datetime_utc = {}".format(select_datetime_utc))
                 print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
+
+            if self.config.peak_detect_fpga_debug:
+                print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
+                print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
+                print("\nDEBUG: adc_clock_count_per_pps = {:10} (0x{:08X})".format(adc_clock_count_per_pps, adc_clock_count_per_pps))
+                #print("\nDEBUG: capture_info_0 = {}".format(capture_info_0))
+                #print("\nDEBUG: capture_info_1 = {}".format(capture_info_1))
+                print("\nDEBUG: capture_info = {}".format(capture_info))
+
+            if not data_ok:
+                continue
 
             #!
             #! Show capture data / phase arrays
@@ -1500,9 +1573,19 @@ class EFD_App(object):
                 #self.show_phase_arrays(phase_index=1)
                 self.show_phase_arrays()
 
-            if self.config.peak_detect_fpga_debug:
-                print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
-                print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
+            #! save phase data to disk.
+            if self.config.save_capture_data:
+                loc_dt = self.capture_datetime_local
+                loc_dt_str = loc_dt.format('YYYYMMDDTHHmmssZ')
+                #! red
+                filename = 'sampledata-{}-red'.format(loc_dt_str)
+                np.save(filename, self.red_phase)
+                #! white
+                filename = 'sampledata-{}-wht'.format(loc_dt_str)
+                np.save(filename, self.wht_phase)
+                #! blue
+                filename = 'sampledata-{}-blu'.format(loc_dt_str)
+                np.save(filename, self.blu_phase)
 
             #! Skip processing if system date is not set properly (year <= 2015).
             if select_datetime_utc.year <= 2015:
@@ -1780,6 +1863,7 @@ def argh_main():
     def app_main(capture_count          = config.capture_count,
                  capture_mode           = config.capture_mode,
                  pps_delay              = config.pps_delay,
+                 adc_polarity           = config.adc_polarity.name.lower(),
                  adc_offset             = config.adc_offset,
                  peak_detect_mode       = config.peak_detect_mode.name.lower(),
                  peak_detect_normal     = config.peak_detect_normal,
@@ -1790,6 +1874,8 @@ def argh_main():
                  show_capture_buffers   = config.show_capture_buffers,
                  show_capture_debug     = config.show_capture_debug,
                  append_gps_data        = config.append_gps_data_to_measurements_log,
+                 save_capture_data      = config.save_capture_data,
+                 test_mode              = config.test_mode.name.lower(),
                  debug                  = False,
                  ):
         """Main entry if running this module directly."""
@@ -1806,6 +1892,9 @@ def argh_main():
 
         if pps_delay != config.pps_delay:
             config.set_pps_delay(pps_delay)
+
+        if adc_polarity != config.adc_polarity.name.lower():
+            config.set_adc_polarity(adc_polarity)
 
         if adc_offset != config.adc_offset:
             config.set_adc_offset(adc_offset)
@@ -1837,11 +1926,16 @@ def argh_main():
         if append_gps_data != config.append_gps_data_to_measurements_log:
             config.set_append_gps_data(append_gps_data)
 
+        if save_capture_data != config.save_capture_data:
+            config.save_capture_data = config.save_capture_data
+
+        if test_mode != config.test_mode.name.lower():
+            config.set_test_mode(test_mode)
+
         if debug:
             config.peak_detect_numpy_debug  = True
             config.peak_detect_fpga_debug   = True
             config.peak_detect_debug        = True
-            config.set_show_capture_debug(True)
 
         config.show_all()
 
