@@ -759,8 +759,8 @@ class EFD_App(object):
 
         sms_message = '\n'.join([
             "EFD PD Event",
-            "Unit: {}".format(config.serial_number),
-            "Site: {}".format(config.site_name),
+            "Unit: {}".format(self.config.serial_number),
+            "Site: {}".format(self.config.site_name),
             "Time (L): {}".format(m.get('datetime_local','')),
             "RED: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_red, min_volt_red, t2_red, w2_red, alert_red),
             "WHT: Vmax={:+0.4f}, Vmin={:+0.4f}, T2={:+0.1e}, W2={:+0.1e} {}".format(max_volt_wht, min_volt_wht, t2_wht, w2_wht, alert_wht),
@@ -1381,7 +1381,7 @@ class EFD_App(object):
 
     def tf_map_calculate(self, phase, index):
         #fft_size_half = self.config.fft_size_half
-        fft_phase = self.phase_array_around_index(phase, index, size_half=config.fft_size_half)
+        fft_phase = self.phase_array_around_index(phase, index, size_half=self.config.fft_size_half)
         tstart = 0
         tstop = len(fft_phase)
 
