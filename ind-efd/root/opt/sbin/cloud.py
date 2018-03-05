@@ -192,7 +192,6 @@ class Cloud(object):
             except Exception as exc:
                 print("EXCEPTION: issue `task_done()` to cloud queue after getting next item !!")
                 print(repr(exc))
-                sys.stdout.flush()
 
             capture_datetime_utc = measurements['datetime_utc']
 
