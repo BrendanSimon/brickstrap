@@ -8,6 +8,11 @@ SITE_NAME="EFD-0000"
 
 HOSTNAME="EFD-0000"
 
+#ADC_OFFSET=0
+
+#PEAK_DETECT_MODE="normal"
+PEAK_DETECT_MODE="squared"
+
 PD_EVENT_TRIGGER_VOLTAGE=0.1
 
 PD_EVENT_REPORTING_INTERVAL=300
@@ -18,6 +23,12 @@ REPORTING_SMS_PHONE_NUMBERS="+61470000000",
 
 #! Server to ping to check internet connection is ok.
 PING_SERVER="203.14.0.251"
+
+#! Number of ping packets to send when checking internet connection.
+#PING_COUNT=10
+
+#! Number of seconds of no internet (ping response) before power cycling modem.
+#PING_REBOOT_TIMEOUT=600
 
 WEB_SERVER="http://www.efd-portal.com.au:81"
 
