@@ -417,7 +417,7 @@ class EFD_App(object):
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count  = peak_detect_stop_count
 
-        ind.adc_capture_start(address=self.adc_capture_buffer_offset,
+        ind.adc_capture_start(address=self.adc_capture_buffer_offset[self.next_bank],
                               capture_count=self.config.capture_count,
                               delay_count=self.config.delay_count,
                               capture_mode=self.config.capture_mode,
