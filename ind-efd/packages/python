@@ -1,4 +1,5 @@
 python
+python-pip
 python-numpy
 #python-gps
 python-gps/$BACKPORTS

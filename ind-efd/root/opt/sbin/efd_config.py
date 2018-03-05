@@ -12,10 +12,45 @@ This module handles configuration information for EFD applications.
 
 import argh
 import os.path
+import enum
 
 #!============================================================================
 
-class Config(object):
+class CaptureMode(enum.Enum):
+    AUTO        = 1
+    MANUAL      = 2
+
+#!============================================================================
+
+class PeakDetectMode(enum.Enum):
+    SQUARED     = 1
+    NORMAL      = 2
+#     ABSOLUTE    = 3
+
+#!============================================================================
+
+class TestMode(enum.Enum):
+    NORMAL          = 1
+    ADC_POST_FIFO   = 2
+    ADC_PRE_FIFO    = 3
+
+#!============================================================================
+
+class ADC_Polarity(enum.Enum):
+    SIGNED      = 1
+    UNSIGNED    = 2
+
+#!============================================================================
+
+class ConfigDefault(object):
+    """
+    Default Configuration Settings.
+
+    This should be used as read-only a singleton
+    (i.e. don't read settings file or overwrite attributes, etc)
+    This should be enforced by some mechanism (__slots__ perhaps?).
+    Applications can instantiate their own Config objects and modify.
+    """
 
     #!
     #! Default values.  Can be overridden by settings file or command line.
@@ -36,7 +71,9 @@ class Config(object):
     web_server = 'http://portal.efdweb.com'
     web_server_measurements_log = '{ws}/api/AddEFDLog/{sn}/'.format(ws=web_server, sn=serial_number)
 
-    num_channels = 3
+    bank_count = 2
+
+    channel_count = 3
 
     #! 16-bits
     sample_bits = 16
@@ -44,8 +81,14 @@ class Config(object):
     #! Sample Frequency 250 MS/s
     sample_frequency = 250 * 1000 * 1000
 
+    adc_polarity = ADC_Polarity.SIGNED
     #! 0x8000 if using offset-binary, 0 if using signed-binary.
-    sample_offset = 0
+    sample_offset = 0 if adc_polarity == ADC_Polarity.SIGNED else 0x8000
+
+    #! ADC offset applied to compensate for DC offset in the system.
+    #! Signed value (in sample units).
+    #! Written to FPGA register and applied by the FPGA as samples are streamed from the ADC.
+    adc_offset = 0;
 
     voltage_range_pp = 2.5
 
@@ -58,50 +101,59 @@ class Config(object):
     #! 'manual' : oneshot software triggered.
     capture_mode = 'auto'
 
+    #! delay between samples in in manual mode (fake pps).
+    pps_delay = 1.0
+
     total_count = sample_frequency * 50 // 1000         #! total of 50ms between start of channel sampling.
 
     delay_count = total_count - capture_count
 
-    initialise_capture_memory = True
-    initialise_capture_memory_magic_value = 0x6141
-    show_intialised_capture_buffers = False
-    show_intialised_phase_arrays = False
+    initialise_capture_memory               = True
+    initialise_capture_memory_magic_value   = 0x6141
+    show_intialised_capture_buffers         = False
+    show_intialised_phase_arrays            = False
 
-    show_capture_debug = False
+    show_capture_debug                      = False
 
     capture_index_offset_red = 0
     capture_index_offset_wht = total_count
     capture_index_offset_blu = total_count * 2
 
-    fft_size = 1 << 8      #! 256 bins.  Was 1 << 16 (65,536)
-    fft_size_half = fft_size >> 1
+    fft_size = 256
+    fft_size_half = fft_size // 2
 
-    show_phase_arrays = False
-    show_phase_arrays_on_pd_event = False
-    show_capture_buffers = False
+    show_phase_arrays               = False
+    show_phase_arrays_on_pd_event   = False
+    show_capture_buffers            = False
+
+    #peak_detect_mode                = PeakDetectMode.SQUARED
+    peak_detect_mode                = PeakDetectMode.NORMAL
+
+    peak_detect_normal              = True
+    peak_detect_squared             = True
 
     peak_detect_numpy_capture_count_limit = 1*1000*1000
-    peak_detect_numpy = False
-    peak_detect_numpy_debug = False
+    peak_detect_numpy               = False
+    peak_detect_numpy_debug         = False
 
-    peak_detect_fpga = True
-    peak_detect_fpga_debug = False
+    peak_detect_fpga                = True
+    peak_detect_fpga_debug          = False
 
-    peak_detect_fpga_fix = False
-    peak_detect_fpga_fix_debug = False
+    peak_detect_fpga_fix            = False
+    peak_detect_fpga_fix_debug      = False
 
-    peak_detection = True
-    peak_detection_debug = False
+    peak_detect                     = True
+    peak_detect_debug               = False
 
-    tf_mapping = True
-    tf_mapping_debug = False
+    tf_mapping                      = True
+    tf_mapping_debug                = False
 
-    show_measurements = False
-    show_measurements_post = False
+    show_measurements               = False
+    show_measurements_post          = False
 
-    page_size = 32
+    page_size = 64
 
-    page_width = 8
+    page_width = 16
 
     data_dir = os.path.join('/mnt', 'data')
 
@@ -135,39 +187,16 @@ class Config(object):
     #! FIXME: this is likely to be temporary !!
     append_gps_data_to_measurements_log = False
 
+    save_capture_data = False
+
+    test_mode = TestMode.NORMAL
+
     #!========================================================================
 
     def __init__(self):
-        self.read_settings_file()
-
+#         pass
         self.set_efd_ping_uris()
         self.set_web_uris()
-
-    ##========================================================================
-
-    def read_settings_file(self):
-        #! Using 'import' is quick and dirty method to read in settings from a file.
-        #! It relies on settings.py being available in the python path to load the 'module'
-        #! Currently a symlink is used from settings.py in app directory to the settings file.
-        import settings
-
-        self.serial_number                          =        getattr(settings, 'SERIAL_NUMBER',                      self.serial_number)
-        self.site_name                              =        getattr(settings, 'SITE_NAME',                          self.site_name)
-        self.reporting_sms_phone_numbers            = list(  getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',        self.reporting_sms_phone_numbers) )
-        self.pd_event_trigger_voltage               = float( getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',           self.pd_event_trigger_voltage) )
-        self.pd_event_reporting_interval            = int(   getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',        self.pd_event_reporting_interval) )
-        self.efd_ping_servers                       = list(  getattr(settings, 'EFD_PING_SERVERS',                   self.efd_ping_servers) )
-        self.web_server                             =        getattr(settings, 'WEB_SERVER',                         self.web_server)
-        self.timezone                               =        getattr(settings, 'TIMEZONE',                           self.timezone)
-        self.append_gps_data_to_measurements_log    = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
-        self.fft_size                               = int(   getattr(settings, 'FFT_SIZE',                           self.fft_size) )
-
-        self.set_capture_count()
-        self.set_fft_size()
-        #self.set_serial_number()
-        self.set_efd_ping_uris()
-        self.set_web_uris()
-        self.set_measurements_log_field_names()
 
     #!========================================================================
 
@@ -189,14 +218,16 @@ class Config(object):
 
     def set_web_server(self, web_server=None):
 
-        if web_server:
+        if web_server != None:
             self.web_server = web_server
             self.set_web_uris()
+            print("INFO: `web_server` set to {}".format(self.web_server))
+            print("INFO: `web_server_measurements_log` set to {}".format(self.web_server_measurements_log))
 
     #!========================================================================
 
     def set_capture_count(self, capture_count=None):
-        if capture_count:
+        if capture_count != None:
             self.capture_count = capture_count
 
         self.delay_count = self.total_count - self.capture_count
@@ -209,24 +240,29 @@ class Config(object):
             print("WARN: fft_size lowered")
             self.set_fft_size(self.capture_count)
 
-    def set_fft_size(self, fft_size=None):
-        if fft_size:
+    #!========================================================================
+
+#     def set_fft_size(self, fft_size=None):
+    def set_fft_size(self, fft_size):
+#         if fft_size != None:
+        if fft_size != self.fft_size:
             self.fft_size = fft_size
-            #print("INFO: fft_size set to {}".format(self.fft_size))
+            print("INFO: fft_size set to {}".format(self.fft_size))
 
-        self.fft_size_half = self.fft_size // 2
-        #print("INFO: fft_size_half set to {}".format(self.fft_size_half))
+        fft_size_half = self.fft_size // 2
+        if fft_size_half != self.fft_size_half:
+            self.fft_size_half = fft_size_half
+            print("INFO: fft_size_half set to {}".format(self.fft_size_half))
 
-    def capture_data_polarity_is_signed(self):
-        return self.sample_offset == 0
+    #!========================================================================
 
     def set_capture_mode(self, capture_mode='auto'):
         if capture_mode not in ['auto', 'manual']:
             msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
-            raise ValueError(msg)
+            raise KeyError(msg)
 
         self.capture_mode = capture_mode
-        #print("INFO: capture_mode set to {}".format(self.capture_mode))
+        print("INFO: `capture_mode` set to {}".format(self.capture_mode))
 
         if capture_mode == 'manual':
             self.peak_detect_numpy_capture_count_limit = self.capture_count
@@ -240,17 +276,101 @@ class Config(object):
 
     #!========================================================================
 
+    def set_pps_delay(self, pps_delay=None):
+        if pps_delay != None:
+            self.pps_delay = pps_delay
+            print("INFO: `pps_delay` set to {}".format(self.pps_delay))
+
+    #!========================================================================
+
+    def set_show_capture_debug(self, show_capture_debug=None):
+        if show_capture_debug != None:
+            self.show_capture_debug = show_capture_debug
+            print("INFO: `show_capture_debug` set to {}".format(self.show_capture_debug))
+
+    #!========================================================================
+
+    def set_show_capture_buffers(self, show_capture_buffers=None):
+        if show_capture_buffers != None:
+            self.show_capture_buffers = show_capture_buffers
+            print("INFO: `show_capture_buffers` set to {}".format(self.show_capture_buffers))
+
+    #!========================================================================
+
+    def set_adc_polarity(self, adc_polarity=None):
+        if adc_polarity != None:
+            try:
+                value = adc_polarity.upper()
+                self.adc_polarity = ADC_Polarity[value]
+                print("INFO: `adc_polarity` set to {}".format(self.adc_polarity))
+            except KeyError as ex:
+                print("ERROR: invalid `adc_polarity`: {!r}".format(adc_polarity))
+            except Exception as ex:
+                print(ex.message)
+            else:
+                #self.sample_offset = 0 if self.adc_polarity == ADC_Polarity.SIGNED else 0x8000
+                print("INFO: `sample_offset` set to 0x{:X}".format(self.sample_offset))
+
+    #!========================================================================
+
+    def adc_polarity_is_signed(self):
+        #return self.sample_offset == 0
+        return self.adc_polarity == ADC_Polarity.SIGNED
+
+    #!========================================================================
+
+    def set_adc_offset(self, adc_offset=None):
+        if adc_offset != None:
+            self.adc_offset = adc_offset
+            print("INFO: `adc_offset` set to {}".format(self.adc_offset))
+
+    #!========================================================================
+
+    def set_peak_detect_mode(self, peak_detect_mode=None):
+        if peak_detect_mode != None:
+            try:
+                value = peak_detect_mode.upper()
+                self.peak_detect_mode = PeakDetectMode[value]
+                print("INFO: `peak_detect_mode` set to {}".format(self.peak_detect_mode))
+            except KeyError as ex:
+                print("ERROR: invalid `peak_detect_mode`: {!r}".format(peak_detect_mode))
+            except Exception as ex:
+                print(ex.message)
+
+    #!========================================================================
+
+    def set_peak_detect_normal(self, peak_detect_normal=None):
+        if peak_detect_normal != None:
+            self.peak_detect_normal = peak_detect_normal
+            print("INFO: `peak_detect_normal` set to {}".format(self.peak_detect_normal))
+
+    #!========================================================================
+
+    def set_peak_detect_squared(self, peak_detect_squared=None):
+        if peak_detect_squared != None:
+            self.peak_detect_squared = peak_detect_squared
+            print("INFO: `peak_detect_squared` set to {}".format(self.peak_detect_squared))
+
+    #!========================================================================
+
     def set_append_gps_data(self, append_gps_data=None):
-        if append_gps_data:
+        if append_gps_data != None:
             self.append_gps_data_to_measurements_log = bool(append_gps_data)
-            print("INFO: append_gps_data_to_measurements_log set to {}".format(self.append_gps_data_to_measurements_log))
+            print("INFO: `append_gps_data_to_measurements_log` set to {}".format(self.append_gps_data_to_measurements_log))
+
+    #!========================================================================
+
+    def set_save_capture_data(self, save_capture_data=None):
+        if save_capture_data != None:
+            self.save_capture_data = bool(save_capture_data)
+            print("INFO: `save_capture_data` set to {}".format(self.save_capture_data))
 
     #!========================================================================
 
     def set_show_measurements(self, show_measurements=None):
-        if show_measurements:
+        if show_measurements != None:
             self.show_measurements = bool(show_measurements)
-            print("INFO: show_measurements set to {}".format(self.show_measurements))
+            print("INFO: `show_measurements` set to {}".format(self.show_measurements))
 
     #!========================================================================
 
@@ -280,6 +400,19 @@ class Config(object):
 
     #!========================================================================
 
+    def set_test_mode(self, test_mode=None):
+        if test_mode != None:
+            try:
+                value = test_mode.upper()
+                self.test_mode = TestMode[value]
+                print("INFO: `test_mode` set to {}".format(self.test_mode))
+            except KeyError as ex:
+                print("ERROR: invalid `test_mode`: {!r}".format(test_mode))
+            except Exception as ex:
+                print(ex.message)
+
+    #!========================================================================
+
     def show_all(self):
         print("-------------------------------------------------------------")
         print("Config values")
@@ -296,13 +429,16 @@ class Config(object):
         print("web_server = {}".format(self.web_server))
         print("web_server_measurements_log = {}".format(self.web_server_measurements_log))
 
-        print("num_channels = {}".format(self.num_channels))
+        print("bank_count = {}".format(self.bank_count))
+        print("channel_count = {}".format(self.channel_count))
 
         print("sample_bits = {}".format(self.sample_bits))
 
         print("sample_frequency = {}".format(self.sample_frequency))
 
+        print("adc_polarity = {}".format(self.adc_polarity))
         print("sample_offset = {}".format(self.sample_offset))
+        print("adc_offset = {}".format(self.adc_offset))
 
         print("voltage_range_pp = {}".format(self.voltage_range_pp))
 
@@ -330,6 +466,11 @@ class Config(object):
         print("show_phase_arrays_on_pd_event = {}".format(self.show_phase_arrays_on_pd_event))
         print("show_capture_buffers = {}".format(self.show_capture_buffers))
 
+        print("peak_detect_mode = {}".format(self.peak_detect_mode))
+
+        print("peak_detect_normal = {}".format(self.peak_detect_normal))
+        print("peak_detect_squared = {}".format(self.peak_detect_squared))
+
         print("peak_detect_numpy_capture_count_limit = {}".format(self.peak_detect_numpy_capture_count_limit))
         print("peak_detect_numpy = {}".format(self.peak_detect_numpy))
         print("peak_detect_numpy_debug = {}".format(self.peak_detect_numpy_debug))
@@ -340,8 +481,8 @@ class Config(object):
         print("peak_detect_fpga_fix = {}".format(self.peak_detect_fpga_fix))
         print("peak_detect_fpga_fix_debug = {}".format(self.peak_detect_fpga_fix_debug))
 
-        print("peak_detection = {}".format(self.peak_detection))
-        print("peak_detection_debug = {}".format(self.peak_detection_debug))
+        print("peak_detect = {}".format(self.peak_detect))
+        print("peak_detect_debug = {}".format(self.peak_detect_debug))
 
         print("tf_mapping = {}".format(self.tf_mapping))
         print("tf_mapping_debug = {}".format(self.tf_mapping_debug))
@@ -368,42 +509,140 @@ class Config(object):
 
         print("append_gps_data_to_measurements_log = {}".format(self.append_gps_data_to_measurements_log))
 
+        print("save_capture_data = {}".format(self.save_capture_data))
+
+        print("test_mode = {}".format(self.test_mode))
+
         print("-------------------------------------------------------------")
-
-##############################################################################
-
-def app_main(capture_count=0, pps_mode=True, web_server=None, show_measurements=False, append_gps_data=False):
-    """Main entry if running this module directly."""
-
-    print(__name__)
-
-    config = Config()
-
-    if capture_count:
-        config.set_capture_count(capture_count)
-        print("INFO: `capture_count` set to {}".format(config.capture_count))
-
-    if not pps_mode:
-        config.set_capture_mode('manual')
-        print("INFO: `capture_mode` set to {}".format(config.capture_mode))
-
-    if web_server:
-        config.set_web_server(web_server)
-        print("INFO: `web_server' set to {}".format(config.web_server))
-
-    if show_measurements:
-        config.set_show_measurements(show_measurements)
-        print("INFO: `show_measurements' set to {}".format(config.show_measurements))
-
-    if append_gps_data:
-        config.set_append_gps_data(append_gps_data)
-        print("INFO: `append_gps_data_to_measurements_log' set to {}".format(config.append_gps_data_to_measurements_log))
-
-    config.show_all()
 
 #!============================================================================
 
+class Config(ConfigDefault):
+
+    #!
+    #! Default values.  Can be overridden by settings file or command line.
+    #!
+
+    #!========================================================================
+
+    def __init__(self):
+        super(Config, self).__init__()
+
+    ##========================================================================
+
+    def read_settings_file(self):
+        #! Using 'import' is quick and dirty method to read in settings from a file.
+        #! It relies on settings.py being available in the python path to load the 'module'
+        #! Currently a symlink is used from settings.py in app directory to the settings file.
+        import settings
+
+        self.serial_number                       =            getattr(settings, 'SERIAL_NUMBER',                       self.serial_number)
+        self.site_name                           =            getattr(settings, 'SITE_NAME',                           self.site_name)
+        self.reporting_sms_phone_numbers         = list(      getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',         self.reporting_sms_phone_numbers) )
+        self.pd_event_trigger_voltage            = float(     getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',            self.pd_event_trigger_voltage) )
+        self.pd_event_reporting_interval         = int(       getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',         self.pd_event_reporting_interval) )
+        self.efd_ping_servers                    = list(      getattr(settings, 'EFD_PING_SERVERS',                    self.efd_ping_servers) )
+        self.web_server                          =            getattr(settings, 'WEB_SERVER',                          self.web_server)
+        self.timezone                            =            getattr(settings, 'TIMEZONE',                            self.timezone)
+        self.append_gps_data_to_measurements_log = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
+        self.save_capture_data                   = bool( int( getattr(settings, 'SAVE_CAPTURE_DATA',                   ConfigDefault.save_capture_data) ) )
+        fft_size                                 = int(       getattr(settings, 'FFT_SIZE',                            ConfigDefault.fft_size) )
+        self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
+        peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
+
+        self.set_capture_count()
+        #self.set_serial_number()
+        self.set_fft_size(fft_size)
+        self.set_efd_ping_uris()
+        self.set_web_uris()
+        self.set_measurements_log_field_names()
+        self.set_peak_detect_mode(peak_detect_mode)
+
+##############################################################################
+
 def argh_main():
+
+    config = Config()
+
+    #! override defaults with settings in user settings file.
+    config.read_settings_file()
+
+    #!------------------------------------------------------------------------
+
+    def app_main(capture_count          = config.capture_count,
+                 capture_mode           = config.capture_mode,
+                 pps_delay              = config.pps_delay,
+                 adc_polarity           = config.adc_polarity.name.lower(),
+                 adc_offset             = config.adc_offset,
+                 peak_detect_mode       = config.peak_detect_mode.name.lower(),
+                 peak_detect_normal     = config.peak_detect_normal,
+                 peak_detect_squared    = config.peak_detect_squared,
+                 fft_size               = config.fft_size,
+                 web_server             = config.web_server,
+                 show_measurements      = config.show_measurements,
+                 show_capture_buffers   = config.show_capture_buffers,
+                 show_capture_debug     = config.show_capture_debug,
+                 append_gps_data        = config.append_gps_data_to_measurements_log,
+                 save_capture_data      = config.save_capture_data,
+                 test_mode              = config.test_mode.name.lower(),
+                 ):
+        """Main entry if running this module directly."""
+
+        print(__name__)
+
+        #! override user settings file if command line argument differs.
+
+        if capture_count != config.capture_count:
+            config.set_capture_count(capture_count)
+
+        if capture_mode != config.capture_mode:
+            config.set_capture_mode(capture_mode)
+
+        if pps_delay != config.pps_delay:
+            config.set_pps_delay(pps_delay)
+
+        if adc_polarity != config.adc_polarity.name.lower():
+            config.set_adc_polarity(adc_polarity)
+
+        if adc_offset != config.adc_offset:
+            config.set_adc_offset(adc_offset)
+
+        if peak_detect_mode != config.peak_detect_mode.name.lower():
+            config.set_peak_detect_mode(peak_detect_mode)
+
+        if peak_detect_normal != config.peak_detect_normal:
+            config.set_peak_detect_normal(peak_detect_normal)
+
+        if peak_detect_squared != config.peak_detect_squared:
+            config.set_peak_detect_squared(peak_detect_squared)
+
+        if fft_size != config.fft_size:
+            config.set_fft_size(fft_size)
+
+        if web_server != config.web_server:
+            config.set_web_server(web_server)
+
+        if show_measurements != config.show_measurements:
+            config.set_show_measurements(show_measurements)
+
+        if show_capture_buffers != config.show_capture_buffers:
+            config.set_show_capture_buffers(show_capture_buffers)
+
+        if show_capture_debug != config.show_capture_debug:
+            config.set_show_capture_debug(show_capture_debug)
+
+        if append_gps_data != config.append_gps_data_to_measurements_log:
+            config.set_append_gps_data(append_gps_data)
+
+        if save_capture_data != config.save_capture_data:
+            config.set_save_capture_data(save_capture_data)
+
+        if test_mode != config.test_mode.name.lower():
+            config.set_test_mode(test_mode)
+
+        config.show_all()
+
+    #!------------------------------------------------------------------------
 
     argh.dispatch_command(app_main)
 

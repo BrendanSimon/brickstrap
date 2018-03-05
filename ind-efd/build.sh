@@ -2,7 +2,7 @@
  
 NOW=$(date +%Y%m%dT%H%M%S)
 
-VERSION="0.10.4"
+VERSION="0.11.0-dev"
 #VERSION="sepl-dev-${NOW}"
  
 BOARD="ind-efd"

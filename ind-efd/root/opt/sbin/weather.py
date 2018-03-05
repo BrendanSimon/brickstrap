@@ -8,11 +8,9 @@
 
 '''
 This module retrieves weather parameters from a weather station.
-Support weather stations are:
+Supported weather stations are:
     * Vaisala Weather Transmitter WXT520
 '''
-
-import ind
 
 #! =========================================
 #! Weather Station Output - composite output
@@ -50,11 +48,13 @@ import ind
 
 import sys
 import time
-import select
 import serial
 import threading
 import re
 
+import selectors2 as selectors
+
+import ind
 
 #! Serial port implemented in Zynq FPGA, registered as /dev/ttyS0.
 DEV_NAME = '/dev/ttyS0'
@@ -163,6 +163,8 @@ class Weather_Station(object):
         self.ser_baudrate = None
         self.ser_dev_hand = None
 
+        self.ser_selector = None
+
         self.ind_dev_hand = None
 
         self.init(ser_dev_name=ser_dev_name, baudrate=baudrate)
@@ -181,6 +183,10 @@ class Weather_Station(object):
                                           timeout=self.serial_timeout
                                          )
 
+        # setup the weather selector.
+        self.ser_selector = selectors.DefaultSelector()
+        self.ser_selector.register(self.ser_dev_hand, selectors.EVENT_READ)
+
         self.ind_dev_hand = ind.get_device_handle()
 
         #! Measurement data.
@@ -194,11 +200,17 @@ class Weather_Station(object):
 
         if self.ind_dev_hand:
             self.ind_dev_hand.close()
-            self.ind_dev_hand = None
 
         if self.ser_dev_hand:
+            # unregister serial device from selector.
+            if self.ser_selector:
+                self.ser_selector.unregister(self.ser_dev_hand)
+
             self.ser_dev_hand.close()
-            self.ser_dev_hand = None
+
+        self.ind_dev_hand = None
+        self.ser_selector = None
+        self.ser_dev_hand = None
 
     #!------------------------------------------------------------------------
 
@@ -283,9 +295,12 @@ class Weather_Station(object):
     def wait_and_process(self):
         '''wait for data and process it.'''
 
-        r = select.select([self.ser_dev_hand], [], [], self.select_timeout)
-        #print("DEBUG: r = {!r}".format(r))
-        if not r[0]:
+        have_data = False
+        events = self.ser_selector.select(timeout=self.select_timeout)
+        for key, event in events:
+            if event & selectors.EVENT_READ:
+                have_data = True
+        if not have_data:
             #print("DEBUG: TIMEOUT: wait_and_process")
             return
 

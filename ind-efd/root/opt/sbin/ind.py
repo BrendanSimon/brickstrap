@@ -8,6 +8,8 @@ IND_FPGA_API = 1
 
 from enum import IntEnum
 
+from efd_config import TestMode
+
 import ioctl
 import ctypes
 import fcntl
@@ -43,7 +45,7 @@ assert(max_capture_size <= mmap_memory_size)
 
 #=============================================================================
 #!
-#! Config Constants
+#! Config Constants/Defaults.
 #!
 #=============================================================================
 class Config(IntEnum):
@@ -52,7 +54,7 @@ class Config(IntEnum):
     DMA_Halt                = 1 << 2
     DMA_Reset               = 1 << 3
     FPGA_Reset              = 1 << 4
-    ADC_Test_Data           = 1 << 5
+    ADC_Test_Data_Post_Fifo = 1 << 5
     PPS_Debug_Mode          = 1 << 6
     DMA_Debug_Mode          = 1 << 7
     Debug_Select_Ch_0       = 0
@@ -62,15 +64,17 @@ class Config(IntEnum):
     Debug_Select_Active     = 1 << 11
     Unsigned_Data           = 0
     Signed_Data             = 1 << 12
+    ADC_Test_Data_Pre_Fifo  = 1 << 13
 
     All                     = PPS_Generate \
                             | Debug_DMA_Start | DMA_Halt | DMA_Reset \
-                            | FPGA_Reset | ADC_Test_Data \
+                            | FPGA_Reset | ADC_Test_Data_Post_Fifo \
                             | PPS_Debug_Mode | DMA_Debug_Mode \
                             | Debug_Select_Ch_0 | Debug_Select_Ch_1 \
                             | Debug_Select_Ch_2 | Debug_Select_Ch_Off \
                             | Debug_Select_Active \
-                            | Unsigned_Data | Signed_Data
+                            | Unsigned_Data | Signed_Data \
+                            | ADC_Test_Data_Pre_Fifo
 
     Mode_Normal             = 0
     Mode_DMA_Debug          = DMA_Debug_Mode
@@ -86,15 +90,18 @@ class Config(IntEnum):
     Mode_Ch_2               = Debug_Select_Active | Debug_Select_Ch_2
     Mode_Ch_Off             = Debug_Select_Active | Debug_Select_Ch_Off
 
-    Mode_Start_Unsigned     = Mode_Normal | Unsigned_Data
-    Mode_Start_Signed       = Mode_Normal | Signed_Data
-    Mode_Manual_Unsigned    = Mode_PPS_Trigger | Unsigned_Data
-    Mode_Manual_Signed      = Mode_PPS_Trigger | Signed_Data
+#     Mode_Start_Unsigned     = Mode_Normal | Unsigned_Data
+#     Mode_Start_Signed       = Mode_Normal | Signed_Data
+#     Mode_Manual_Unsigned    = Mode_PPS_Trigger | Unsigned_Data
+#     Mode_Manual_Signed      = Mode_PPS_Trigger | Signed_Data
+    Mode_Auto_Trigger       = Mode_Normal
     Mode_Manual_Trigger     = Mode_PPS_Trigger
     Mode_Stop               = Mode_System_Halt
 
-    Peak_Start_Disable      = 0x00FFFFFF
-    Peak_Stop_Disable       = 0x00FFFFFF
+    Peak_Start_Disable      = 0x00FFFFFF                #! default
+    Peak_Stop_Disable       = 0x00FFFFFF                #! default
+
+    ADC_Offset              = 0                         #! default
 
 
 #=============================================================================
@@ -304,6 +311,133 @@ else:
 
 #=============================================================================
 
+class Struct_Base(ctypes.Structure):
+
+    def __repr__(self):
+        s = ', '.join("{}={}".format(t[0],getattr(self,t[0])) for t in self._fields_)
+        return "{}: ( {} )".format(self.__class__.__name__, s)
+
+#=============================================================================
+
+class MaxMin(Struct_Base):
+    _fields_ = [
+        #! version 1 : peak values and indices.
+        ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
+        ('_unused_1_',      ctypes.c_int16),        #! __i16 (unused)
+        ('max_ch0_addr',    ctypes.c_uint32),       #! __u32 max_ch0_addr
+        ('min_ch0_data',    ctypes.c_int16),        #! __i16 min_ch0_data
+        ('_unused_2_',      ctypes.c_int16),        #! __i16 (unused)
+        ('min_ch0_addr',    ctypes.c_uint32),       #! __u32 min_ch0_addr
+
+        ('max_ch1_data',    ctypes.c_int16),        #! __i16 max_ch1_data
+        ('_unused_3_',      ctypes.c_int16),        #! __i16 (unused)
+        ('max_ch1_addr',    ctypes.c_uint32),       #! __u32 max_ch1_addr
+        ('min_ch1_data',    ctypes.c_int16),        #! __i16 min_ch1_data
+        ('_unused_4_',      ctypes.c_int16),        #! __i16 (unused)
+        ('min_ch1_addr',    ctypes.c_uint32),       #! __u32 min_ch1_addr
+
+        ('max_ch2_data',    ctypes.c_int16),        #! __i16 max_ch2_data
+        ('_unused_5_',      ctypes.c_int16),        #! __i16 (unused)
+        ('max_ch2_addr',    ctypes.c_uint32),       #! __u32 max_ch2_addr
+        ('min_ch2_data',    ctypes.c_int16),        #! __i16 min_ch2_data
+        ('_unused_6_',      ctypes.c_int16),        #! __i16 (unused)
+        ('min_ch2_addr',    ctypes.c_uint32),       #! __u32 min_ch2_addr
+
+        #! version 2 : add peak counts.
+        ('max_ch0_count',   ctypes.c_uint32),       #! __u32 max_ch0_count
+        ('min_ch0_count',   ctypes.c_uint32),       #! __u32 min_ch0_count
+
+        ('max_ch1_count',   ctypes.c_uint32),       #! __u32 max_ch1_count
+        ('min_ch1_count',   ctypes.c_uint32),       #! __u32 min_ch1_count
+
+        ('max_ch2_count',   ctypes.c_uint32),       #! __u32 max_ch2_count
+        ('min_ch2_count',   ctypes.c_uint32),       #! __u32 min_ch2_count
+    ]
+
+#=============================================================================
+
+class MaxMin2(Struct_Base):
+    _fields_ = [
+        #! version 1 : peak values and indices.
+        ('max_ch0_data',    ctypes.c_int32),        #! __i16 max_ch0_data
+        ('max_ch0_addr',    ctypes.c_uint32),       #! __u32 max_ch0_addr
+        ('min_ch0_data',    ctypes.c_int32),        #! __i16 min_ch0_data
+        ('min_ch0_addr',    ctypes.c_uint32),       #! __u32 min_ch0_addr
+
+        ('max_ch1_data',    ctypes.c_int32),        #! __i16 max_ch1_data
+        ('max_ch1_addr',    ctypes.c_uint32),       #! __u32 max_ch1_addr
+        ('min_ch1_data',    ctypes.c_int32),        #! __i16 min_ch1_data
+        ('min_ch1_addr',    ctypes.c_uint32),       #! __u32 min_ch1_addr
+
+        ('max_ch2_data',    ctypes.c_int32),        #! __i16 max_ch2_data
+        ('max_ch2_addr',    ctypes.c_uint32),       #! __u32 max_ch2_addr
+        ('min_ch2_data',    ctypes.c_int32),        #! __i16 min_ch2_data
+        ('min_ch2_addr',    ctypes.c_uint32),       #! __u32 min_ch2_addr
+
+        #! version 2 : add peak counts.
+        ('max_ch0_count',   ctypes.c_uint32),       #! __u32 max_ch0_count
+        ('min_ch0_count',   ctypes.c_uint32),       #! __u32 min_ch0_count
+
+        ('max_ch1_count',   ctypes.c_uint32),       #! __u32 max_ch1_count
+        ('min_ch1_count',   ctypes.c_uint32),       #! __u32 min_ch1_count
+
+        ('max_ch2_count',   ctypes.c_uint32),       #! __u32 max_ch2_count
+        ('min_ch2_count',   ctypes.c_uint32),       #! __u32 min_ch2_count
+    ]
+
+#=============================================================================
+
+class TimeSpec(Struct_Base):
+    _fields_ = [
+        ('tv_sec',    ctypes.c_long),
+        ('tv_nsec',   ctypes.c_long),
+    ]
+
+#=============================================================================
+
+class CaptureInfo(Struct_Base):
+    _fields_ = [
+        ('irq_time',                TimeSpec),          #! struct timespec irq_time
+        ('int_status',              ctypes.c_uint32),   #! __u32 status
+        ('irq_count',               ctypes.c_uint32),   #! __u32 irq_count
+        ('semaphore',               ctypes.c_int32),    #! __u32 semaphore
+        ('adc_clock_count_per_pps', ctypes.c_uint32),   #! __u32 adc_clock_count_per_pps
+        ('bank',                    ctypes.c_int32),    #! __u32 bank
+        ('maxmin_normal',           MaxMin),            #! IND_maxmin_struct maxmin_normal
+        ('maxmin_squared',          MaxMin2),           #! IND_maxmin_struct maxmin_squared
+    ]
+
+#=============================================================================
+
+class FPGA_Version(ctypes.Structure):
+    _fields_ = [
+        ('_unused_0_',      ctypes.c_uint16),       #! __u16 unused
+        ('major',           ctypes.c_uint8),        #! __u8 major version number
+        ('minor',           ctypes.c_uint8),        #! __u8 minor version number
+    ]
+
+class bit_flag_struct(ctypes.Structure):
+    _fields_ = [
+        ('set',             ctypes.c_uint32),       #! __u32 set
+        ('clear',           ctypes.c_uint32),       #! __u32 clear
+        ('toggle',          ctypes.c_uint32),       #! __u32 clear
+    ]
+
+class spi_cmd_struct(ctypes.Structure):
+    _fields_ = [
+        ('port_devices',    ctypes.c_uint32 * 16),  #! __u32 port_device[16]
+        ('port_addr',       ctypes.c_uint32 * 16),  #! __u32 port_addr[16]
+        ('port_data',       ctypes.c_uint32 * 16),  #! __u32 port_data[16]
+        ('num_spi_writes',  ctypes.c_uint32)        #! __u32 num_spi_writes
+    ]
+
+class debug_struct(ctypes.Structure):
+    _fields_ = [
+        ('cmd',     ctypes.c_uint32),               #! __u32 cmd
+        ('reg',     ctypes.c_uint32),               #! __u32 reg
+        ('data',    ctypes.c_uint32),               #! __u32 data
+    ]
+
 class cmd_struct(ctypes.Structure):
     _fields_ = [
         ('config',                  ctypes.c_uint32),   #! __u32 config
@@ -313,59 +447,7 @@ class cmd_struct(ctypes.Structure):
         ('delay_count',             ctypes.c_uint32),   #! __u32 delay_count
         ('peak_detect_start_count', ctypes.c_uint32),   #! __u32 delay_count
         ('peak_detect_stop_count',  ctypes.c_uint32),   #! __u32 delay_count
-    ]
-
-class maxmin_struct(ctypes.Structure):
-    _fields_ = [
-        ('max_ch0_data',    ctypes.c_int16),        #! __i16 max_ch0_data
-        ('_unused_1_',      ctypes.c_int16),        #! __i16 max_ch2_data
-        ('max_ch0_addr',    ctypes.c_uint32),       #! __u32 max_ch0_addr
-        ('min_ch0_data',    ctypes.c_int16),        #! __i16 min_ch0_data
-        ('_unused_2_',      ctypes.c_int16),        #! __i16 max_ch2_data
-        ('min_ch0_addr',    ctypes.c_uint32),       #! __u32 min_ch0_addr
-
-        ('max_ch1_data',    ctypes.c_int16),        #! __i16 max_ch1_data
-        ('_unused_3_',      ctypes.c_int16),        #! __i16 max_ch2_data
-        ('max_ch1_addr',    ctypes.c_uint32),       #! __u32 max_ch1_addr
-        ('min_ch1_data',    ctypes.c_int16),        #! __i16 min_ch1_data
-        ('_unused_4_',      ctypes.c_int16),        #! __i16 max_ch2_data
-        ('min_ch1_addr',    ctypes.c_uint32),       #! __u32 min_ch1_addr
-
-        ('max_ch2_data',    ctypes.c_int16),        #! __i16 max_ch2_data
-        ('_unused_5_',      ctypes.c_int16),        #! __i16 max_ch2_data
-        ('max_ch2_addr',    ctypes.c_uint32),       #! __u32 max_ch2_addr
-        ('min_ch2_data',    ctypes.c_int16),        #! __i16 min_ch2_data
-        ('_unused_6_',      ctypes.c_int16),        #! __i16 min_ch2_data
-        ('min_ch2_addr',    ctypes.c_uint32),       #! __u32 min_ch2_addr
-    ]
-
-class FPGA_Version(ctypes.Structure):
-    _fields_ = [
-        ('_unused_0_',      ctypes.c_uint16),       ## __u16 unused
-        ('major',           ctypes.c_uint8),        ## __u8 major version number
-        ('minor',           ctypes.c_uint8),        ## __u8 minor version number
-    ]
-
-class bit_flag_struct(ctypes.Structure):
-    _fields_ = [
-        ('set',             ctypes.c_uint),         #! __u32 set
-        ('clear',           ctypes.c_uint),         #! __u32 clear
-        ('toggle',          ctypes.c_uint),         #! __u32 clear
-    ]
-
-class spi_cmd_struct(ctypes.Structure):
-    _fields_ = [
-        ('port_devices',    ctypes.c_uint * 16),    #! __u32 port_device[16]
-        ('port_addr',       ctypes.c_uint * 16),    #! __u32 port_addr[16]
-        ('port_data',       ctypes.c_uint * 16),    #! __u32 port_data[16]
-        ('num_spi_writes',  ctypes.c_uint)          #! __u32 num_spi_writes
-    ]
-
-class debug_struct(ctypes.Structure):
-    _fields_ = [
-        ('cmd',     ctypes.c_uint),                 #! __u32 cmd
-        ('reg',     ctypes.c_uint),                 #! __u32 reg
-        ('data',    ctypes.c_uint),                 #! __u32 data
+        ('adc_offset',              ctypes.c_int32),    #! __s32 adc_offset
     ]
 
 
@@ -377,10 +459,18 @@ class debug_struct(ctypes.Structure):
 
 IOCTL_BASE = ord('t')
 
+IOCTL_ID_BASE = 0x80
+
+def _IOW(id, structure):
+    val = ioctl._IOW(IOCTL_BASE, (IOCTL_ID_BASE + id), ctypes.sizeof(structure))
+    return val
+
+def _IOR(id, structure):
+    val = ioctl._IOR(IOCTL_BASE, (IOCTL_ID_BASE + id), ctypes.sizeof(structure))
+    return val
+
 def _IOWR(id, structure):
-    val = ioctl._IOWR(IOCTL_BASE, (0x80 + id), ctypes.sizeof(structure))
-    #val = ioctl._IOWR(IOCTL_BASE, (0x80 + id), 16)
-    #print("DEBUG: _IOWR: val = 0x{:0X}".format(val))
+    val = ioctl._IOWR(IOCTL_BASE, (IOCTL_ID_BASE + id), ctypes.sizeof(structure))
     return val
 
 # Can't use enum with Python2, if value has top bit set.
@@ -406,9 +496,14 @@ class IOCTL:
     IND_USER_REG_DEBUG                  = _IOWR(0x0F, structure=cmd_struct)
     IND_USER_MODIFY_LEDS                = _IOWR(0x10, structure=bit_flag_struct)
     IND_USER_MODIFY_CTRL                = _IOWR(0x11, structure=bit_flag_struct)
-    IND_USER_READ_MAXMIN                = _IOWR(0x12, structure=maxmin_struct)
+    IND_USER_READ_MAXMIN_NORMAL         = _IOR( 0x12, structure=MaxMin)
     IND_USER_FPGA_VERSION               = _IOWR(0x13, structure=FPGA_Version)
-    IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint)
+    IND_USER_ADC_CLOCK_COUNT_PER_PPS    = _IOWR(0x14, structure=ctypes.c_uint32)
+    IND_USER_ADC_OFFSET_SET             = _IOW( 0x15, structure=ctypes.c_int32)
+    IND_USER_ADC_OFFSET_GET             = _IOR( 0x16, structure=ctypes.c_int32)
+    IND_USER_READ_MAXMIN_SQUARED        = _IOR( 0x17, structure=MaxMin2)
+    IND_USER_CAPTURE_INFO_0_GET         = _IOR( 0x18, structure=CaptureInfo)
+    IND_USER_CAPTURE_INFO_1_GET         = _IOR( 0x19, structure=CaptureInfo)
 
 #!===========================================================================
 #!  Library functions.
@@ -420,7 +515,7 @@ def get_device_handle():
         #dev_hand = open(dev_name, 'rw')
         dev_hand = open(dev_name, 'r+b')
         #print("DEBUG: dev_hand={!r}".format(dev_hand))
-    except:
+    except IOError:
         print("EXCEPTION: opening device name '{}'".format(dev_name))
         raise
     return dev_hand
@@ -432,8 +527,8 @@ def fpga_reset(dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_RESET, 0)
-    except:
-        print("EXCEPTION: resetting ADC DMA engine.")
+    except IOError:
+        print("IOError: resetting ADC DMA engine.")
         raise
 
 def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
@@ -459,8 +554,8 @@ def leds_modify(on=0, off=0, toggle=0, dev_hand=None):
     try:
         #print("DEBUG: modifying LEDS '{!r}'".format(bits))
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_MODIFY_LEDS, bits)
-    except:
-        print("EXCEPTION: modifying LEDS '{!r}'".format(bits))
+    except IOError:
+        print("IOError: modifying LEDS '{!r}'".format(bits))
         raise
 
 def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
@@ -484,8 +579,8 @@ def ctrl_modify(set=0, clear=0, toggle=0, dev_hand=None):
     try:
         #print("DEBUG: modifying LEDS '{!r}'".format(bits))
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_MODIFY_CTRL, bits)
-    except:
-        print("EXCEPTION: modifying CTRL '{!r}'".format(bits))
+    except IOError:
+        print("IOError: modifying CTRL '{!r}'".format(bits))
         raise
 
 def modem_power_pulse(duration, dev_hand=None):
@@ -526,6 +621,7 @@ def modem_power_on(dev_hand=None):
 
 def adc_memory_map(size=0, dev_hand=None):
     '''Get ADC Memory Map.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -535,7 +631,7 @@ def adc_memory_map(size=0, dev_hand=None):
     try:
         #mem = mmap.mmap(dev_hand.fileno(), length=size, access=mmap.ACCESS_READ, offset=0)
         mem = mmap.mmap(dev_hand.fileno(), length=size, offset=0)
-    except:
+    except Exception:
         print("EXCEPTION: getting ADC Memory Map.")
         raise
 
@@ -543,48 +639,54 @@ def adc_memory_map(size=0, dev_hand=None):
 
 def adc_dma_reset(dev_hand=None):
     '''Reset ADC DMA engine.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_DMA_RESET, 0)
-    except:
-        print("EXCEPTION: resetting ADC DMA engine.")
+    except IOError:
+        print("IOError: resetting ADC DMA engine.")
         raise
 
 def adc_capture_address(address=0, dev_hand=None):
     '''Set capture offset address.  Use for ping-pong capture.  Should be either 0 or half the buffer size.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_ADDRESS, address)
-    except:
-        print("EXCEPTION: setting capture address.")
+    except IOError:
+        print("IOError: setting capture address.")
         raise
 
-def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable=False, capture_count=0, delay_count=0, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
+def adc_capture_set_mode(address=0,
+                         mode=Config.Mode_PPS_Debug,
+                         interrupt_enable=False,
+                         capture_count=0,
+                         delay_count=0,
+                         peak_detect_start_count=Config.Peak_Start_Disable,
+                         peak_detect_stop_count=Config.Peak_Stop_Disable,
+                         adc_offset=Config.ADC_Offset,
+                         dev_hand=None):
     '''Setup ADC Capture parameters.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     cmd = cmd_struct()
 
-    #cmd.config = Config.Mode_Normal
-    #cmd.config = Config.Mode_DMA_Debug
-    #cmd.config = Config.Mode_DMA_Trigger
-    #cmd.config = Config.Mode_PPS_Debug
-    #cmd.config = Config.Mode_PPS_Trigger
     cmd.config = mode
-
     cmd.interrupt = 1 if interrupt_enable else 0
     cmd.address = address
     cmd.capture_count = capture_count
     cmd.delay_count = delay_count
     cmd.peak_detect_start_count = peak_detect_start_count
     cmd.peak_detect_stop_count = peak_detect_stop_count
+    cmd.adc_offset = adc_offset
 
-    if 0:
+    if 1:
         print("DEBUG: adc_capture_mode_set: cmd.config=0x{:08x}".format(cmd.config))
         print("DEBUG: adc_capture_mode_set: cmd.interrupt=0x{:08x}".format(cmd.interrupt))
         print("DEBUG: adc_capture_mode_set: cmd.address=0x{:08x}".format(cmd.address))
@@ -592,34 +694,65 @@ def adc_capture_set_mode(address=0, mode=Config.Mode_PPS_Debug, interrupt_enable
         print("DEBUG: adc_capture_mode_set: cmd.delay_count=0x{:08x}".format(cmd.delay_count))
         print("DEBUG: adc_capture_mode_set: cmd.peak_detect_start_count=0x{:08x}".format(cmd.peak_detect_start_count))
         print("DEBUG: adc_capture_mode_set: cmd.peak_detect_stop_count=0x{:08x}".format(cmd.peak_detect_stop_count))
+        print("DEBUG: adc_capture_mode_set: cmd.adc_offset={}".format(cmd.adc_offset))
 
-    status = status_get(dev_hand=dev_hand)
+    #status = status_get(dev_hand=dev_hand)
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_MODE, cmd)
-    except:
-        print("EXCEPTION: ADC Capture Setup.")
+    except IOError:
+        print("IOError: ADC Capture Setup.")
         raise
 
     #status = status_get(dev_hand=dev_hand)
 
-def adc_capture_start(address, capture_count, delay_count, capture_mode='auto', signed=True, peak_detect_start_count=Config.Peak_Start_Disable, peak_detect_stop_count=Config.Peak_Stop_Disable, dev_hand=None):
+def adc_capture_start(address,
+                      capture_count,
+                      delay_count,
+                      capture_mode='auto',
+                      signed=True,
+                      peak_detect_start_count=Config.Peak_Start_Disable,
+                      peak_detect_stop_count=Config.Peak_Stop_Disable,
+                      adc_offset=Config.ADC_Offset,
+                      test_mode=TestMode.NORMAL,
+                      dev_hand=None):
     '''Start ADC Capture.'''
 
-    if capture_mode == 'manual':
-        mode_start = Config.Mode_Manual_Signed if signed else Config.Mode_Manual_Unsigned
-    elif capture_mode == 'auto':
-        mode_start = Config.Mode_Start_Signed if signed else Config.Mode_Start_Unsigned
-    else:
+    if capture_mode not in [ 'auto', 'manual' ]:
         msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
         raise ValueError(msg)
 
-    adc_capture_set_mode(address=address, mode=mode_start, interrupt_enable=True, capture_count=capture_count, delay_count=delay_count, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=dev_hand)
+    mode_start = 0
+
+    mode_start |= Config.Mode_Manual_Trigger if capture_mode == 'manual' else 0
+    mode_start |= Config.Mode_Auto_Trigger   if capture_mode == 'auto'   else 0
+
+    mode_start |= Config.Signed_Data if signed else Config.Unsigned_Data
+
+    mode_start |= Config.ADC_Test_Data_Post_Fifo if test_mode == TestMode.ADC_POST_FIFO else 0
+    mode_start |= Config.ADC_Test_Data_Pre_Fifo  if test_mode == TestMode.ADC_PRE_FIFO  else 0
+
+    print("DEBUG: adc_capture_start: capture_mode={}".format(capture_mode))
+    print("DEBUG: adc_capture_start: test_mode={}".format(test_mode))
+    print("DEBUG: adc_capture_start: mode_start=0x{:08x}".format(mode_start))
+
+    adc_capture_set_mode(address=address,
+                         mode=mode_start,
+                         interrupt_enable=True,
+                         capture_count=capture_count,
+                         delay_count=delay_count,
+                         peak_detect_start_count=peak_detect_start_count,
+                         peak_detect_stop_count=peak_detect_stop_count,
+                         adc_offset=adc_offset,
+                         dev_hand=dev_hand)
 
 def adc_capture_stop(dev_hand=None):
     '''Stop ADC Capture.'''
 
-    adc_capture_set_mode(address=0, mode=Config.Mode_Stop, interrupt_enable=False, dev_hand=dev_hand)
+    adc_capture_set_mode(address=0,
+                         mode=Config.Mode_Stop,
+                         interrupt_enable=False,
+                         dev_hand=dev_hand)
 
 def adc_trigger(dev_hand=None):
     '''Manually Trigger ADC Capture.'''
@@ -627,35 +760,72 @@ def adc_trigger(dev_hand=None):
     arg = Config.Mode_Manual_Trigger
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_TRIG_PPS, arg)
-    except:
-        print("EXCEPTION: ADC Trigger.")
+    except IOError:
+        print("IOError: ADC Trigger.")
         raise
 
-def adc_capture_maxmin_get(dev_hand=None):
-    '''Get the maximum and minimum sample values and indices of each channel.'''
+def adc_capture_maxmin_normal_get(dev_hand=None):
+    '''Get the maximum and minimum normal sample values and indices of each channel.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
-    maxmin = maxmin_struct()
+    maxmin = MaxMin()
     try:
         #! set mutable flag to true to place data in maxmin object.
-        fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN, maxmin, True)
-    except:
-        print("EXCEPTION: ADC Capture MaxMin Get.")
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_NORMAL, maxmin, True)
+    except IOError:
+        print("IOError: ADC Capture MaxMin Normal Get.")
         raise
 
     return maxmin
 
+def adc_capture_maxmin_squared_get(dev_hand=None):
+    '''Get the maximum and minimum squared sample values and indices of each channel.'''
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+#     maxmin = MaxMin()
+    maxmin = MaxMin2()
+    try:
+        #! set mutable flag to true to place data in maxmin object.
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_READ_MAXMIN_SQUARED, maxmin, True)
+    except IOError:
+        print("IOError: ADC Capture MaxMin Squared Get.")
+        raise
+
+    return maxmin
+
+def adc_capture_info_get(bank, dev_hand=None):
+    '''Get the capture info from the kernel driver.'''
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    ioctl_id = IOCTL.IND_USER_CAPTURE_INFO_0_GET if bank == 0 else IOCTL.IND_USER_CAPTURE_INFO_1_GET
+
+    capture_info = CaptureInfo()
+    try:
+        #! set mutable flag to true to place data in our object.
+        fcntl.ioctl(dev_hand, ioctl_id, capture_info, True)
+    except IOError:
+        print("IOError: ADC Capture Info Get.")
+        raise
+
+    return capture_info
+
 def status_get(dev_hand=None):
-    '''Get Status.'''
+    '''Get FPGA Status.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_STATUS, "1234")
-        value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: Get Status.")
+        value = struct.unpack('L', a)[0]
+    except IOError:
+        print("IOError: Get Status.")
         raise
 
     #print("DEBUG: status_get: status = 0x{:08x}".format(value))
@@ -663,31 +833,34 @@ def status_get(dev_hand=None):
 
 def adc_semaphore_get(dev_hand=None):
     '''Get ADC Semaphore.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_GET_SEM, "1234")
-        value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: ADC Get Semaphore.")
+        value = struct.unpack('L', a)[0]
+    except IOError:
+        print("IOError: ADC Get Semaphore.")
         raise
 
     return value
 
 def adc_semaphore_set(value=0, dev_hand=None):
     '''Set ADC Semaphore.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SET_SEM, value)
-    except:
-        print("EXCEPTION: ADC Set Semaphore.")
+    except IOError:
+        print("IOError: ADC Set Semaphore.")
         raise
 
 def adc_output_mode_twos_complement(dev_hand=None):
     '''Set ADC Semaphore.'''
+
     if not dev_hand:
         dev_hand = get_device_handle()
 
@@ -698,8 +871,8 @@ def adc_output_mode_twos_complement(dev_hand=None):
 
     try:
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_SPI_WRITE, spi_cmd)
-    except:
-        print("EXCEPTION: ADC Set Semaphore.")
+    except IOError:
+        print("IOError: ADC Set Semaphore.")
         raise
 
 #!===========================================================================
@@ -714,8 +887,8 @@ def fpga_version_get(dev_hand=None):
     try:
         ## set mutable flag to true to place data in the object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_FPGA_VERSION, fpga_version, True)
-    except:
-        print("EXCEPTION: FPGA Version Get.")
+    except IOError:
+        print("IOError: FPGA Version Get.")
         raise
 
     return fpga_version
@@ -730,9 +903,40 @@ def adc_clock_count_per_pps_get(dev_hand=None):
 
     try:
         a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_CLOCK_COUNT_PER_PPS, "1234")
+        value = struct.unpack('L', a)[0]
+    except IOError:
+        print("IOError: Get ADC Clock Counter Per PPS.")
+        raise
+
+    return value
+
+##----------------------------------------------------------------------------
+
+def adc_offset_set(adc_offset, dev_hand=None):
+    """Set the ADC Offset to be applied to ADC sample stream."""
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    try:
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_OFFSET_SET, adc_offset)
+    except IOError:
+        print("IOError: Set ADC Offset.")
+        raise
+
+##----------------------------------------------------------------------------
+
+def adc_offset_get(dev_hand=None):
+    """Set the ADC DC Offset to be applied to ADC sample stream."""
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    try:
+        a = fcntl.ioctl(dev_hand, IOCTL.IND_USER_ADC_OFFSET_GET, "1234")
         value = struct.unpack('l', a)[0]
-    except:
-        print("EXCEPTION: Get ADC Clock Counter Per PPS.")
+    except IOError:
+        print("IOError: Get ADC Offset.")
         raise
 
     return value
@@ -1062,8 +1266,8 @@ def main():
         #dev_hand = open(dev_name, 'rw')
         dev_hand = open(dev_name, 'r+b')
         print("DEBUG: dev_hand={!r}".format(dev_hand))
-    except:
-        print("EXCEPTION: opening device name '{}'".format(dev_name))
+    except IOError:
+        print("IOError: opening device name '{}'".format(dev_name))
         raise
 
     #led_seq = [ LED.Battery_OK, LED.Power_OK, LED.PPS_OK, LED.Running,

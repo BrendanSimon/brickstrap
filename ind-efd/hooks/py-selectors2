@@ -2,25 +2,25 @@
 
 #!============================================================================
 #!
-#!  Install PySensors python module (not available as a Debian package)
+#!  Install `selectors2` python module (not available as a Debian package)
 #!
 #!============================================================================
 
-PY_MOD="PySensors"
+PY_MOD="selectors2-2.0.1-py2.py3-none-any.whl"
 
-SRC_DIR="third-party/PySensors-0.0.3"
+HOST_SRC_DIR="/host-rootfs/${BOARDDIR}/third-party"
 
-HOST_SRC_DIR="/host-rootfs/${BOARDDIR}/third-party/PySensors-0.0.3"
+HOST_PY_MOD="${HOST_SRC_DIR}/${PY_MOD}"
 
 #!
 #! Debug info.
 #!
 #echo "PY_MOD = '${PY_MOD}'"
-#echo "SRC_DIR = '${SRC_DIR}'"
 #echo "HOST_SRC_DIR = '${HOST_SRC_DIR}'"
+#echo "HOST_PY_MOD = '${HOST_PY_MOD}'"
 
 #!
 #! Install Python module.
 #!
 echo "Installing '${PY_MOD}' ..."
-${CHROOTCMD} bash -c "cd ${HOST_SRC_DIR} && python setup.py install"
+${CHROOTCMD} pip install --upgrade ${HOST_PY_MOD}
