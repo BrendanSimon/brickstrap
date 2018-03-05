@@ -187,6 +187,8 @@ class ConfigDefault(object):
     #! FIXME: this is likely to be temporary !!
     append_gps_data_to_measurements_log = False
 
+    save_capture_data = False
+
     test_mode = TestMode.NORMAL
 
     #!========================================================================
@@ -358,6 +360,13 @@ class ConfigDefault(object):
 
     #!========================================================================
 
+    def set_save_capture_data(self, save_capture_data=None):
+        if save_capture_data != None:
+            self.save_capture_data = bool(save_capture_data)
+            print("INFO: `save_capture_data` set to {}".format(self.save_capture_data))
+
+    #!========================================================================
+
     def set_show_measurements(self, show_measurements=None):
         if show_measurements != None:
             self.show_measurements = bool(show_measurements)
@@ -500,6 +509,8 @@ class ConfigDefault(object):
 
         print("append_gps_data_to_measurements_log = {}".format(self.append_gps_data_to_measurements_log))
 
+        print("save_capture_data = {}".format(self.save_capture_data))
+
         print("test_mode = {}".format(self.test_mode))
 
         print("-------------------------------------------------------------")
@@ -534,6 +545,7 @@ class Config(ConfigDefault):
         self.web_server                          =            getattr(settings, 'WEB_SERVER',                          self.web_server)
         self.timezone                            =            getattr(settings, 'TIMEZONE',                            self.timezone)
         self.append_gps_data_to_measurements_log = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
+        self.save_capture_data                   = bool( int( getattr(settings, 'SAVE_CAPTURE_DATA',                   ConfigDefault.save_capture_data) ) )
         fft_size                                 = int(       getattr(settings, 'FFT_SIZE',                            ConfigDefault.fft_size) )
         self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
         peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
@@ -560,6 +572,7 @@ def argh_main():
     def app_main(capture_count          = config.capture_count,
                  capture_mode           = config.capture_mode,
                  pps_delay              = config.pps_delay,
+                 adc_polarity           = config.adc_polarity.name.lower(),
                  adc_offset             = config.adc_offset,
                  peak_detect_mode       = config.peak_detect_mode.name.lower(),
                  peak_detect_normal     = config.peak_detect_normal,
@@ -570,6 +583,8 @@ def argh_main():
                  show_capture_buffers   = config.show_capture_buffers,
                  show_capture_debug     = config.show_capture_debug,
                  append_gps_data        = config.append_gps_data_to_measurements_log,
+                 save_capture_data      = config.save_capture_data,
+                 test_mode              = config.test_mode.name.lower(),
                  ):
         """Main entry if running this module directly."""
 
@@ -585,6 +600,9 @@ def argh_main():
 
         if pps_delay != config.pps_delay:
             config.set_pps_delay(pps_delay)
+
+        if adc_polarity != config.adc_polarity.name.lower():
+            config.set_adc_polarity(adc_polarity)
 
         if adc_offset != config.adc_offset:
             config.set_adc_offset(adc_offset)
@@ -615,6 +633,12 @@ def argh_main():
 
         if append_gps_data != config.append_gps_data_to_measurements_log:
             config.set_append_gps_data(append_gps_data)
+
+        if save_capture_data != config.save_capture_data:
+            config.set_save_capture_data(save_capture_data)
+
+        if test_mode != config.test_mode.name.lower():
+            config.set_test_mode(test_mode)
 
         config.show_all()
 
