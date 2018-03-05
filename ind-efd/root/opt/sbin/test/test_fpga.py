@@ -391,57 +391,6 @@ class Read_Capture_Buffers_App(object):
         peak_detect_start_count = 0
         peak_detect_stop_count = self.config.capture_count
 
-        #peak_detect_start_count = 0
-        #peak_detect_start_count = 1
-        #peak_detect_start_count = 2
-        #peak_detect_start_count = 7
-        #peak_detect_start_count = 8
-        #peak_detect_start_count = 16
-        #peak_detect_start_count = 32
-        #peak_detect_start_count = 0x80000
-        #peak_detect_start_count = 0x90000
-        #peak_detect_start_count = 0x90010
-        #peak_detect_start_count = 0x90020
-        #peak_detect_start_count = 0x90030
-        #peak_detect_start_count = 0x90040
-        #peak_detect_stop_count = 0
-        #peak_detect_stop_count = 1
-        #peak_detect_stop_count = 2
-        #peak_detect_stop_count = 7
-        #peak_detect_stop_count = 8
-        #peak_detect_stop_count = 9
-        #peak_detect_stop_count = 15
-        #peak_detect_stop_count = 16
-        #peak_detect_stop_count = 17
-        #peak_detect_stop_count = 32
-        #peak_detect_stop_count = 64
-        #peak_detect_stop_count = 0x90000
-        #peak_detect_stop_count = 0x90001
-        #peak_detect_stop_count = 0x90007
-        #peak_detect_stop_count = 0x90008
-        #peak_detect_stop_count = 0x90009
-        #peak_detect_stop_count = 0x9000F
-        #peak_detect_stop_count = 0x90010
-        #peak_detect_stop_count = 0x90011
-        #peak_detect_stop_count = 0x90020
-        #peak_detect_stop_count = 0x90030
-        #peak_detect_stop_count = 0x90040
-        #peak_detect_stop_count = 0x100000
-        #peak_detect_stop_count = self.config.capture_count - 8
-        #peak_detect_stop_count = self.config.capture_count - 6
-        #peak_detect_stop_count = self.config.capture_count - 5
-        #peak_detect_stop_count = self.config.capture_count - 4
-        #peak_detect_stop_count = self.config.capture_count - 3
-        #peak_detect_stop_count = self.config.capture_count - 2
-        #peak_detect_stop_count = self.config.capture_count - 1
-        #peak_detect_stop_count = self.config.capture_count - 0
-        #peak_detect_stop_count = self.config.capture_count + 16
-        #peak_detect_stop_count = self.config.capture_count + 8
-        #peak_detect_stop_count = self.config.capture_count + 4
-        #peak_detect_stop_count = self.config.capture_count + 3
-        #peak_detect_stop_count = self.config.capture_count + 2
-        #peak_detect_stop_count = self.config.capture_count + 1
-
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count = peak_detect_stop_count
 
@@ -1651,8 +1600,6 @@ def argh_main():
     #! additional config items for this app only !!
     #!
 
-    config.save_capture_data        = False
-
     #!------------------------------------------------------------------------
 
     def app_main(capture_count          = config.capture_count,
@@ -1722,7 +1669,7 @@ def argh_main():
             config.set_append_gps_data(append_gps_data)
 
         if save_capture_data != config.save_capture_data:
-            config.save_capture_data = config.save_capture_data
+            config.set_save_capture_data(save_capture_data)
 
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
