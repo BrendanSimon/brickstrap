@@ -110,8 +110,9 @@ fi
 
 ## Confirm format
 while true ; do
-    echo -e "\nAuto-detected current roots on partition ${current_boot_part}"
-    echo "Upgrade roots will be extracted to partition ${upgrade_boot_part}"
+    echo -e "\nAuto-detected current rootfs on partition ${current_boot_part}"
+    echo "Upgrade rootfs will be extracted to partition ${upgrade_boot_part}"
+    echo "WARNING: partition ${upgrade_boot_part} will be erased !!"
     echo -e "\nPlease confirm (type: 'YES' to continue, 'NO' to exit)"
     read r
     if [[ ${r} == "YES" ]] ; then
