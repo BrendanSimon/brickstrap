@@ -1927,7 +1927,7 @@ def argh_main():
             config.set_append_gps_data(append_gps_data)
 
         if save_capture_data != config.save_capture_data:
-            config.save_capture_data = config.save_capture_data
+            config.set_save_capture_data(save_capture_data)
 
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
