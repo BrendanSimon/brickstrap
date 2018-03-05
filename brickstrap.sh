@@ -479,7 +479,11 @@ case "${cmd}" in
     all)
         create-rootfs
         create-tar
-        create-image
+        if true ; then
+            echo "Skipping 'create-image'"
+        else
+            create-image
+        fi
         create-report
     ;;
 
