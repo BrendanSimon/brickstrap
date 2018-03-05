@@ -694,6 +694,7 @@ def adc_capture_set_mode(address=0,
         print("DEBUG: adc_capture_mode_set: cmd.delay_count=0x{:08x}".format(cmd.delay_count))
         print("DEBUG: adc_capture_mode_set: cmd.peak_detect_start_count=0x{:08x}".format(cmd.peak_detect_start_count))
         print("DEBUG: adc_capture_mode_set: cmd.peak_detect_stop_count=0x{:08x}".format(cmd.peak_detect_stop_count))
+        print("DEBUG: adc_capture_mode_set: cmd.adc_offset={}".format(cmd.adc_offset))
 
     #status = status_get(dev_hand=dev_hand)
 
