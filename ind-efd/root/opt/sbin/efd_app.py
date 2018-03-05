@@ -412,7 +412,7 @@ class EFD_App(object):
         #peak_detect_start_count=ind.Config.Peak_Start_Disable
         #peak_detect_stop_count=ind.Config.Peak_Stop_Disable
         peak_detect_start_count = 0
-        peak_detect_stop_count  = self.config.capture_count - 1
+        peak_detect_stop_count  = self.config.capture_count
 
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count  = peak_detect_stop_count
