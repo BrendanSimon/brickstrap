@@ -24,7 +24,7 @@ settings_orig="/mnt/data/etc/settings_ORIG"
 settings_old="/mnt/data/etc/settings_OLD"
 settings_new="/mnt/data/etc/settings_NEW"
 
-reboot_delay=10
+reboot_delay=3
 
 ## Set to "#" to do a dry-run (no actions)
 #dryrun="#"
@@ -71,8 +71,13 @@ copy_from_current_fs()
 {
     local src="$1"
     local dst="${upgrade_root_mnt}$1"
+
+    if [ -d "${src}" ] ; then
+        dst=$(dirname "${dst}")
+    fi
+
     if [[ -e ${src} ]] ; then
-        echo "copying '${src}'"
+        echo "copying '${src}' => '${dst}'"
         cmd cp -a "${src}" "${dst}"
     fi
 }
@@ -148,6 +153,7 @@ cmd tar --extract --gzip --file "${prog_dir}/${archive}"
 ## Copy config files from current rootfs to upgrade rootfs.
 ##
 copy_from_current_fs /etc/hostname
+copy_from_current_fs /etc/ssh
 copy_from_current_fs /home/sepladmin/.ssh
 copy_from_current_fs /home/sepluser/.ssh
 copy_from_current_fs /home/efdadmin/.ssh
