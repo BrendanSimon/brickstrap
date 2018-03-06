@@ -787,21 +787,19 @@ class EFD_App(object):
 
     ##------------------------------------------------------------------------
 
-    def peak_convert(self, index, value, index_offset, count):
+    def peak_convert(self, index, value, index_offset, count, voltage_factor):
         '''Convert peak index and value to Peak object, converting to time and voltage.'''
 
         toff = float(index + index_offset) / self.config.sample_frequency
         #toff = float(index + index_offset) * self.time_resolution
         value -= self.config.sample_offset
-        volt = value * self.voltage_factor
-        if self.config.peak_detect_mode == PeakDetectMode.SQUARED:
-            volt *= self.voltage_factor
+        volt = value * voltage_factor
         peak = Peak(index=index, value=value, count=count, time_offset=toff, voltage=volt)
         return peak
 
     ##------------------------------------------------------------------------
 
-    def peak_by_func(self, func, data, index_offset):
+    def peak_by_func(self, func, data, index_offset, voltage_factor):
         '''Search numpy data array (by function) and get the index.'''
         '''Value is converted from sample level to volts.'''
 
@@ -823,29 +821,31 @@ class EFD_App(object):
         delta = time.time() - time0
         #print("DEBUG: np.count_nonzero took {} seconds".format(delta))
 
-        peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count)
+        peak = self.peak_convert(index=idx, value=value, index_offset=index_offset, count=count, voltage_factor=voltage_factor)
         return peak
 
     ##------------------------------------------------------------------------
 
-    def peak_min(self, data, index_offset):
+    def peak_min(self, data, index_offset, voltage_factor):
         '''Search numpy data array for minimum value and the index.'''
         '''Value is converted from sample level to volts.'''
 
-        return self.peak_by_func(func=np.argmin, data=data, index_offset=index_offset)
+        return self.peak_by_func(func=np.argmin, data=data, index_offset=index_offset, voltage_factor=voltage_factor)
 
     ##------------------------------------------------------------------------
 
-    def peak_max(self, data, index_offset):
+    def peak_max(self, data, index_offset, voltage_factor):
         '''Search numpy data array for maximum value and the index.'''
         '''Value is converted from sample level to volts.'''
 
-        return self.peak_by_func(func=np.argmax, data=data, index_offset=index_offset)
+        return self.peak_by_func(func=np.argmax, data=data, index_offset=index_offset, voltage_factor=voltage_factor)
 
     ##------------------------------------------------------------------------
 
     def peak_detect_normal_numpy(self):
         '''Perform peak detection on normal current phases using numpy.'''
+
+        voltage_factor = self.voltage_factor
 
         phase = self.red_phase
         if 0:
@@ -854,9 +854,9 @@ class EFD_App(object):
             phase = np.copy(phase)
         offset = self.config.capture_index_offset_red
         t1 = time.time()
-        peak_max_red = self.peak_max(phase, index_offset=offset)
+        peak_max_red = self.peak_max(phase, index_offset=offset, voltage_factor=voltage_factor)
         t2 = time.time()
-        peak_min_red = self.peak_min(phase, index_offset=offset)
+        peak_min_red = self.peak_min(phase, index_offset=offset, voltage_factor=voltage_factor)
         t3 = time.time()
         red_time_delta_1 = t2 - t1
         red_time_delta_2 = t3 - t2
@@ -870,8 +870,8 @@ class EFD_App(object):
             #! FIXME: for testing only !!
             phase = np.copy(phase)
         offset = self.config.capture_index_offset_wht
-        peak_max_wht = self.peak_max(phase, index_offset=offset)
-        peak_min_wht = self.peak_min(phase, index_offset=offset)
+        peak_max_wht = self.peak_max(phase, index_offset=offset, voltage_factor=voltage_factor)
+        peak_min_wht = self.peak_min(phase, index_offset=offset, voltage_factor=voltage_factor)
 
         phase = self.blu_phase
         if 0:
@@ -879,8 +879,8 @@ class EFD_App(object):
             #! FIXME: for testing only !!
             phase = np.copy(phase)
         offset = self.config.capture_index_offset_blu
-        peak_max_blu = self.peak_max(phase, index_offset=offset)
-        peak_min_blu = self.peak_min(phase, index_offset=offset)
+        peak_max_blu = self.peak_max(phase, index_offset=offset, voltage_factor=voltage_factor)
+        peak_min_blu = self.peak_min(phase, index_offset=offset, voltage_factor=voltage_factor)
 
         self.peak_normal_max_red = peak_max_red
         self.peak_normal_min_red = peak_min_red
@@ -894,14 +894,16 @@ class EFD_App(object):
     def peak_detect_squared_numpy(self):
         '''Perform peak detection on squared current phases using numpy.'''
 
+        voltage_factor = self.voltage_factor ** 2
+
         phase = self.red_phase
         phase = phase.astype(np.int32)
         phase = np.square(phase)
         offset = self.config.capture_index_offset_red
         t1 = time.time()
-        peak_max_red = self.peak_max(phase, index_offset=offset)
+        peak_max_red = self.peak_max(phase, index_offset=offset, voltage_factor=voltage_factor)
         t2 = time.time()
-        peak_min_red = self.peak_min(phase, index_offset=offset)
+        peak_min_red = self.peak_min(phase, index_offset=offset, voltage_factor=voltage_factor)
         t3 = time.time()
         red_time_delta_1 = t2 - t1
         red_time_delta_2 = t3 - t2
@@ -910,19 +912,18 @@ class EFD_App(object):
             print("DEBUG: RED: time_delta_2={}".format(red_time_delta_2))
 
         phase = self.wht_phase
-        phase = np.square(phase.astype(np.int32))
         phase = phase.astype(np.int32)
         phase = np.square(phase)
         offset = self.config.capture_index_offset_wht
-        peak_max_wht = self.peak_max(phase, index_offset=offset)
-        peak_min_wht = self.peak_min(phase, index_offset=offset)
+        peak_max_wht = self.peak_max(phase, index_offset=offset, voltage_factor=voltage_factor)
+        peak_min_wht = self.peak_min(phase, index_offset=offset, voltage_factor=voltage_factor)
 
         phase = self.blu_phase
         phase = phase.astype(np.int32)
         phase = np.square(phase)
         offset = self.config.capture_index_offset_blu
-        peak_max_blu = self.peak_max(phase, index_offset=offset)
-        peak_min_blu = self.peak_min(phase, index_offset=offset)
+        peak_max_blu = self.peak_max(phase, index_offset=offset, voltage_factor=voltage_factor)
+        peak_min_blu = self.peak_min(phase, index_offset=offset, voltage_factor=voltage_factor)
 
         self.peak_squared_max_red = peak_max_red
         self.peak_squared_min_red = peak_min_red
@@ -939,18 +940,19 @@ class EFD_App(object):
         t1 = time.time()
 
         maxmin = self.maxmin_normal
+        voltage_factor = self.voltage_factor
 
         #! channel 0 (red)
-        peak_max_red = self.peak_convert(index=(maxmin.max_ch0_addr & 0xffffff), value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
-        peak_min_red = self.peak_convert(index=(maxmin.min_ch0_addr & 0xffffff), value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
+        peak_max_red = self.peak_convert(index=(maxmin.max_ch0_addr & 0xffffff), value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count, voltage_factor=voltage_factor)
+        peak_min_red = self.peak_convert(index=(maxmin.min_ch0_addr & 0xffffff), value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count, voltage_factor=voltage_factor)
 
-        ## channel 1 (white)
-        peak_max_wht = self.peak_convert(index=(maxmin.max_ch1_addr & 0xffffff), value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
-        peak_min_wht = self.peak_convert(index=(maxmin.min_ch1_addr & 0xffffff), value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
+        #! channel 1 (white)
+        peak_max_wht = self.peak_convert(index=(maxmin.max_ch1_addr & 0xffffff), value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count, voltage_factor=voltage_factor)
+        peak_min_wht = self.peak_convert(index=(maxmin.min_ch1_addr & 0xffffff), value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count, voltage_factor=voltage_factor)
 
-        ## channel 2 (blue)
-        peak_max_blu = self.peak_convert(index=(maxmin.max_ch2_addr & 0xffffff), value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
-        peak_min_blu = self.peak_convert(index=(maxmin.min_ch2_addr & 0xffffff), value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
+        #! channel 2 (blue)
+        peak_max_blu = self.peak_convert(index=(maxmin.max_ch2_addr & 0xffffff), value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count, voltage_factor=voltage_factor)
+        peak_min_blu = self.peak_convert(index=(maxmin.min_ch2_addr & 0xffffff), value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count, voltage_factor=voltage_factor)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
@@ -977,18 +979,19 @@ class EFD_App(object):
         t1 = time.time()
 
         maxmin = self.maxmin_squared
+        voltage_factor = self.voltage_factor ** 2
 
         #! channel 0 (red)
-        peak_max_red = self.peak_convert(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count)
-        peak_min_red = self.peak_convert(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count)
+        peak_max_red = self.peak_convert(index=maxmin.max_ch0_addr, value=maxmin.max_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.max_ch0_count, voltage_factor=voltage_factor)
+        peak_min_red = self.peak_convert(index=maxmin.min_ch0_addr, value=maxmin.min_ch0_data, index_offset=self.config.capture_index_offset_red, count=maxmin.min_ch0_count, voltage_factor=voltage_factor)
 
-        ## channel 1 (white)
-        peak_max_wht = self.peak_convert(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count)
-        peak_min_wht = self.peak_convert(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count)
+        #! channel 1 (white)
+        peak_max_wht = self.peak_convert(index=maxmin.max_ch1_addr, value=maxmin.max_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.max_ch1_count, voltage_factor=voltage_factor)
+        peak_min_wht = self.peak_convert(index=maxmin.min_ch1_addr, value=maxmin.min_ch1_data, index_offset=self.config.capture_index_offset_wht, count=maxmin.min_ch1_count, voltage_factor=voltage_factor)
 
-        ## channel 2 (blue)
-        peak_max_blu = self.peak_convert(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count)
-        peak_min_blu = self.peak_convert(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count)
+        #! channel 2 (blue)
+        peak_max_blu = self.peak_convert(index=maxmin.max_ch2_addr, value=maxmin.max_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.max_ch2_count, voltage_factor=voltage_factor)
+        peak_min_blu = self.peak_convert(index=maxmin.min_ch2_addr, value=maxmin.min_ch2_data, index_offset=self.config.capture_index_offset_blu, count=maxmin.min_ch2_count, voltage_factor=voltage_factor)
 
         t2 = time.time()
         t_delta_1 = t2 - t1
@@ -1016,13 +1019,13 @@ class EFD_App(object):
         peak_value_errors = 0
         peak_count_errors = 0
 
-        ## Do FPGA first (if minmax registers are not double buffered).
+        #! Do FPGA first (if minmax registers are not double buffered).
         if self.config.peak_detect_fpga:
             time0 = time.time()
             ret = self.peak_detect_normal_fpga()
             time1 = time.time()
 
-            ## Maintain reference to FPGA peak values.
+            #! Maintain reference to FPGA peak values.
             fpga_peak_normal_max_red = self.peak_normal_max_red
             fpga_peak_normal_min_red = self.peak_normal_min_red
             fpga_peak_normal_max_wht = self.peak_normal_max_wht
@@ -1047,7 +1050,7 @@ class EFD_App(object):
             ret = self.peak_detect_normal_numpy()
             time1 = time.time()
 
-            ## Maintain reference to numpy peak values.
+            #! Maintain reference to numpy peak values.
             numpy_peak_normal_max_red = self.peak_normal_max_red
             numpy_peak_normal_min_red = self.peak_normal_min_red
             numpy_peak_normal_max_wht = self.peak_normal_max_wht
@@ -1071,9 +1074,9 @@ class EFD_App(object):
                 print("ERROR: SAME OBJECT: fpga_peak_normal_max_red is numpy_peak_normal_max_red !!")
 
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
-            print("\nDEBUG: Peak Detect Check FPGA v Numpy")
+            print("\nDEBUG: Peak Detect Check (FPGA v Numpy)")
 
-            ## Red Max
+            #! Red Max
             if fpga_peak_normal_max_red.value != numpy_peak_normal_max_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_red.value={:+8} numpy_peak_normal_max_red.value={:+8}".format(fpga_peak_normal_max_red.value, numpy_peak_normal_max_red.value))
                 peak_value_errors += 1
@@ -1090,7 +1093,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_red.count={:8} numpy_peak_normal_max_red.count={:8}".format(fpga_peak_normal_max_red.count, numpy_peak_normal_max_red.count))
                 peak_count_errors += 1
 
-            ## Red Min
+            #! Red Min
             if fpga_peak_normal_min_red.value != numpy_peak_normal_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_red.value={:+8} numpy_peak_normal_min_red.value={:+8}".format(fpga_peak_normal_min_red.value, numpy_peak_normal_min_red.value))
                 peak_value_errors += 1
@@ -1107,7 +1110,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_red.count={:8} numpy_peak_normal_min_red.count={:8}".format(fpga_peak_normal_min_red.count, numpy_peak_normal_min_red.count))
                 peak_count_errors += 1
 
-            ## White Max
+            #! White Max
             if fpga_peak_normal_max_wht.value != numpy_peak_normal_max_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_wht.value={:+8} numpy_peak_normal_max_wht.value={:+8}".format(fpga_peak_normal_max_wht.value, numpy_peak_normal_max_wht.value))
                 peak_value_errors += 1
@@ -1124,7 +1127,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_wht.count={:8} numpy_peak_normal_max_wht.count={:8}".format(fpga_peak_normal_max_wht.count, numpy_peak_normal_max_wht.count))
                 peak_count_errors += 1
 
-            ## White Min
+            #! White Min
             if fpga_peak_normal_min_wht.value != numpy_peak_normal_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_wht.value={:+8} numpy_peak_normal_min_wht.value={:+8}".format(fpga_peak_normal_min_wht.value, numpy_peak_normal_min_wht.value))
                 peak_value_errors += 1
@@ -1141,7 +1144,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_min_wht.count={:8} numpy_peak_normal_min_wht.count={:8}".format(fpga_peak_normal_min_wht.count, numpy_peak_normal_min_wht.count))
                 peak_count_errors += 1
 
-            ## Blue Max
+            #! Blue Max
             if fpga_peak_normal_max_blu.value != numpy_peak_normal_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_max_blu.value={:+8} numpy_peak_normal_max_blu.value={:+8}".format(fpga_peak_normal_max_blu.value, numpy_peak_normal_max_blu.value))
                 peak_value_errors += 1
@@ -1158,7 +1161,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_normal_max_blu.count={:8} numpy_peak_normal_max_blu.count={:8}".format(fpga_peak_normal_max_blu.count, numpy_peak_normal_max_blu.count))
                 peak_count_errors += 1
 
-            ## Blue Min
+            #! Blue Min
             if fpga_peak_normal_min_blu.value != numpy_peak_normal_min_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_normal_min_blu.value={:+8} numpy_peak_normal_min_blu.value={:+8}".format(fpga_peak_normal_min_blu.value, numpy_peak_normal_min_blu.value))
                 peak_value_errors += 1
@@ -1196,13 +1199,13 @@ class EFD_App(object):
         peak_value_errors = 0
         peak_count_errors = 0
 
-        ## Do FPGA first (if minmax registers are not double buffered).
+        #! Do FPGA first (if minmax registers are not double buffered).
         if self.config.peak_detect_fpga:
             time0 = time.time()
             ret = self.peak_detect_squared_fpga()
             time1 = time.time()
 
-            ## Maintain reference to FPGA peak values.
+            #! Maintain reference to FPGA peak values.
             fpga_peak_squared_max_red = self.peak_squared_max_red
             fpga_peak_squared_min_red = self.peak_squared_min_red
             fpga_peak_squared_max_wht = self.peak_squared_max_wht
@@ -1227,7 +1230,7 @@ class EFD_App(object):
             ret = self.peak_detect_squared_numpy()
             time1 = time.time()
 
-            ## Maintain reference to numpy peak values.
+            #! Maintain reference to numpy peak values.
             numpy_peak_squared_max_red = self.peak_squared_max_red
             numpy_peak_squared_min_red = self.peak_squared_min_red
             numpy_peak_squared_max_wht = self.peak_squared_max_wht
@@ -1251,9 +1254,9 @@ class EFD_App(object):
                 print("ERROR: SAME OBJECT: fpga_peak_squared_max_red is numpy_peak_squared_max_red !!")
 
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
-            print("\nDEBUG: Peak Detect Check FPGA v Numpy")
+            print("\nDEBUG: Peak Detect Check (FPGA v Numpy)")
 
-            ## Red Max
+            #! Red Max
             if fpga_peak_squared_max_red.value != numpy_peak_squared_max_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_red.value={:+8} numpy_peak_squared_max_red.value={:+8}".format(fpga_peak_squared_max_red.value, numpy_peak_squared_max_red.value))
                 peak_value_errors += 1
@@ -1270,7 +1273,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_red.count={:8} numpy_peak_squared_max_red.count={:8}".format(fpga_peak_squared_max_red.count, numpy_peak_squared_max_red.count))
                 peak_count_errors += 1
 
-            ## Red Min
+            #! Red Min
             if fpga_peak_squared_min_red.value != numpy_peak_squared_min_red.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_red.value={:+8} numpy_peak_squared_min_red.value={:+8}".format(fpga_peak_squared_min_red.value, numpy_peak_squared_min_red.value))
                 peak_value_errors += 1
@@ -1287,7 +1290,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_red.count={:8} numpy_peak_squared_min_red.count={:8}".format(fpga_peak_squared_min_red.count, numpy_peak_squared_min_red.count))
                 peak_count_errors += 1
 
-            ## White Max
+            #! White Max
             if fpga_peak_squared_max_wht.value != numpy_peak_squared_max_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_wht.value={:+8} numpy_peak_squared_max_wht.value={:+8}".format(fpga_peak_squared_max_wht.value, numpy_peak_squared_max_wht.value))
                 peak_value_errors += 1
@@ -1304,7 +1307,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_wht.count={:8} numpy_peak_squared_max_wht.count={:8}".format(fpga_peak_squared_max_wht.count, numpy_peak_squared_max_wht.count))
                 peak_count_errors += 1
 
-            ## White Min
+            #! White Min
             if fpga_peak_squared_min_wht.value != numpy_peak_squared_min_wht.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_wht.value={:+8} numpy_peak_squared_min_wht.value={:+8}".format(fpga_peak_squared_min_wht.value, numpy_peak_squared_min_wht.value))
                 peak_value_errors += 1
@@ -1321,7 +1324,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_min_wht.count={:8} numpy_peak_squared_min_wht.count={:8}".format(fpga_peak_squared_min_wht.count, numpy_peak_squared_min_wht.count))
                 peak_count_errors += 1
 
-            ## Blue Max
+            #! Blue Max
             if fpga_peak_squared_max_blu.value != numpy_peak_squared_max_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_max_blu.value={:+8} numpy_peak_squared_max_blu.value={:+8}".format(fpga_peak_squared_max_blu.value, numpy_peak_squared_max_blu.value))
                 peak_value_errors += 1
@@ -1338,7 +1341,7 @@ class EFD_App(object):
                 print("ERROR: COUNT NOT EQUAL: fpga_peak_squared_max_blu.count={:8} numpy_peak_squared_max_blu.count={:8}".format(fpga_peak_squared_max_blu.count, numpy_peak_squared_max_blu.count))
                 peak_count_errors += 1
 
-            ## Blue Min
+            #! Blue Min
             if fpga_peak_squared_min_blu.value != numpy_peak_squared_min_blu.value:
                 print("ERROR: VALUE NOT EQUAL: fpga_peak_squared_min_blu.value={:+8} numpy_peak_squared_min_blu.value={:+8}".format(fpga_peak_squared_min_blu.value, numpy_peak_squared_min_blu.value))
                 peak_value_errors += 1
@@ -1374,15 +1377,15 @@ class EFD_App(object):
 
         errors = 0
 
-        ##
-        ## Normal Peak Detection.
-        ##
+        #!
+        #! Normal Peak Detection.
+        #!
         if self.config.peak_detect_normal:
             errors += self.peak_detect_normal()
 
-        ##
-        ## Squared Peak Detection.
-        ##
+        #!
+        #! Squared Peak Detection.
+        #!
         if self.config.peak_detect_squared:
             errors += self.peak_detect_squared()
 
