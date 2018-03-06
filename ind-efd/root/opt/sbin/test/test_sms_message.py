@@ -16,6 +16,7 @@ sys.path.append(opt_sbin_path)
 #print("{!r}".format(sys.path))
 
 import efd_app
+from efd_config import Config
 
 ##
 ## CSV file data.
@@ -85,7 +86,7 @@ def test_generate_sms_message():
 
 def test_main():
     global config
-    config = efd_app.config
+    config = Config()
     global app
     app = efd_app.EFD_App(config=config)
     #app.init()
