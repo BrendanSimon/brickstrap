@@ -94,15 +94,15 @@ class ConfigDefault(object):
 
     pd_event_trigger_voltage = 0.10
 
-    capture_count = 10*1000*1000
-
     #! Capture Mode
     #! 'auto'   : PPS triggered.
     #! 'manual' : oneshot software triggered.
     capture_mode = 'auto'
 
-    #! delay between samples in in manual mode (fake pps).
+    #! delay between captures in in manual mode (fake pps).
     pps_delay = 1.0
+
+    capture_count = 10*1000*1000
 
     total_count = sample_frequency * 50 // 1000         #! total of 50ms between start of channel sampling.
 
@@ -229,12 +229,11 @@ class ConfigDefault(object):
     def set_capture_count(self, capture_count=None):
         if capture_count != None:
             self.capture_count = capture_count
+            self.delay_count = self.total_count - self.capture_count
 
-        self.delay_count = self.total_count - self.capture_count
-
-        #print("INFO: capture_count set to {}".format(self.capture_count))
-        #print("INFO: delay_count set to {}".format(self.delay_count))
-        #print("INFO: total_count is {}".format(self.total_count))
+            print("INFO: capture_count set to {}".format(self.capture_count))
+            print("INFO: delay_count set to {}".format(self.delay_count))
+            #print("INFO: total_count is {}".format(self.total_count))
 
         if self.capture_count < self.fft_size:
             print("WARN: fft_size lowered")
@@ -549,8 +548,9 @@ class Config(ConfigDefault):
         fft_size                                 = int(       getattr(settings, 'FFT_SIZE',                            ConfigDefault.fft_size) )
         self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
         peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
+        capture_count                            =            getattr(settings, 'CAPTURE_COUNT',                       None)
 
-        self.set_capture_count()
+        self.set_capture_count(capture_count)
         #self.set_serial_number()
         self.set_fft_size(fft_size)
         self.set_efd_ping_uris()
