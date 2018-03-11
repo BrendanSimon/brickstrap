@@ -168,7 +168,7 @@ if [[ ! -e ${settings_orig} ]] ; then
     cmd cp "${settings}" "${settings_orig}"
 fi
 cmd cp "${settings}" "${settings_old}"
-cmd cp "${upgrade_root_mnt}/opt/sbin/test/settings" "${settings_new}"
+cmd cp "${upgrade_root_mnt}/opt/sbin/settings_new" "${settings_new}"
 
 ## Get system setting values and overwrite default values in
 ## the new settings file.
