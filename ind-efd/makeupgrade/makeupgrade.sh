@@ -8,7 +8,7 @@ set -o errexit
 ## Uses the `makeself` utility.
 ## 
 
-ver="v0.11.0"
+ver="v0.11.1-rc1"
 
 upgrade_name="ind-efd-upgrade-${ver}"
 
