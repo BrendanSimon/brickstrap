@@ -234,7 +234,7 @@ class Cloud(object):
         #!
         #! concatenate csv row header and data into a single string.
         #!
-        post_data = self.measurements_log.csv_header + ''.join(self.csv_data)
+        post_data = 'data=' + self.measurements_log.csv_header + ''.join(self.csv_data)
         #print("DEBUG: Posting data: len(csv_data)={}".format(len(self.csv_data)))
         #print("DEBUG: post_data={}".format(post_data))
 
