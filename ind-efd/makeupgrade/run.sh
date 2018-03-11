@@ -233,13 +233,21 @@ cmd mount --options remount,rw /boot/flash
 
 ##
 ## Upgrade the BOOT.bin bootloader/FPGA for the platform.
+## Copies all files from `/boot/flash/`
 ##
-echo -e "\nUpgrade BOOT.bin for platform..."
-if [[ ! -e "/boot/flash/BOOT_ORIG.bin" ]] ; then
-    cmd cp "/boot/flash/BOOT.bin" "/boot/flash/BOOT_ORIG.bin"
+if [[ ! -e "/boot/flash/ORIG" ]] ; then
+    echo -e "\nMake backup of original boot files for platform..."
+    cmd mkdir -p "/boot/flash/ORIG"
+    cmd find "/boot/flash" -maxdepth 1 -type f | xargs cp -t "/boot/flash/ORIG/"
 fi
-cmd cp "/boot/flash/BOOT.bin" "/boot/flash/BOOT_OLD.bin"
-cmd cp "${upgrade_root_mnt}/boot/flash/BOOT${platform}.bin" "/boot/flash/BOOT.bin"
+
+echo -e "\nMake backup of current boot files for platform..."
+cmd mkdir -p "/boot/flash/PREV"
+cmd find "/boot/flash" -maxdepth 1 -type f | xargs cp -t "/boot/flash/PREV/"
+
+echo -e "\nUpgrade boot files for platform..."
+cmd cp "${upgrade_root_mnt}/boot/flash/*" "/boot/flash/"
+cmd cp "/boot/flash/BOOT${platform}.bin" "/boot/flash/BOOT.bin"
 
 ##
 ## Setup the devicetree symlinks for the platform.
