@@ -57,8 +57,9 @@ class Measurements_Log(object):
         '''
         Convert measurements to a csv record.
 
-        NOTE: in some modes, some csv fields are used for a different purpose
-        than originally intended !!  Some measurement fields are replaced !!
+        DEPRECATED: we no longer reuse fields for various modes (11 Mar 2018) !!
+        #NOTE: in some modes, some csv fields are used for a different purpose
+        #than originally intended !!  Some measurement fields are replaced !!
         '''
 
         #!
@@ -66,19 +67,23 @@ class Measurements_Log(object):
         #!
         m = copy.deepcopy(measurements)
 
-        #!
-        #! Some modes reuse the csv fields for different purposes,
-        #! so copy the necessary measurements to the appropriate csv fields.
-        #! This was chosen by IND to minimise changing the web backend API !!
-        #!
-
-        if peak_detect_mode == PeakDetectMode.NORMAL:
-            pass
-
-# Uncomment to enable Absolute peak detection mode (WIP, needs testing !!)
-# Note: has not been formally asked for or quoted !!
+#!
+#! DEPRECATED: we no longer reuse fields for various modes (11 Mar 2018) !!
+#!
+#         #!
+#         #! Some modes reuse the csv fields for different purposes,
+#         #! so copy the necessary measurements to the appropriate csv fields.
+#         #! This was chosen by IND to minimise changing the web backend API !!
+#         #!
+#
+#         if peak_detect_mode == PeakDetectMode.NORMAL:
+#             pass
+#
+#! Uncomment to reuse existing csv fields for Absolute peak detection mode (WIP, needs testing !!)
+#! NOTE: has not been formally asked for or quoted !!
 #
 #         elif peak_detect_mode == PeakDetectMode.ABSOLUTE:
+#             #! FIXME: move these calcs for `*_abs_*` fields to main app loop !!
 #             #! Work out if min or max has largest magnitude.
 #             #! (important for correct time index/offset !!)
 #             #! max_volt_* contains signed adjusted squared voltage.
@@ -86,53 +91,53 @@ class Measurements_Log(object):
 #
 #             #! red
 #             if abs(m['min_volt_red']) > abs(m['max_volt_red']):
-#                 m['max_volt_red']           = abs(m['min_volt_red'])
-#                 m['max_time_offset_red']    = m['min_time_offset_red']
-#                 m['min_volt_red']           = m['min_volt_count_red']
+#                 m['max_volt_abs_red']           = abs(m['min_volt_red'])
+#                 m['max_time_offset_abs_red']    = m['min_time_offset_red']
+#                 m['min_volt_abs_red']           = m['min_count_red']
 #             else:
-#                 m['max_volt_red']           = abs(m['max_volt_red'])
-#                 m['max_time_offset_red']    = m['max_time_offset_red']
-#                 m['min_volt_red']           = m['max_volt_count_red']
+#                 m['max_volt_abs_red']           = abs(m['max_volt_red'])
+#                 m['max_time_offset_abs_red']    = m['max_time_offset_red']
+#                 m['min_volt_abs_red']           = m['max_count_red']
 #             #! white
-#             if abs(m['min_volt_wht']) > abs(m['max_volt_wht']):
-#                 m['max_volt_wht']           = abs(m['min_volt_wht'])
-#                 m['max_time_offset_wht']    = m['min_time_offset_wht']
-#                 m['min_volt_wht']           = m['min_volt_count_wht']
+#             if abs(m['min_volt_abs_wht']) > abs(m['max_volt_wht']):
+#                 m['max_volt_abs_wht']           = abs(m['min_volt_wht'])
+#                 m['max_time_offset_abs_wht']    = m['min_time_offset_wht']
+#                 m['min_volt_abs_wht']           = m['min_count_wht']
 #             else:
-#                 m['max_volt_wht']           = abs(m['max_volt_wht'])
-#                 m['max_time_offset_wht']    = m['max_time_offset_wht']
-#                 m['min_volt_wht']           = m['max_volt_count_wht']
+#                 m['max_volt_abs_wht']           = abs(m['max_volt_wht'])
+#                 m['max_time_offset_abs_wht']    = m['max_time_offset_wht']
+#                 m['min_volt_abs_wht']           = m['max_count_wht']
 #             #! blue
-#             if abs(m['min_volt_blu']) > abs(m['max_volt_blu']):
-#                 m['max_volt_blu']           = abs(m['min_volt_blu'])
-#                 m['max_time_offset_blu']    = m['min_time_offset_blu']
-#                 m['min_volt_blu']           = m['min_volt_count_blu']
+#             if abs(m['min_volt_abs_blu']) > abs(m['max_volt_blu']):
+#                 m['max_volt_abs_blu']           = abs(m['min_volt_blu'])
+#                 m['max_time_offset_abs_blu']    = m['min_time_offset_blu']
+#                 m['min_volt_abs_blu']           = m['min_count_blu']
 #             else:
-#                 m['max_volt_blu']           = abs(m['max_volt_blu'])
-#                 m['max_time_offset_blu']    = m['max_time_offset_blu']
-#                 m['min_volt_blu']           = m['max_volt_count_blu']
-
-        elif peak_detect_mode == PeakDetectMode.SQUARED:
-            #! max_volt_* contains signed adjusted squared voltage.
-            #! min_volt_* contains the total count of peaks.
-
-            #! red
-            m['max_volt_red']           = m['max_volt_squared_red']
-            m['max_time_offset_red']    = m['max_time_offset_squared_red']
-            m['min_volt_red']           = m['max_volt_squared_count_red']
-            #! white
-            m['max_volt_wht']           = m['max_volt_squared_wht']
-            m['max_time_offset_wht']    = m['max_time_offset_squared_wht']
-            m['min_volt_wht']           = m['max_volt_squared_count_wht']
-            #! blue
-            m['max_volt_blu']           = m['max_volt_squared_blu']
-            m['max_time_offset_blu']    = m['max_time_offset_squared_blu']
-            m['min_volt_blu']           = m['max_volt_squared_count_blu']
-
-        else:
-            #! shouldn't get here !!
-            #! FIXME: print an error or raise an exception.
-            pass
+#                 m['max_volt_abs_blu']           = abs(m['max_volt_blu'])
+#                 m['max_time_offset_abs_blu']    = m['max_time_offset_blu']
+#                 m['min_volt_abs_blu']           = m['max_count_blu']
+#
+#         elif peak_detect_mode == PeakDetectMode.SQUARED:
+#             #! max_volt_* contains signed adjusted squared voltage.
+#             #! min_volt_* contains the total count of peaks.
+#
+#             #! red
+#             m['max_volt_red']           = m['max_volt_sq_red']
+#             m['max_time_offset_red']    = m['max_time_offset_sq_red']
+#             m['min_volt_red']           = m['max_count_sq_red']
+#             #! white
+#             m['max_volt_wht']           = m['max_volt_sq_wht']
+#             m['max_time_offset_wht']    = m['max_time_offset_sq_wht']
+#             m['min_volt_wht']           = m['max_count_sq_wht']
+#             #! blue
+#             m['max_volt_blu']           = m['max_volt_sq_blu']
+#             m['max_time_offset_blu']    = m['max_time_offset_sq_blu']
+#             m['min_volt_blu']           = m['max_count_sq_blu']
+#
+#         else:
+#             #! shouldn't get here !!
+#             #! FIXME: print an error or raise an exception.
+#             pass
 
         #!
         #! Convert dates to strings that are compatible with Microsoft Excel.

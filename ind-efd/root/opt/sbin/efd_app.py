@@ -1683,68 +1683,68 @@ class EFD_App(object):
 
             #! FIXME: should use a class to encapsulate measurements for each phase (red, white, blue).
             phase = self.red_phase
-            self.measurements['max_volt_red']                   = self.peak_normal_max_red.voltage
-            self.measurements['min_volt_red']                   = self.peak_normal_min_red.voltage
-            self.measurements['max_time_offset_red']            = self.peak_normal_max_red.time_offset
-            self.measurements['min_time_offset_red']            = self.peak_normal_min_red.time_offset
-            self.measurements['max_volt_count_red']             = self.peak_normal_max_red.count
-            self.measurements['min_volt_count_red']             = self.peak_normal_min_red.count
-            self.measurements['t2_red']                         = self.tf_map_red.T2
-            self.measurements['w2_red']                         = self.tf_map_red.F2
-            self.measurements['max_volt_squared_red']           = self.sign_adjusted_magnitude(magnitude=self.peak_squared_max_red.voltage, value=phase[self.peak_squared_max_red.index])
-            self.measurements['min_volt_squared_red']           = self.sign_adjusted_magnitude(magnitude=self.peak_squared_min_red.voltage, value=phase[self.peak_squared_min_red.index])
-            self.measurements['max_time_offset_squared_red']    = self.peak_squared_max_red.time_offset
-            self.measurements['min_time_offset_squared_red']    = self.peak_squared_min_red.time_offset
-            self.measurements['max_volt_squared_count_red']     = self.peak_squared_max_red.count
-            self.measurements['min_volt_squared_count_red']     = self.peak_squared_min_red.count
+            self.measurements['max_volt_red']               = self.peak_normal_max_red.voltage
+            self.measurements['min_volt_red']               = self.peak_normal_min_red.voltage
+            self.measurements['max_time_offset_red']        = self.peak_normal_max_red.time_offset
+            self.measurements['min_time_offset_red']        = self.peak_normal_min_red.time_offset
+            self.measurements['max_count_red']              = self.peak_normal_max_red.count
+            self.measurements['min_count_red']              = self.peak_normal_min_red.count
+            self.measurements['t2_red']                     = self.tf_map_red.T2
+            self.measurements['w2_red']                     = self.tf_map_red.F2
+            self.measurements['max_volt_sq_red']            = self.sign_adjusted_magnitude(magnitude=self.peak_squared_max_red.voltage, value=phase[self.peak_squared_max_red.index])
+            self.measurements['min_volt_sq_red']            = self.sign_adjusted_magnitude(magnitude=self.peak_squared_min_red.voltage, value=phase[self.peak_squared_min_red.index])
+            self.measurements['max_time_offset_sq_red']     = self.peak_squared_max_red.time_offset
+            self.measurements['min_time_offset_sq_red']     = self.peak_squared_min_red.time_offset
+            self.measurements['max_count_sq_red']           = self.peak_squared_max_red.count
+            self.measurements['min_count_sq_red']           = self.peak_squared_min_red.count
 
             #! FIXME: should use a class to encapsulate measumenets for each phase (red, white, blue).
             phase = self.wht_phase
-            self.measurements['max_volt_wht']                   = self.peak_normal_max_wht.voltage
-            self.measurements['min_volt_wht']                   = self.peak_normal_min_wht.voltage
-            self.measurements['max_time_offset_wht']            = self.peak_normal_max_wht.time_offset
-            self.measurements['min_time_offset_wht']            = self.peak_normal_min_wht.time_offset
-            self.measurements['t2_wht']                         = self.tf_map_wht.T2
-            self.measurements['w2_wht']                         = self.tf_map_wht.F2
-            self.measurements['max_volt_squared_wht']           = self.sign_adjusted_magnitude(magnitude=self.peak_squared_max_wht.voltage, value=phase[self.peak_squared_max_wht.index])
-            self.measurements['min_volt_squared_wht']           = self.sign_adjusted_magnitude(magnitude=self.peak_squared_min_wht.voltage, value=phase[self.peak_squared_min_wht.index])
-            self.measurements['max_time_offset_squared_wht']    = self.peak_squared_max_wht.time_offset
-            self.measurements['min_time_offset_squared_wht']    = self.peak_squared_min_wht.time_offset
-            self.measurements['max_volt_squared_count_wht']     = self.peak_squared_max_wht.count
-            self.measurements['min_volt_squared_count_wht']     = self.peak_squared_min_wht.count
+            self.measurements['max_volt_wht']               = self.peak_normal_max_wht.voltage
+            self.measurements['min_volt_wht']               = self.peak_normal_min_wht.voltage
+            self.measurements['max_time_offset_wht']        = self.peak_normal_max_wht.time_offset
+            self.measurements['min_time_offset_wht']        = self.peak_normal_min_wht.time_offset
+            self.measurements['max_count_wht']              = self.peak_normal_max_wht.count
+            self.measurements['min_count_wht']              = self.peak_normal_min_wht.count
+            self.measurements['t2_wht']                     = self.tf_map_wht.T2
+            self.measurements['w2_wht']                     = self.tf_map_wht.F2
+            self.measurements['max_volt_sq_wht']            = self.sign_adjusted_magnitude(magnitude=self.peak_squared_max_wht.voltage, value=phase[self.peak_squared_max_wht.index])
+            self.measurements['min_volt_sq_wht']            = self.sign_adjusted_magnitude(magnitude=self.peak_squared_min_wht.voltage, value=phase[self.peak_squared_min_wht.index])
+            self.measurements['max_time_offset_sq_wht']     = self.peak_squared_max_wht.time_offset
+            self.measurements['min_time_offset_sq_wht']     = self.peak_squared_min_wht.time_offset
+            self.measurements['max_count_sq_wht']           = self.peak_squared_max_wht.count
+            self.measurements['min_count_sq_wht']           = self.peak_squared_min_wht.count
 
             #! FIXME: should use a class to encapsulate measumenets for each phase (red, white, blue).
             phase = self.blu_phase
-            self.measurements['max_volt_blu']                   = self.peak_normal_max_blu.voltage
-            self.measurements['min_volt_blu']                   = self.peak_normal_min_blu.voltage
-            self.measurements['max_time_offset_blu']            = self.peak_normal_max_blu.time_offset
-            self.measurements['min_time_offset_blu']            = self.peak_normal_min_blu.time_offset
-            self.measurements['max_volt_count_blu']             = self.peak_normal_max_blu.count
-            self.measurements['min_volt_count_blu']             = self.peak_normal_min_blu.count
-            self.measurements['t2_blu']                         = self.tf_map_blu.T2
-            self.measurements['w2_blu']                         = self.tf_map_blu.F2
-            self.measurements['max_volt_squared_blu']           = self.sign_adjusted_magnitude(magnitude=self.peak_squared_max_blu.voltage, value=phase[self.peak_squared_max_blu.index])
-            self.measurements['min_volt_squared_blu']           = self.sign_adjusted_magnitude(magnitude=self.peak_squared_min_blu.voltage, value=phase[self.peak_squared_min_blu.index])
-            self.measurements['max_time_offset_squared_blu']    = self.peak_squared_max_blu.time_offset
-            self.measurements['min_time_offset_squared_blu']    = self.peak_squared_min_blu.time_offset
-            self.measurements['max_volt_squared_count_blu']     = self.peak_squared_max_blu.count
-            self.measurements['min_volt_squared_count_blu']     = self.peak_squared_min_blu.count
+            self.measurements['max_volt_blu']               = self.peak_normal_max_blu.voltage
+            self.measurements['min_volt_blu']               = self.peak_normal_min_blu.voltage
+            self.measurements['max_time_offset_blu']        = self.peak_normal_max_blu.time_offset
+            self.measurements['min_time_offset_blu']        = self.peak_normal_min_blu.time_offset
+            self.measurements['max_count_blu']              = self.peak_normal_max_blu.count
+            self.measurements['min_count_blu']              = self.peak_normal_min_blu.count
+            self.measurements['t2_blu']                     = self.tf_map_blu.T2
+            self.measurements['w2_blu']                     = self.tf_map_blu.F2
+            self.measurements['max_volt_sq_blu']            = self.sign_adjusted_magnitude(magnitude=self.peak_squared_max_blu.voltage, value=phase[self.peak_squared_max_blu.index])
+            self.measurements['min_volt_sq_blu']            = self.sign_adjusted_magnitude(magnitude=self.peak_squared_min_blu.voltage, value=phase[self.peak_squared_min_blu.index])
+            self.measurements['max_time_offset_sq_blu']     = self.peak_squared_max_blu.time_offset
+            self.measurements['min_time_offset_sq_blu']     = self.peak_squared_min_blu.time_offset
+            self.measurements['max_count_sq_blu']           = self.peak_squared_max_blu.count
+            self.measurements['min_count_sq_blu']           = self.peak_squared_min_blu.count
 
-            self.measurements['temperature']                    = self.ws_info.temperature
-            self.measurements['humidity']                       = self.ws_info.humidity
-            self.measurements['rain_intensity']                 = self.ws_info.rain_intensity
-            self.measurements['alert']                          = trigger_alert
+            self.measurements['temperature']                = self.ws_info.temperature
+            self.measurements['humidity']                   = self.ws_info.humidity
+            self.measurements['rain_intensity']             = self.ws_info.rain_intensity
+            self.measurements['alert']                      = trigger_alert
+            self.measurements['adc_clock_count_per_pps']    = adc_clock_count_per_pps
 
             #! FIXME: Temporary fields for testing of new web server being developed by IND.
             if self.config.append_gps_data_to_measurements_log:
-                self.measurements['gps_latitude']               = self.gpsd.fix.latitude
-                self.measurements['gps_longitude']              = self.gpsd.fix.longitude
-                self.measurements['battery_volt']               = "{:0.1f}".format(self.sensors.battery_voltage())
-                self.measurements['solar_volt']                 = "{:0.1f}".format(self.sensors.solar_voltage())
-                self.measurements['box_temperature']            = "{:0.1f}".format(self.sensors.box_temperature())
-
-            #! FIXME: the above is temporary, so maybe this should go after 'alert' field !!
-            self.measurements['adc_clock_count_per_pps']    = adc_clock_count_per_pps
+                self.measurements['gps_latitude']           = self.gpsd.fix.latitude
+                self.measurements['gps_longitude']          = self.gpsd.fix.longitude
+                self.measurements['battery_volt']           = "{:0.1f}".format(self.sensors.battery_voltage())
+                self.measurements['solar_volt']             = "{:0.1f}".format(self.sensors.solar_voltage())
+                self.measurements['box_temperature']        = "{:0.1f}".format(self.sensors.box_temperature())
 
             #!
             #! push measurements to cloud queue for logging, posting, etc.

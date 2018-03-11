@@ -159,18 +159,8 @@ class ConfigDefault(object):
 
     state_filename = os.path.join(data_dir, 'efd_app.state')
 
-    measurements_log_field_names = [
-        'datetime_utc', 'datetime_local',
-        'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
-        't2_red', 'w2_red',
-        'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
-        't2_wht', 'w2_wht',
-        'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
-        't2_blu', 'w2_blu',
-        'temperature', 'humidity', 'rain_intensity',
-        'alert',
-        'adc_clock_count_per_pps',
-        ]
+    #! set via function call during intialisation.
+    measurements_log_field_names = []
 
     #! retry time interval (minimum) between reposting EFD measurements to web portal.
     measurments_post_retry_time_interval = 10
@@ -197,6 +187,8 @@ class ConfigDefault(object):
 #         pass
         self.set_efd_ping_uris()
         self.set_web_uris()
+        self.set_measurements_log_field_names()
+
 
     #!========================================================================
 
@@ -377,12 +369,9 @@ class ConfigDefault(object):
 
         self.measurements_log_field_names = [
             'datetime_utc', 'datetime_local',
-            'max_volt_red', 'min_volt_red', 'max_time_offset_red', #'min_time_offset_red',
-            't2_red', 'w2_red',
-            'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', #'min_time_offset_wht',
-            't2_wht', 'w2_wht',
-            'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', #'min_time_offset_blu',
-            't2_blu', 'w2_blu',
+            'max_volt_red', 'min_volt_red', 'max_time_offset_red', 't2_red', 'w2_red',
+            'max_volt_wht', 'min_volt_wht', 'max_time_offset_wht', 't2_wht', 'w2_wht',
+            'max_volt_blu', 'min_volt_blu', 'max_time_offset_blu', 't2_blu', 'w2_blu',
             'temperature', 'humidity', 'rain_intensity',
             'alert',
             ]
@@ -396,6 +385,22 @@ class ConfigDefault(object):
 
         #! FIXME: the above is temporary, so maybe this should go after 'alert' field !!
         self.measurements_log_field_names += [ 'adc_clock_count_per_pps' ]
+
+        self.measurements_log_field_names += [
+            'max_count_sq_red', 'max_count_sq_wht', 'max_count_sq_blu',
+            'max_volt_sq_red', 'max_volt_sq_wht', 'max_volt_sq_blu',
+            'max_time_offset_sq_red', 'max_time_offset_sq_wht', 'max_time_offset_sq_blu',
+
+            #!
+            #! Fields to potentially add later if IND request them (in no particular order)
+            #!
+            #'min_count_sq_red', 'min_count_sq_wht', 'min_count_sq_blu',
+            #'min_volt_sq_red', 'min_volt_sq_wht', 'min_volt_sq_blu',
+            #'min_time_offset_sq_red', 'min_time_offset_sq_wht', 'min_time_offset_sq_blu',
+            #'min_count_red', 'min_count_wht', 'min_count_blu',
+            #'min_time_offset_red', 'min_time_offset_wht', 'min_time_offset_blu',
+            #'max_count_red', 'max_count_wht', 'max_count_blu',
+            ]
 
     #!========================================================================
 
@@ -414,8 +419,6 @@ class ConfigDefault(object):
 
     def show_all(self):
         print("-------------------------------------------------------------")
-        print("Config values")
-        print("-------------")
 
         print("version_str = {}".format(self.version_str))
 
@@ -564,6 +567,10 @@ def argh_main():
 
     config = Config()
 
+    print("\n")
+    print("Config settings (default)")
+    config.show_all()
+
     #! override defaults with settings in user settings file.
     config.read_settings_file()
 
@@ -640,6 +647,8 @@ def argh_main():
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
 
+        print("\n")
+        print("Config settings (modified)")
         config.show_all()
 
     #!------------------------------------------------------------------------
