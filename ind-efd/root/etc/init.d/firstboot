@@ -14,18 +14,18 @@ case "$1" in
     start)
         update-rc.d -f firstboot remove
 
-        # generating ssh host key to be unique
-        # only if not previously generated or installed.
+        #! generating ssh host key to be unique
+        #! only if not previously generated or installed.
         for f in rsa dsa ecdsa ed25519; do
             key_file="/etc/ssh/ssh_host_${f}_key"
-            # only generate if key file is zero size (or doesn't exist)
+            #! only generate if key file is zero size (or doesn't exist)
             if [ ! -s ${key_file} ] ; then
                 echo "generating ssh ${f} key..."
                 ssh-keygen -q -t ${f} -f ${key_file} -C "" -N ""
             fi
         done
 
-        # set static mac address for usb networking
+        #! set static mac address for usb networking
         eeprom_addr=$(hexdump -e '5/1 "%02X:" "%02X"' -s 0x3f06 -n 6 < /sys/bus/i2c/drivers/at24/1-0050/eeprom)
         dev_addr=$(echo ${eeprom_addr} | sed s/^00/02/)
         host_addr=$(echo ${eeprom_addr} | sed s/^00/12/)
@@ -34,21 +34,22 @@ options g_cdc dev_addr=${dev_addr} host_addr=${host_addr}
 options g_ether dev_addr=${dev_addr} host_addr=${host_addr}
 EOF
 
-        # Fix file ownership (due to PRoot bug/missing feature)
-        # Fix permissions of screen
+        #! Fix file ownership (due to PRoot bug/missing feature)
+        #! Fix permissions of screen
         chown root:utmp /usr/bin/screen
         chmod 2755 /usr/bin/screen
 
-        # expand the root file system
-        # Note, this will break if using an initramfs
+        #! expand the root file system
+        #! Note, this will break if using an initramfs
         parted --script /dev/mmcblk0 unit % resizepart 4 100%
         partprobe
         resize2fs /dev/mmcblk0p4
 
-        ## ensure directories on /mnt/data are created
-        ## Are filesystems mounted yet?
+        #! ensure directories on /mnt/data are created with permissions.
+        #! Are filesystems mounted yet?
         echo "Mounted filesystems ..."
-        mount
+        mount /mnt/data || true
+        install --directory /mnt/data/tmp --mode 776
         ;;
 
     stop|restart|reload|force-reload|status)
