@@ -19,9 +19,9 @@ upgrade_root_mnt="/tmp/upgrade"
 current_uenv="/boot/flash/uEnv.txt"
 upgrade_uenv="/boot/flash/uEnv_tmp.txt"
 
-settings="/mnt/data/etc/settings"
-settings_orig="/mnt/data/etc/settings_ORIG"
-settings_old="/mnt/data/etc/settings_OLD"
+settings_file="/mnt/data/etc/settings"
+settings_orig_dir="/mnt/data/etc/ORIG"
+settings_prev_dir="/mnt/data/etc/PREV"
 settings_new="/mnt/data/etc/settings_NEW"
 
 reboot_delay=3
@@ -131,8 +131,10 @@ done
 
 ##
 ## Make a clean filesystem on the upgrade partition.
+## (ensure it's not mounted first)
 ##
-cmd mkfs.ext4 -F -L "${upgrade_root_name}" ${upgrade_root_dev}
+cmd umount "${upgrade_root_dev}" || true
+cmd mkfs.ext4 -F -L "${upgrade_root_name}" "${upgrade_root_dev}"
 
 ##
 ## Mount the upgrade filesystem.
@@ -164,23 +166,31 @@ copy_from_current_fs /home/efduser/.ssh
 ##
 echo -e "\nUpdating user settings..."
 
-if [[ ! -e ${settings_orig} ]] ; then
-    cmd cp "${settings}" "${settings_orig}"
+if [[ ! -e ${settings_orig_dir} ]] ; then
+    echo -e "\nMake backup of original user settings file..."
+    cmd mkdir -p "${settings_orig_dir}"
+    cmd cp "${settings_file}" "${settings_orig_dir}/"
 fi
-cmd cp "${settings}" "${settings_old}"
+
+echo -e "\nMake backup of current user settings file..."
+cmd mkdir -p "${settings_prev_dir}"
+cmd cp "${settings_file}" "${settings_prev_dir}/"
+
+echo -e "\nCopy new default user settings file..."
 cmd cp "${upgrade_root_mnt}/opt/sbin/settings_new" "${settings_new}"
 
 ## Get system setting values and overwrite default values in
 ## the new settings file.
+echo -e "\nReplace default user settings with existing settings..."
 pat_old="^(\w+=).*"
 while read -r  line ; do
     if [[ ${line} =~ ${pat_old} ]] ; then
         pat_new="^${BASH_REMATCH[1]}.*"
         cmd sed -i "s|${pat_new}|${line}|" "${settings_new}"
     fi
-done < "${settings_old}"
+done < "${settings_file}"
 
-cmd mv "${settings_new}" "${settings}"
+cmd mv "${settings_new}" "${settings_file}"
 
 ##
 ## Detect/choose platform type.
@@ -193,13 +203,13 @@ devtree_model=$(cat /proc/device-tree/model)
 
 if [[ ${fpga_ver_maj} == 2 ]] ; then
     platform=2
-elif [[ ${fpga_ver_maj} == 1 ]] ; then
+elif [[ "${fpga_ver_maj}" == 1 ]] ; then
     platform=1
-elif [[ ${devtree_model} == "Xilinx Zynq IND-EFD-2" ]] ; then
+elif [[ "${devtree_model}" == "Xilinx Zynq IND-EFD-2" ]] ; then
     platform=2
-elif [[ ${devtree_model} == "Xilinx Zynq LSI" ]] ; then
+elif [[ "${devtree_model}" == "Xilinx Zynq LSI" ]] ; then
     platform=2
-elif [[ ${devtree_model} == "Xilinx Zynq ZED" ]] ; then
+elif [[ "${devtree_model}" == "Xilinx Zynq ZED" ]] ; then
     platform=1
 else
     platform=0
