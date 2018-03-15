@@ -1638,9 +1638,12 @@ class EFD_App(object):
             #!
             #! Retrieve info from FPGA registers.
             #!
-            capture_info_lst = [ ind.adc_capture_info_get(bank, dev_hand=self.dev_hand) for bank in range(self.config.bank_count) ]
+            capture_info_lst  = ind.adc_capture_info_list_get(dev_hand=self.dev_hand)
             capture_info_prev = capture_info_lst[self.prev_bank]
-            capture_info = capture_info_lst[self.bank]
+            capture_info      = capture_info_lst[self.bank]
+            logging.debug("")
+            logging.debug("capture_info_prev = {!r}\n".format(capture_info_prev))
+            logging.debug("capture_info      = {!r}\n".format(capture_info))
 
             self.maxmin_normal      = capture_info.maxmin_normal
             self.maxmin_squared     = capture_info.maxmin_squared
@@ -1668,12 +1671,12 @@ class EFD_App(object):
                 print("app_capture_datetime_utc = {}".format(self.capture_datetime_utc))
 
             if self.config.peak_detect_fpga_debug:
-                print("\nDEBUG: Peak Detect Normal FPGA:  maxmin = {}".format(self.maxmin_normal))
-                print("\nDEBUG: Peak Detect Squared FPGA: maxmin = {}".format(self.maxmin_squared))
-                print("\nDEBUG: adc_clock_count_per_pps = {:10} (0x{:08X})".format(adc_clock_count_per_pps, adc_clock_count_per_pps))
-                #print("\nDEBUG: capture_info_0 = {}".format(capture_info_0))
-                #print("\nDEBUG: capture_info_1 = {}".format(capture_info_1))
-                print("\nDEBUG: capture_info = {}".format(capture_info))
+                print("DEBUG: Peak Detect Normal FPGA:  maxmin = {}\n".format(self.maxmin_normal))
+                print("DEBUG: Peak Detect Squared FPGA: maxmin = {}\n".format(self.maxmin_squared))
+                print("DEBUG: adc_clock_count_per_pps = {:10} (0x{:08X})\n".format(adc_clock_count_per_pps, adc_clock_count_per_pps))
+                #print("DEBUG: capture_info_0 = {}\n".format(capture_info_0))
+                #print("DEBUG: capture_info_1 = {}\n".format(capture_info_1))
+                print("DEBUG: capture_info = {}\n".format(capture_info))
 
             if not data_ok:
                 continue
@@ -1702,6 +1705,15 @@ class EFD_App(object):
                 #! blue
                 filename = 'sampledata-{}-blu'.format(loc_dt_str)
                 np.save(filename, self.blu_phase)
+
+            #!
+            #! Sanity check select capture time versus irq capture time.
+            #!
+            td = select_datetime_utc - irq_capture_datetime_utc
+            processing_latency = td.total_seconds()
+            logging.info("processing_latency={}, irq_capture_datetime_utc={}, select_datetime_utc={},".format(processing_latency, irq_capture_datetime_utc, select_datetime_utc))
+            if processing_latency > 0.200:
+                logging.warning("processing_latency={} exceeds 200ms, irq_capture_datetime_utc={}, select_datetime_utc={},".format(processing_latency, irq_capture_datetime_utc, select_datetime_utc))
 
             #!
             #! Sanity check current bank is actually the latest/newest capture.
