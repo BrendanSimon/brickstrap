@@ -21,12 +21,15 @@ import time
 import arrow
 import selectors2 as selectors
 import traceback
+import logging
 
 from collections import namedtuple
 
 sys.path.append('..')
 
 from efd_config import Config, PeakDetectMode, TestMode, ADC_Polarity
+
+from efd_app import method_name
 from efd_app import Peak, PEAK_DEFAULT
 from efd_app import Sample, sample_min, sample_max
 
@@ -75,6 +78,7 @@ class Read_Capture_Buffers_App(object):
 
         self.bank = 0
         self.next_bank = 0
+        self.prev_bank = 0
         self.adc_capture_buffer_offset = [ 0 ] * self.config.bank_count
 
         self.capture_datetime_utc = None
@@ -179,7 +183,11 @@ class Read_Capture_Buffers_App(object):
         '''Initialise Read_Capture_Buffers_App application.'''
         #print(self.__doc__)
 
-        print("INFO: Python System Version = {}".format(sys.version))
+        logging.basicConfig(level=self.config.logging_level)
+        #logger = logging.getLogger()
+        #logger.setLevel(self.config.logging_level)
+
+        logging.info("Python System Version = {}".format(sys.version))
 
         self.sample_levels = (1 << self.config.sample_bits)
         self.time_resolution = 1.0 / self.config.sample_frequency
@@ -339,9 +347,13 @@ class Read_Capture_Buffers_App(object):
 
         print("DEBUG: next_capture_buffer: old_bank={}, old_next_bank={}".format(self.bank, self.next_bank))
 
+        self.prev_bank = self.bank
+
         self.bank = self.next_bank
 
         self.next_bank = (self.next_bank + 1) % self.config.bank_count
+
+        #self.prev_bank = (self.bank - 1) % self.config.bank_count
 
         curr_offset = self.adc_capture_buffer_offset[self.bank]
         next_offset = self.adc_capture_buffer_offset[self.next_bank]
@@ -910,7 +922,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: SAME OBJECT: fpga_peak_normal_max_red is numpy_peak_normal_max_red !!")
 
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
-            print("\nDEBUG: Peak Detect Check (FPGA v Numpy)")
+            print("\nDEBUG: Peak Detect Normal Check (FPGA v Numpy)")
 
             #! Red Max
             if fpga_peak_normal_max_red.value != numpy_peak_normal_max_red.value:
@@ -1090,7 +1102,7 @@ class Read_Capture_Buffers_App(object):
                 print("ERROR: SAME OBJECT: fpga_peak_squared_max_red is numpy_peak_squared_max_red !!")
 
         if self.config.peak_detect_numpy and self.config.peak_detect_fpga:
-            print("\nDEBUG: Peak Detect Check (FPGA v Numpy)")
+            print("\nDEBUG: Peak Detect Check Squared (FPGA v Numpy)")
 
             #! Red Max
             if fpga_peak_squared_max_red.value != numpy_peak_squared_max_red.value:
@@ -1203,6 +1215,95 @@ class Read_Capture_Buffers_App(object):
         self.peak_count_errors_total += peak_count_errors
 
         errors = peak_index_errors + peak_value_errors + peak_count_errors
+
+        return errors
+
+    ##------------------------------------------------------------------------
+
+    def peak_detect_sanity_check(self):
+        '''Perform sanity check on peak detection objects.'''
+
+        logging.debug("trace:{}".format( method_name() ) )
+
+        errors = 0
+
+        #!
+        #! red phase
+        #!
+        test_max = abs(self.peak_normal_max_red.voltage) > abs(self.peak_normal_min_red.voltage)
+        test_min = abs(self.peak_normal_max_red.voltage) < abs(self.peak_normal_min_red.voltage)
+        test_max |= not (test_max or test_min) and self.peak_normal_max_red.time_offset < self.peak_normal_min_red.timeoffset
+
+        if test_max:
+            v2, sq = (self.peak_normal_max_red.voltage ** 2), self.peak_squared_max_red.voltage
+            if v2 != sq:
+                logging.error("peak_normal_max_red.voltage^2={} does not equal peak_squared_max_red.voltage={}".format(v2, sq))
+                errors += 1
+            t1, t2 = self.peak_normal_max_red.time_offset, self.peak_squared_max_red.time_offset
+            if t2 != t1:
+                logging.error("peak_normal_max_red.timeoffset={} does not equal peak_squared_max_red.timeoffset={}".format(t2, t1))
+                errors += 1
+        else:
+            v2, sq = (self.peak_normal_min_red.voltage ** 2), self.peak_squared_max_red.voltage
+            if v2 != sq:
+                logging.error("peak_normal_min_red.voltage^2={} does not equal peak_squared_max_red.voltage={}".format(v2, sq))
+                errors += 1
+            t1, t2 = self.peak_normal_min_red.time_offset, self.peak_squared_max_red.time_offset
+            if t2 != t1:
+                logging.error("peak_normal_min_red.timeoffset={} does not equal peak_squared_max_red.timeoffset={}".format(t2, t1))
+                errors += 1
+
+        #!
+        #! white phase
+        #!
+        test_max = abs(self.peak_normal_max_wht.voltage) > abs(self.peak_normal_min_wht.voltage)
+        test_min = abs(self.peak_normal_max_wht.voltage) < abs(self.peak_normal_min_wht.voltage)
+        test_max |= not (test_max or test_min) and self.peak_normal_max_wht.time_offset < self.peak_normal_min_wht.timeoffset
+
+        if test_max:
+            v2, sq = (self.peak_normal_max_wht.voltage ** 2), self.peak_squared_max_wht.voltage
+            if v2 != sq:
+                logging.error("peak_normal_max_wht.voltage^2={} does not equal peak_squared_max_wht.voltage={}".format(v2, sq))
+                errors += 1
+            t1, t2 = self.peak_normal_max_wht.time_offset, self.peak_squared_max_wht.time_offset
+            if t2 != t1:
+                logging.error("peak_normal_max_wht.timeoffset={} does not equal peak_squared_max_wht.timeoffset={}".format(t2, t1))
+                errors += 1
+        else:
+            v2, sq = (self.peak_normal_min_wht.voltage ** 2), self.peak_squared_max_wht.voltage
+            if v2 != sq:
+                logging.error("peak_normal_min_wht.voltage^2={} does not equal peak_squared_max_wht.voltage={}".format(v2, sq))
+                errors += 1
+            t1, t2 = self.peak_normal_min_wht.time_offset, self.peak_squared_max_wht.time_offset
+            if t2 != t1:
+                logging.error("peak_normal_min_wht.timeoffset={} does not equal peak_squared_max_wht.timeoffset={}".format(t2, t1))
+                errors += 1
+
+        #!
+        #! blu phase
+        #!
+        test_max = abs(self.peak_normal_max_blu.voltage) > abs(self.peak_normal_min_blu.voltage)
+        test_min = abs(self.peak_normal_max_blu.voltage) < abs(self.peak_normal_min_blu.voltage)
+        test_max |= not (test_max or test_min) and self.peak_normal_max_blu.time_offset < self.peak_normal_min_blu.timeoffset
+
+        if test_max:
+            v2, sq = (self.peak_normal_max_blu.voltage ** 2), self.peak_squared_max_blu.voltage
+            if v2 != sq:
+                logging.error("peak_normal_max_blu.voltage^2={} does not equal peak_squared_max_blu.voltage={}".format(v2, sq))
+                errors += 1
+            t1, t2 = self.peak_normal_max_blu.time_offset, self.peak_squared_max_blu.time_offset
+            if t2 != t1:
+                logging.error("peak_normal_max_blu.timeoffset={} does not equal peak_squared_max_blu.timeoffset={}".format(t2, t1))
+                errors += 1
+        else:
+            v2, sq = (self.peak_normal_min_blu.voltage ** 2), self.peak_squared_max_blu.voltage
+            if v2 != sq:
+                logging.error("peak_normal_min_blu.voltage^2={} does not equal peak_squared_max_blu.voltage={}".format(v2, sq))
+                errors += 1
+            t1, t2 = self.peak_normal_min_blu.time_offset, self.peak_squared_max_blu.time_offset
+            if t2 != t1:
+                logging.error("peak_normal_min_blu.timeoffset={} does not equal peak_squared_max_blu.timeoffset={}".format(t2, t1))
+                errors += 1
 
         return errors
 
@@ -1336,40 +1437,43 @@ class Read_Capture_Buffers_App(object):
             #self.running_led_on()
             self.running_led_toggle()
 
-            if data_ok:
-                self.capture_trigger_count += 1
+            #!
+            #! use next capture buffer for ping-pong
+            #! sets `self.bank` to the current bank to process
+            #! and `self.next_bank` to the next bank to fill.
+            #!
+            self.adc_capture_buffer_next()
 
+            #!
             #! Get time that `selector` returns.
+            #!
             select_datetime_utc = arrow.utcnow()
             select_datetime_local = select_datetime_utc.to(self.config.timezone)
 
-            #! use next capture buffer for ping-pong.  Updates self.bank to captured buffer bank.
-            self.adc_capture_buffer_next()
+            if data_ok:
+                self.capture_trigger_count += 1
 
+            #!
             #! Retrieve info from FPGA registers first (especially if not double buffered).
-            capture_info = ind.adc_capture_info_get(self.bank, dev_hand=self.dev_hand)
+            #!
+            capture_info_lst = [ ind.adc_capture_info_get(bank, dev_hand=self.dev_hand) for bank in range(self.config.bank_count) ]
+            capture_info_prev = capture_info_lst[self.prev_bank]
+            capture_info = capture_info_lst[self.bank]
 
-            if 1:
-                self.maxmin_normal      = capture_info.maxmin_normal
-                self.maxmin_squared     = capture_info.maxmin_squared
-                adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
-            else:
-                #! Read the maxmin registers from the fpga.
-                self.maxmin_normal = ind.adc_capture_maxmin_normal_get(dev_hand=self.dev_hand)
-                self.maxmin_squared = ind.adc_capture_maxmin_squared_get(dev_hand=self.dev_hand)
+            self.maxmin_normal      = capture_info.maxmin_normal
+            self.maxmin_squared     = capture_info.maxmin_squared
+            adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
 
-                #! Read the `adc_clock_count_per_pps` register from the fpga.
-                adc_clock_count_per_pps = ind.adc_clock_count_per_pps_get(dev_hand=self.dev_hand)
-
+            #!
             #! convert fpga capture time to Arrow datetime object.
-            timestamp = float(capture_info.irq_time.tv_sec) + (float(capture_info.irq_time.tv_nsec) / 1000000000.0)
+            #!
+            timestamp = float(capture_info.irq_time)
             irq_capture_datetime_utc = arrow.get(timestamp)
 
+            #!
             #! set the capture time (truncate to seconds).
-            if 1:
-                self.set_capture_datetime(irq_capture_datetime_utc.floor('second'))
-            else:
-                self.set_capture_datetime(select_datetime_utc.floor('second'))
+            #!
+            self.set_capture_datetime(irq_capture_datetime_utc.floor('second'))
 
             #! Clear terminal screen by sending special chars (ansi sequence?).
             #print("\033c")
@@ -1416,6 +1520,24 @@ class Read_Capture_Buffers_App(object):
                 #! blue
                 filename = 'sampledata-{}-blu'.format(loc_dt_str)
                 np.save(filename, self.blu_phase)
+
+            #!
+            #! Sanity check current bank is actually the latest/newest capture.
+            #!
+            irq_times = [ float(ci.irq_time) for ci in capture_info_lst ]
+            newest_irq_timestamp = max(irq_times)
+            newest_irq_index = irq_times.index(newest_irq_timestamp)
+            newest_irq_time = capture_info_lst[newest_irq_index].irq_time
+            if capture_info.irq_time != newest_irq_time:
+                logging.error("capture_info.irq_time={} does not equal newest_irq_time={}".format(capture_info.irq_time, newest_irq_time))
+
+            #!
+            #! Sanity check select capture time versus irq capture time.
+            #!
+            td = select_datetime_utc - irq_capture_datetime_utc
+            processing_latency = td.total_seconds()
+            if processing_latency > 0.200:
+                logging.warning("processing_latency={}, irq_capture_datetime_utc={}, select_datetime_utc={},".format(processing_latency, irq_capture_datetime_utc, select_datetime_utc))
 
             self.spare_led_on()
 
@@ -1542,6 +1664,15 @@ class Read_Capture_Buffers_App(object):
                     print("Total Peak Detect Count Errors = {}".format(self.peak_count_errors_total))
                     print("Total Peak Detect Errors = {}".format(self.peak_errors_total))
 
+                sanity_check_errors = self.peak_detect_sanity_check()
+                if sanity_check_errors:
+                    msg = '\n'.join( [
+                        "Sanity Check Error !!\n",
+                        "capture_info_prev = {!r}\n".format(capture_info_prev),
+                        "capture_info      = {!r}\n".format(capture_info),
+                        ] )
+                    logging.error(msg)
+
             print("\nTotal Capture Trigger Count = {}".format(self.capture_trigger_count))
 
             ##
@@ -1571,6 +1702,7 @@ class Read_Capture_Buffers_App(object):
 
 
 def argh_main():
+    """Main entry if running this module directly."""
 
     config = Config()
 
@@ -1622,8 +1754,8 @@ def argh_main():
                  save_capture_data      = config.save_capture_data,
                  test_mode              = config.test_mode.name.lower(),
                  debug                  = False,
+                 logging_level          = config.logging_level,
                  ):
-        """Main entry if running this module directly."""
 
         print(__name__)
 
@@ -1681,6 +1813,10 @@ def argh_main():
             config.peak_detect_numpy_debug  = True
             config.peak_detect_fpga_debug   = True
             config.peak_detect_debug        = True
+            logging_level                   = 'debug'
+
+        if logging_level != config.logging_level:
+            config.set_logging_level(logging_level)
 
         config.show_all()
 
