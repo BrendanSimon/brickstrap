@@ -1232,7 +1232,7 @@ class Read_Capture_Buffers_App(object):
         #!
         test_max = abs(self.peak_normal_max_red.voltage) > abs(self.peak_normal_min_red.voltage)
         test_min = abs(self.peak_normal_max_red.voltage) < abs(self.peak_normal_min_red.voltage)
-        test_max |= not (test_max or test_min) and self.peak_normal_max_red.time_offset < self.peak_normal_min_red.timeoffset
+        test_max |= not (test_max or test_min) and self.peak_normal_max_red.time_offset < self.peak_normal_min_red.time_offset
 
         if test_max:
             v2, sq = (self.peak_normal_max_red.voltage ** 2), self.peak_squared_max_red.voltage
@@ -1241,7 +1241,7 @@ class Read_Capture_Buffers_App(object):
                 errors += 1
             t1, t2 = self.peak_normal_max_red.time_offset, self.peak_squared_max_red.time_offset
             if t2 != t1:
-                logging.error("peak_normal_max_red.timeoffset={} does not equal peak_squared_max_red.timeoffset={}".format(t2, t1))
+                logging.error("peak_normal_max_red.time_offset={} does not equal peak_squared_max_red.time_offset={}".format(t2, t1))
                 errors += 1
         else:
             v2, sq = (self.peak_normal_min_red.voltage ** 2), self.peak_squared_max_red.voltage
@@ -1250,7 +1250,7 @@ class Read_Capture_Buffers_App(object):
                 errors += 1
             t1, t2 = self.peak_normal_min_red.time_offset, self.peak_squared_max_red.time_offset
             if t2 != t1:
-                logging.error("peak_normal_min_red.timeoffset={} does not equal peak_squared_max_red.timeoffset={}".format(t2, t1))
+                logging.error("peak_normal_min_red.time_offset={} does not equal peak_squared_max_red.time_offset={}".format(t2, t1))
                 errors += 1
 
         #!
@@ -1258,7 +1258,7 @@ class Read_Capture_Buffers_App(object):
         #!
         test_max = abs(self.peak_normal_max_wht.voltage) > abs(self.peak_normal_min_wht.voltage)
         test_min = abs(self.peak_normal_max_wht.voltage) < abs(self.peak_normal_min_wht.voltage)
-        test_max |= not (test_max or test_min) and self.peak_normal_max_wht.time_offset < self.peak_normal_min_wht.timeoffset
+        test_max |= not (test_max or test_min) and self.peak_normal_max_wht.time_offset < self.peak_normal_min_wht.time_offset
 
         if test_max:
             v2, sq = (self.peak_normal_max_wht.voltage ** 2), self.peak_squared_max_wht.voltage
@@ -1267,7 +1267,7 @@ class Read_Capture_Buffers_App(object):
                 errors += 1
             t1, t2 = self.peak_normal_max_wht.time_offset, self.peak_squared_max_wht.time_offset
             if t2 != t1:
-                logging.error("peak_normal_max_wht.timeoffset={} does not equal peak_squared_max_wht.timeoffset={}".format(t2, t1))
+                logging.error("peak_normal_max_wht.time_offset={} does not equal peak_squared_max_wht.time_offset={}".format(t2, t1))
                 errors += 1
         else:
             v2, sq = (self.peak_normal_min_wht.voltage ** 2), self.peak_squared_max_wht.voltage
@@ -1276,7 +1276,7 @@ class Read_Capture_Buffers_App(object):
                 errors += 1
             t1, t2 = self.peak_normal_min_wht.time_offset, self.peak_squared_max_wht.time_offset
             if t2 != t1:
-                logging.error("peak_normal_min_wht.timeoffset={} does not equal peak_squared_max_wht.timeoffset={}".format(t2, t1))
+                logging.error("peak_normal_min_wht.time_offset={} does not equal peak_squared_max_wht.time_offset={}".format(t2, t1))
                 errors += 1
 
         #!
@@ -1284,7 +1284,7 @@ class Read_Capture_Buffers_App(object):
         #!
         test_max = abs(self.peak_normal_max_blu.voltage) > abs(self.peak_normal_min_blu.voltage)
         test_min = abs(self.peak_normal_max_blu.voltage) < abs(self.peak_normal_min_blu.voltage)
-        test_max |= not (test_max or test_min) and self.peak_normal_max_blu.time_offset < self.peak_normal_min_blu.timeoffset
+        test_max |= not (test_max or test_min) and self.peak_normal_max_blu.time_offset < self.peak_normal_min_blu.time_offset
 
         if test_max:
             v2, sq = (self.peak_normal_max_blu.voltage ** 2), self.peak_squared_max_blu.voltage
@@ -1293,7 +1293,7 @@ class Read_Capture_Buffers_App(object):
                 errors += 1
             t1, t2 = self.peak_normal_max_blu.time_offset, self.peak_squared_max_blu.time_offset
             if t2 != t1:
-                logging.error("peak_normal_max_blu.timeoffset={} does not equal peak_squared_max_blu.timeoffset={}".format(t2, t1))
+                logging.error("peak_normal_max_blu.time_offset={} does not equal peak_squared_max_blu.time_offset={}".format(t2, t1))
                 errors += 1
         else:
             v2, sq = (self.peak_normal_min_blu.voltage ** 2), self.peak_squared_max_blu.voltage
@@ -1302,7 +1302,7 @@ class Read_Capture_Buffers_App(object):
                 errors += 1
             t1, t2 = self.peak_normal_min_blu.time_offset, self.peak_squared_max_blu.time_offset
             if t2 != t1:
-                logging.error("peak_normal_min_blu.timeoffset={} does not equal peak_squared_max_blu.timeoffset={}".format(t2, t1))
+                logging.error("peak_normal_min_blu.time_offset={} does not equal peak_squared_max_blu.time_offset={}".format(t2, t1))
                 errors += 1
 
         return errors
