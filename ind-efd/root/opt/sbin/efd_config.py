@@ -13,6 +13,28 @@ This module handles configuration information for EFD applications.
 import argh
 import os.path
 import enum
+import logging
+
+import logging
+import copy
+
+#!============================================================================
+
+def get_logging_level_names():
+    '''Helper to retrieve dict of logging names and levels.'''
+
+    #! find logging's internal dictionary for level names.
+    #! the internal dict name changed in python 3.4.
+    try:
+        level_to_name = logging._levelToName
+        level_vals = level_to_name.keys()
+    except AttributeError:
+        level_to_name = logging._levelNames
+        level_vals = [ key for key in level_to_name.keys() if isinstance(key,int) ]
+
+    level_vals = sorted(level_vals)
+    level_names = [ level_to_name[val] for val in level_vals ]
+    return level_names
 
 #!============================================================================
 
@@ -180,6 +202,8 @@ class ConfigDefault(object):
     save_capture_data = False
 
     test_mode = TestMode.NORMAL
+
+    logging_level = logging.getLevelName(logging.WARNING)
 
     #!========================================================================
 
@@ -417,6 +441,16 @@ class ConfigDefault(object):
 
     #!========================================================================
 
+    def set_logging_level(self, logging_level=None):
+        if logging_level != None:
+            level_names = get_logging_level_names()
+            logging_level = logging_level.upper()
+            if logging_level in level_names:
+                self.logging_level = logging_level
+            print("INFO: `logging_level` set to {}".format(self.logging_level))
+
+    #!========================================================================
+
     def show_all(self):
         print("-------------------------------------------------------------")
 
@@ -515,6 +549,8 @@ class ConfigDefault(object):
 
         print("test_mode = {}".format(self.test_mode))
 
+        print("logging_level = {}".format(self.logging_level))
+
         print("-------------------------------------------------------------")
 
 #!============================================================================
@@ -552,6 +588,7 @@ class Config(ConfigDefault):
         self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
         peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
         capture_count                            =            getattr(settings, 'CAPTURE_COUNT',                       None)
+        logging_level                            =            getattr(settings, 'LOGGING_LEVEL',                       None)
 
         self.set_capture_count(capture_count)
         #self.set_serial_number()
@@ -560,10 +597,12 @@ class Config(ConfigDefault):
         self.set_web_uris()
         self.set_measurements_log_field_names()
         self.set_peak_detect_mode(peak_detect_mode)
+        self.set_logging_level(logging_level)
 
 ##############################################################################
 
 def argh_main():
+    """Main entry if running this module directly."""
 
     config = Config()
 
@@ -592,8 +631,8 @@ def argh_main():
                  append_gps_data        = config.append_gps_data_to_measurements_log,
                  save_capture_data      = config.save_capture_data,
                  test_mode              = config.test_mode.name.lower(),
+                 logging_level          = config.logging_level.lower(),
                  ):
-        """Main entry if running this module directly."""
 
         print(__name__)
 
@@ -646,6 +685,9 @@ def argh_main():
 
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
+
+        if logging_level != config.logging_level.lower():
+            config.set_logging_level(logging_level)
 
         print("\n")
         print("Config settings (modified)")
