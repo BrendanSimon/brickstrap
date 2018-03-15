@@ -387,11 +387,29 @@ class MaxMin2(Struct_Base):
 
 #=============================================================================
 
+#! see https://stackoverflow.com/questions/24307022/how-to-compare-two-ctypes-objects-for-equality
+#! for more generalise comparison operator functions which can be used in a base class.
+
 class TimeSpec(Struct_Base):
     _fields_ = [
         ('tv_sec',    ctypes.c_long),
         ('tv_nsec',   ctypes.c_long),
     ]
+
+    #! simple efficient comparison function.
+    #! assumes `other` is a TimeSpec class.
+    def __eq__(self, other):
+        return self.tv_sec == other.tv_sec and self.tv_nsec == other.tv_nsec
+
+    #! simple efficient comparison function.
+    #! assumes `other` is a TimeSpec class.
+    def __ne__(self, other):
+        return self.tv_sec != other.tv_sec or self.tv_nsec != other.tv_nsec
+
+    #! convert to floating point
+    def __float__(self):
+        f = float(self.tv_sec) + (float(self.tv_nsec) / 1000000000.0)
+        return f
 
 #=============================================================================
 
