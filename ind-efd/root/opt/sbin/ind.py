@@ -560,6 +560,8 @@ class IOCTL:
     IND_USER_CAPTURE_INFO_0_GET         = _IOR( 0x18, structure=CaptureInfo)
     IND_USER_CAPTURE_INFO_1_GET         = _IOR( 0x19, structure=CaptureInfo)
     IND_USER_CAPTURE_INFO_LIST_GET      = _IOR( 0x1A, structure=CaptureInfoList)
+    IND_USER_DMA_MEM_SYNC_ALL           = _IOW( 0x1B, structure=ctypes.c_uint32)
+    IND_USER_DMA_MEM_SYNC_BANK          = _IOW( 0x1B, structure=ctypes.c_uint32)
 
 #!===========================================================================
 #!  Library functions.
@@ -888,6 +890,25 @@ def adc_capture_info_list_get(dev_hand=None):
         raise
 
     return ci_list
+
+def dma_mem_sync_all(dev_hand=None):
+    '''Synchronise all DMA memory by invalidating the memory cache.'''
+
+    try:
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_DMA_MEM_SYNC_ALL)
+#         fcntl.ioctl(dev_hand, IOCTL.DMA_MEM_SYNC_ALL, 0)
+    except IOError:
+        print("IOError: DMA Memory Sync All.")
+        raise
+
+def dma_mem_sync_bank(bank, dev_hand=None):
+    '''Synchronise a capture bank of DMA memory by invalidating the memory cache.'''
+
+    try:
+        fcntl.ioctl(dev_hand, IOCTL.IND_USER_DMA_MEM_SYNC_BANK, bank)
+    except IOError:
+        print("IOError: DMA Memory Sync Bank (bank={!r}).".format(bank))
+        raise
 
 def status_get(dev_hand=None):
     '''Get FPGA Status.'''
