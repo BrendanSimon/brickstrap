@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 """IND Driver Module."""
 
 ## Set to the FPGA register mapping variant.
@@ -24,11 +26,19 @@ import struct
 #!
 dev_name = '/dev/IND'
 
+BANK_COUNT = 2
+
 max_channels = 3
+
+SAMPLE_SIZE = ctypes.sizeof(ctypes.c_uint16)
+
 max_capture_count = 10 * 1024 * 1024
+
 #! 2 bytes per sample.  2 buffers for ping-pong acquisition.
-max_capture_size = max_capture_count * max_channels * 2 * 2
+max_capture_size = max_capture_count * SAMPLE_SIZE * max_channels * BANK_COUNT
+
 mmap_memory_size = 128 * 1024 * 1024
+
 #print("DEBUG: max_capture_size={}".format(max_capture_size))
 #print("DEBUG: mmap_memory_size={}".format(mmap_memory_size))
 assert(max_capture_size <= mmap_memory_size)
@@ -425,6 +435,33 @@ class CaptureInfo(Struct_Base):
         ('maxmin_squared',          MaxMin2),           #! IND_maxmin_struct maxmin_squared
     ]
 
+class CaptureInfoList(Struct_Base):
+    _fields_ = [
+        ('ci',    CaptureInfo * BANK_COUNT),
+    ]
+
+    def __len__(self):
+        return BANK_COUNT
+
+    def __getitem__(self, key):
+        return self.ci[key]
+
+    def __iter__(self): #! return an iterator
+        return iter(self.ci)
+
+#     def __iter__(self): #! initialise the iterator
+#         self._it = 0
+#         return self
+#
+#     def next(self): #! __next__(self) for python 3 !!
+#         if self._it >= BANK_COUNT:
+#             raise StopIteration
+#
+#         ci = self.ci[self._it]
+#         self._it += 1
+#
+#         return ci
+
 #=============================================================================
 
 class FPGA_Version(ctypes.Structure):
@@ -522,6 +559,7 @@ class IOCTL:
     IND_USER_READ_MAXMIN_SQUARED        = _IOR( 0x17, structure=MaxMin2)
     IND_USER_CAPTURE_INFO_0_GET         = _IOR( 0x18, structure=CaptureInfo)
     IND_USER_CAPTURE_INFO_1_GET         = _IOR( 0x19, structure=CaptureInfo)
+    IND_USER_CAPTURE_INFO_LIST_GET      = _IOR( 0x1A, structure=CaptureInfoList)
 
 #!===========================================================================
 #!  Library functions.
@@ -832,6 +870,24 @@ def adc_capture_info_get(bank, dev_hand=None):
         raise
 
     return capture_info
+
+def adc_capture_info_list_get(dev_hand=None):
+    '''Get the capture info list from the kernel driver.'''
+
+    if not dev_hand:
+        dev_hand = get_device_handle()
+
+    ioctl_id = IOCTL.IND_USER_CAPTURE_INFO_LIST_GET
+
+    ci_list = CaptureInfoList()
+    try:
+        #! set mutable flag to true to place data in our object.
+        fcntl.ioctl(dev_hand, ioctl_id, ci_list, True)
+    except IOError:
+        print("IOError: ADC Capture Info List Get.")
+        raise
+
+    return ci_list
 
 def status_get(dev_hand=None):
     '''Get FPGA Status.'''
@@ -1278,6 +1334,24 @@ def main():
     print("LED.Alert                =", int(LED.Alert))
     print("LED.Weather_Station_OK   =", LED.Weather_Station_OK)
     print("LED.Weather_Station_OK   =", int(LED.Weather_Station_OK))
+
+    capture_info = CaptureInfo()
+    print("\ncapture_info = {!r}".format(capture_info))
+
+    ci_list = CaptureInfoList()
+    print("\nci_list      = {!r}".format(ci_list))
+
+    list_ci_list = list(ci_list)
+    print("\nlist_ci_list = {!r}".format(list_ci_list))
+
+    print("\nci_list.ci[0] = {!r}".format(ci_list.ci[0]))
+    print("\nci_list.ci[1] = {!r}".format(ci_list.ci[1]))
+
+    print("\nci_list[0]    = {!r}".format(ci_list[0]))
+    print("\nci_list[1]    = {!r}".format(ci_list[1]))
+
+    for i, ci in enumerate(ci_list):
+        print("\nci[i={}]  = {!r}".format(i, ci))
 
     try:
         print("DEBUG: opening device name '{}'".format(dev_name))
