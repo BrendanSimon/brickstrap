@@ -1402,7 +1402,7 @@ class EFD_App(object):
     def peak_detect_sanity_check(self):
         '''Perform sanity check on peak detection objects.'''
 
-        logging.debug("trace:{}".format( method_name() ) )
+        logging.debug("TRACE:{}".format( method_name() ) )
 
         errors = 0
 
@@ -1910,10 +1910,11 @@ class EFD_App(object):
             #! push measurements to cloud queue for logging, posting, etc.
             #!
             try:
+                logging.debug("efd_app: putting measurements to cloud queue.")
+                logging.debug("efd_app: measurements={!r}".format(self.measurements))
                 self.cloud_queue.put(item=self.measurements, block=False)
             except queue.Full:
-                print("EXCEPTION: could not queue measurement data to cloud thread. qsize={}".format(self.cloud_queue.qsize()))
-                sys.stdout.flush()
+                logging.error("efd_app: EXCEPTION: could not queue measurement data to cloud thread. qsize={}".format(self.cloud_queue.qsize()))
 
             #! FIXME: this could be done in the cloud thread !!
             #! Save sample data and send SMS if a trigger event detected.

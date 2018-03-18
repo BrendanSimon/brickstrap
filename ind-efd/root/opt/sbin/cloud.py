@@ -12,6 +12,7 @@ This module posts data to a service in the "cloud".
 
 
 import sys
+import logging
 import traceback
 import threading
 import time
@@ -187,16 +188,18 @@ class Cloud(object):
             #! Notify the queue that we have processed the retrieved item.
             #!
             try:
-                #print("DEBUG: notify queue that next item has been processed.")
+                logging.debug("cloud:notify queue that item has been processed.")
                 self.cloud_queue.task_done()
             except Exception as exc:
-                print("EXCEPTION: issue `task_done()` to cloud queue after getting next item !!")
+                logging.error("cloud:EXCEPTION: issue `task_done()` to cloud queue after getting next item !!")
                 print(repr(exc))
+
+            logging.debug("cloud:measurements={!r}".format(measurements))
 
             capture_datetime_utc = measurements['datetime_utc']
 
             csv_data = self.measurements_log.to_csv(measurements=measurements, peak_detect_mode=self.config.peak_detect_mode)
-            #print("DEBUG: csv_data =", csv_data)
+            logging.debug("cloud:csv_data={!r}".format(csv_data))
 
             #! write csv data to measurements log file.
             self.measurements_log.write(csv_data=csv_data, datetime=capture_datetime_utc)
@@ -213,7 +216,7 @@ class Cloud(object):
         #!
         if len(self.csv_data) < self.config.max_records_per_post:
             #! Not enough data to post.
-            print("DEBUG: Not enough data records to post ({}).".format(len(self.csv_data)))
+            logging.warning("cloud:Not enough data records to post ({}).".format(len(self.csv_data)))
             return
 
         #!
@@ -225,7 +228,7 @@ class Cloud(object):
             #print("DEBUG: now={}, last_post_time={}, time_diff={}".format(now, self.last_post_time, time_diff))
             if time_diff < self.config.measurments_post_retry_time_interval:
                 #! Not time to retry last post.
-                print("DEBUG: Not time to retry last post.")
+                logging.info("cloud:Not time to retry last post.")
                 time.sleep(1)
                 return
 
@@ -235,8 +238,8 @@ class Cloud(object):
         #! concatenate csv row header and data into a single string.
         #!
         post_data = 'data=' + self.measurements_log.csv_header + ''.join(self.csv_data)
-        #print("DEBUG: Posting data: len(csv_data)={}".format(len(self.csv_data)))
-        #print("DEBUG: post_data={}".format(post_data))
+        logging.info("cloud:Posting data: len(csv_data)={}".format(len(self.csv_data)))
+        logging.debug("cloud:post_data={}".format(post_data))
 
         #!
         #! post the data to the web server.
@@ -247,7 +250,7 @@ class Cloud(object):
             print(repr(exc))
             print(traceback.format_exc())
         else:
-            #print("INFO: Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
+            logging.info("cloud:Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
             #! clear list to allow more csv data to accumulate from the queue.
             self.csv_data = []
 
