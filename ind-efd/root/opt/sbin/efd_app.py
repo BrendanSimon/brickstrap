@@ -1826,8 +1826,9 @@ class EFD_App(object):
                             trigger_alert = 'B'
 
             #!
-            #! Update measurements dictionary.
+            #! Create measurements dictionary and populate.
             #!
+            self.measurements = {}
 
             #! Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
             self.measurements['datetime_utc']               = self.capture_datetime_utc
