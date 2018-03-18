@@ -1830,8 +1830,6 @@ class EFD_App(object):
             #!
 
             #! Modify utc and local datetimes to output Excel & Matlab compatible ISO datetime strings.
-#             self.measurements['datetime_utc']               = self.capture_datetime_utc.isoformat(sep=' ')
-#             self.measurements['datetime_local']             = self.capture_datetime_local.isoformat(sep=' ')
             self.measurements['datetime_utc']               = self.capture_datetime_utc
             self.measurements['datetime_local']             = self.capture_datetime_local
 
@@ -1847,8 +1845,6 @@ class EFD_App(object):
             self.measurements['w2_red']                     = self.tf_map_red.F2
             self.measurements['max_volt_sq_red']            = sign_adjusted_magnitude(magnitude=self.peak_squared_max_red.voltage, value=phase[self.peak_squared_max_red.index])
             self.measurements['min_volt_sq_red']            = sign_adjusted_magnitude(magnitude=self.peak_squared_min_red.voltage, value=phase[self.peak_squared_min_red.index])
-#             self.measurements['max_volt_sq_red']            = sign_adjusted_magnitude(magnitude=self.peak_squared_max_red.voltage, value=phase[self.peak_squared_max_red.index])
-#             self.measurements['min_volt_sq_red']            = sign_adjusted_magnitude(magnitude=self.peak_squared_min_red.voltage, value=phase[self.peak_squared_min_red.index])
             self.measurements['max_time_offset_sq_red']     = self.peak_squared_max_red.time_offset
             self.measurements['min_time_offset_sq_red']     = self.peak_squared_min_red.time_offset
             self.measurements['max_count_sq_red']           = self.peak_squared_max_red.count
@@ -1866,8 +1862,6 @@ class EFD_App(object):
             self.measurements['w2_wht']                     = self.tf_map_wht.F2
             self.measurements['max_volt_sq_wht']            = sign_adjusted_magnitude(magnitude=self.peak_squared_max_wht.voltage, value=phase[self.peak_squared_max_wht.index])
             self.measurements['min_volt_sq_wht']            = sign_adjusted_magnitude(magnitude=self.peak_squared_min_wht.voltage, value=phase[self.peak_squared_min_wht.index])
-#             self.measurements['max_volt_sq_wht']            = sign_adjusted_magnitude(magnitude=self.peak_squared_max_wht.voltage, value=phase[self.peak_squared_max_wht.index])
-#             self.measurements['min_volt_sq_wht']            = sign_adjusted_magnitude(magnitude=self.peak_squared_min_wht.voltage, value=phase[self.peak_squared_min_wht.index])
             self.measurements['max_time_offset_sq_wht']     = self.peak_squared_max_wht.time_offset
             self.measurements['min_time_offset_sq_wht']     = self.peak_squared_min_wht.time_offset
             self.measurements['max_count_sq_wht']           = self.peak_squared_max_wht.count
@@ -1885,8 +1879,6 @@ class EFD_App(object):
             self.measurements['w2_blu']                     = self.tf_map_blu.F2
             self.measurements['max_volt_sq_blu']            = sign_adjusted_magnitude(magnitude=self.peak_squared_max_blu.voltage, value=phase[self.peak_squared_max_blu.index])
             self.measurements['min_volt_sq_blu']            = sign_adjusted_magnitude(magnitude=self.peak_squared_min_blu.voltage, value=phase[self.peak_squared_min_blu.index])
-#             self.measurements['max_volt_sq_blu']            = sign_adjusted_magnitude(magnitude=self.peak_squared_max_blu.voltage, value=phase[self.peak_squared_max_blu.index])
-#             self.measurements['min_volt_sq_blu']            = sign_adjusted_magnitude(magnitude=self.peak_squared_min_blu.voltage, value=phase[self.peak_squared_min_blu.index])
             self.measurements['max_time_offset_sq_blu']     = self.peak_squared_max_blu.time_offset
             self.measurements['min_time_offset_sq_blu']     = self.peak_squared_min_blu.time_offset
             self.measurements['max_count_sq_blu']           = self.peak_squared_max_blu.count
