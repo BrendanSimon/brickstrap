@@ -1731,14 +1731,6 @@ class EFD_App(object):
                 logging.error("capture_info.irq_time={} does not equal newest_irq_time={}".format(capture_info.irq_time, newest_irq_time))
 
             #!
-            #! Sanity check select capture time versus irq capture time.
-            #!
-            td = select_datetime_utc - irq_capture_datetime_utc
-            processing_latency = td.total_seconds()
-            if processing_latency > 0.200:
-                logging.warning("processing_latency={}, irq_capture_datetime_utc={}, select_datetime_utc={},".format(processing_latency, irq_capture_datetime_utc, select_datetime_utc))
-
-            #!
             #! Skip processing if system date is not set properly (year <= 2015).
             #!
             if select_datetime_utc.year <= 2015:
