@@ -1645,6 +1645,11 @@ class EFD_App(object):
             logging.debug("capture_info_prev = {!r}\n".format(capture_info_prev))
             logging.debug("capture_info      = {!r}\n".format(capture_info))
 
+            #!
+            #! Synchronise DMA capture memory.
+            #!
+            ind.dma_mem_sync_bank(self.bank, dev_hand=self.dev_hand)
+
             self.maxmin_normal      = capture_info.maxmin_normal
             self.maxmin_squared     = capture_info.maxmin_squared
             adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
