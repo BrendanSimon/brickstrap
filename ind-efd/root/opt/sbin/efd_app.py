@@ -1722,13 +1722,16 @@ class EFD_App(object):
 
             #!
             #! Sanity check current bank is actually the latest/newest capture.
+            #! only check once we have two captures (prev bank == current bank on first capture)
             #!
-            irq_times = [ float(ci.irq_time) for ci in capture_info_lst ]
-            newest_irq_timestamp = max(irq_times)
-            newest_irq_index = irq_times.index(newest_irq_timestamp)
-            newest_irq_time = capture_info_lst[newest_irq_index].irq_time
-            if capture_info.irq_time != newest_irq_time:
-                logging.error("capture_info.irq_time={} does not equal newest_irq_time={}".format(capture_info.irq_time, newest_irq_time))
+            if self.prev_bank != self.bank:
+                irq_times = [ float(ci.irq_time) for ci in capture_info_lst ]
+                newest_irq_timestamp = max(irq_times)
+                newest_irq_index = irq_times.index(newest_irq_timestamp)
+                newest_irq_time = capture_info_lst[newest_irq_index].irq_time
+                if capture_info.irq_time != newest_irq_time:
+                    logging.error("capture_info[{}].irq_time={} does not equal newest_irq_time={}".format(self.bank, capture_info.irq_time, newest_irq_time))
+                    logging.error("capture_info irq_times={!r}".format(irq_times))
 
             #!
             #! Skip processing if system date is not set properly (year <= 2015).
