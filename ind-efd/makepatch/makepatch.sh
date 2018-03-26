@@ -10,7 +10,7 @@ set -o errexit
 
 ver_from="v0.11.0"
 
-ver_to="v0.11.1-rc2"
+ver_to="v0.11.1-rc3"
 
 patch_name="ind-efd-patch-${ver_from}-to-${ver_to}"
 
