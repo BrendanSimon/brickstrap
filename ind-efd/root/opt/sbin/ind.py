@@ -2,15 +2,10 @@
 
 """IND Driver Module."""
 
-## Set to the FPGA register mapping variant.
-## Should only need original API version, once IND2 FPGA is made
-## to conform with the original IND1 API.
-IND_FPGA_API = 1
-#IND_FPGA_API = 2
-
 from enum import IntEnum
 
 from efd_config import TestMode
+from efd_config import PhaseMode
 
 import ioctl
 import ctypes
@@ -55,36 +50,51 @@ assert(max_capture_size <= mmap_memory_size)
 
 #=============================================================================
 #!
+#! TODO: Rename this class to Config_Register_Bits
+#!       Make enum symbols all upper case
+#!
 #! Config Constants/Defaults.
 #!
 #=============================================================================
-class Config(IntEnum):
+class Config( IntEnum ):
     PPS_Generate            = 1 << 0
     Debug_DMA_Start         = 1 << 1
     DMA_Halt                = 1 << 2
     DMA_Reset               = 1 << 3
+
     FPGA_Reset              = 1 << 4
     ADC_Test_Data_Post_Fifo = 1 << 5
     PPS_Debug_Mode          = 1 << 6
     DMA_Debug_Mode          = 1 << 7
+
     Debug_Select_Ch_0       = 0
     Debug_Select_Ch_1       = 1 << 8
     Debug_Select_Ch_2       = 2 << 8
     Debug_Select_Ch_Off     = 3 << 8
     Debug_Select_Active     = 1 << 11
+
     Unsigned_Data           = 0
     Signed_Data             = 1 << 12
+
     ADC_Test_Data_Pre_Fifo  = 1 << 13
 
-    All                     = PPS_Generate \
-                            | Debug_DMA_Start | DMA_Halt | DMA_Reset \
-                            | FPGA_Reset | ADC_Test_Data_Post_Fifo \
-                            | PPS_Debug_Mode | DMA_Debug_Mode \
-                            | Debug_Select_Ch_0 | Debug_Select_Ch_1 \
-                            | Debug_Select_Ch_2 | Debug_Select_Ch_Off \
-                            | Debug_Select_Active \
-                            | Unsigned_Data | Signed_Data \
-                            | ADC_Test_Data_Pre_Fifo
+    PHASE_MODE_POLY         = 0
+    PHASE_MODE_CH_0         = 1 << 14
+    PHASE_MODE_CH_1         = 2 << 14
+    PHASE_MODE_CH_2         = 3 << 14
+    PHASE_MODE_DEFAULT      = PHASE_MODE_POLY
+
+    All                     = PPS_Generate                              \
+                            | Debug_DMA_Start | DMA_Halt | DMA_Reset    \
+                            | FPGA_Reset | ADC_Test_Data_Post_Fifo      \
+                            | PPS_Debug_Mode | DMA_Debug_Mode           \
+                            | Debug_Select_Ch_0 | Debug_Select_Ch_1     \
+                            | Debug_Select_Ch_2 | Debug_Select_Ch_Off   \
+                            | Debug_Select_Active                       \
+                            | Unsigned_Data | Signed_Data               \
+                            | ADC_Test_Data_Pre_Fifo                    \
+                            | PHASE_MODE_POLY | PHASE_MODE_CH_0         \
+                            | PHASE_MODE_CH_1 | PHASE_MODE_CH_2         \
 
     Mode_Normal             = 0
     Mode_DMA_Debug          = DMA_Debug_Mode
@@ -108,36 +118,64 @@ class Config(IntEnum):
     Mode_Manual_Trigger     = Mode_PPS_Trigger
     Mode_Stop               = Mode_System_Halt
 
-    Peak_Start_Disable      = 0x00FFFFFF                #! default
-    Peak_Stop_Disable       = 0x00FFFFFF                #! default
 
-    ADC_Offset              = 0                         #! default
+#=============================================================================
+#! Default values
+#=============================================================================
+
+phase_mode_to_config_register_mask = \
+{
+    PhaseMode.POLY  : Config.PHASE_MODE_POLY,
+    PhaseMode.RED   : Config.PHASE_MODE_CH_0,
+    PhaseMode.WHITE : Config.PHASE_MODE_CH_1,
+    PhaseMode.BLUE  : Config.PHASE_MODE_CH_2,
+}
+
+#=============================================================================
+#! Default values
+#=============================================================================
+
+CAPTURE_COUNT_DEFAULT       = 0
+DELAY_COUNT_DEFAULT         = 0
+
+PEAK_START_DISABLE_DEFAULT  = 0x00FFFFFF
+PEAK_STOP_DISABLE_DEFAULT   = 0x00FFFFFF
+
+ADC_OFFSET_DEFAULT          = 0
 
 
 #=============================================================================
+#!
+#! TODO: Rename this class ??
+#!       Make enum symbols all upper case
 #!
 #! Cmd Interrupt Constants
 #!
 #=============================================================================
-class Interrupt(IntEnum):
+class Interrupt( IntEnum ):
     Disable     = 0
     Enable      = 1 << 0
 
 #=============================================================================
 #!
+#! TODO: Rename this class to Status_Register_Bits
+#!       Make enum symbols all upper case
+#!
 #! Status Register Constants
 #!
 #=============================================================================
 
-class Status_1(IntEnum):
+class Status( IntEnum ):
     SPI_Busy                = 1 << 0
     S2MM_Error              = 1 << 1
     MM2S_Read_Complete      = 1 << 2        #! What is this ??
     MM2S_Error              = 1 << 3
+
     SPI_Error               = 1 << 4
     Interrupt_Active        = 1 << 5
     FPGA_Reset              = 1 << 6
     ADC_Test                = 1 << 7
+
     PPS_Debug               = 1 << 8
     DMA_Reset               = 1 << 9
     DMA_Debug               = 1 << 10
@@ -145,99 +183,61 @@ class Status_1(IntEnum):
 
     Battery_Low             = 1 << 12
     AC_Power                = 1 << 13
-    Not_Restart_Request     = 1 << 14       ## PM MCU has requested a restart
-    Not_Shutdown_Request    = 1 << 15       ## PM MCU has requested a shutdown
+    Not_Restart_Request     = 1 << 14       #! PM MCU has requested a restart
+    Not_Shutdown_Request    = 1 << 15       #! PM MCU has requested a shutdown
+
+    ADC_Test_Data_Pre_Fifo  = 1 << 16
+
+    PHASE_MODE_POLY         = 0
+    PHASE_MODE_CH_0         = 1 << 17
+    PHASE_MODE_CH_1         = 2 << 17
+    PHASE_MODE_CH_2         = 3 << 17
+    PHASE_MODE_DEFAULT      = PHASE_MODE_POLY
+
 
     All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error   \
                             | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test      \
                             | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable      \
                             | Battery_Low | AC_Power                                    \
-                            | Not_Restart_Request | Not_Shutdown_Request
-
-class Status_2(IntEnum):
-    SPI_Busy                = 1 << 0
-    S2MM_Error              = 1 << 1
-    MM2S_Read_Complete      = 1 << 2        #! What is this ??
-    MM2S_Error              = 1 << 3
-    SPI_Error               = 1 << 4
-    Interrupt_Active        = 1 << 5
-    FPGA_Reset              = 1 << 6
-    ADC_Test                = 1 << 7
-    PPS_Debug               = 1 << 8
-    DMA_Reset               = 1 << 9
-    DMA_Debug               = 1 << 10
-    Interrupt_Enable        = 1 << 11
-
-## IND2 Kutu assignments
-## FIXME: these are probably wrong !!
-    Modem_OK                = 1 << 12
-    Weather_Station_OK      = 1 << 13
-    Battery_OK              = 1 << 14
-    Power_OK                = 1 << 15
-    PPS_OK                  = 1 << 16
-
-    Not_Restart_Request     = 1 << 17
-    Not_Shutdown_Request    = 1 << 18
-
-    Battery_Low             = 1 << 19       ## FIXME: not sure if this is correct !!
-    AC_Power                = 1 << 20       ## FIXME: not sure if this is correct !!
-
-    All                     = SPI_Busy | S2MM_Error | MM2S_Read_Complete | MM2S_Error   \
-                            | SPI_Error | Interrupt_Active | FPGA_Reset | ADC_Test      \
-                            | PPS_Debug | DMA_Reset | DMA_Debug | Interrupt_Enable      \
-                            | Modem_OK | Weather_Station_OK                             \
-                            | Battery_OK | Power_OK                                     \
-                            | PPS_OK                                                    \
-                            | Not_Restart_Request | Not_Shutdown_Request
+                            | Not_Restart_Request | Not_Shutdown_Request                \
+                            | ADC_Test_Data_Pre_Fifo                                    \
+                            | PHASE_MODE_POLY | PHASE_MODE_CH_0                         \
+                            | PHASE_MODE_CH_1 | PHASE_MODE_CH_2                         \
 
 #=============================================================================
+#!
+#! TODO: Rename this class to Control_Register_Bits
+#!       Make enum symbols all upper case
 #!
 #! Control Register Constants
 #!
 #=============================================================================
 
-class Control_1(IntEnum):
+class Control( IntEnum ):
     Modem_Reset             = 1 << 0
     Modem_Power             = 1 << 1
     EN_Select               = 1 << 2        #! What is this ??
 
-    Not_OS_Running          = 1 << 3        ## output low to indicate to PM MCU that we are up and running ok
-    Not_Spare_MCU           = 1 << 4        ## a spare signal to PM MCU (could be input or output)?
+    Not_OS_Running          = 1 << 3        #! output low to indicate to PM MCU that we are up and running ok
+    Not_Spare_MCU           = 1 << 4        #! a spare signal to PM MCU (could be input or output)?
 
     All                     = Modem_Reset | Modem_Power | EN_Select     \
-                            | Not_OS_Running | Not_Spare_MCU
-
-class Control_2(IntEnum):
-    Modem_Reset             = 1 << 0
-    Modem_Power             = 1 << 1
-    EN_Select               = 1 << 2        #! What is this ??
-
-    Not_OS_Running          = 1 << 3        ## output low to indicate to PM MCU that we are up and running ok
-    Not_Spare_MCU           = 1 << 4        ## a spare signal to PM MCU (could be input or output)?
-
-    All                     = Modem_Reset | Modem_Power | EN_Select     \
-                            | Not_OS_Running | Not_Spare_MCU
-
-## IND2 Kutu assignments (FIXME) !!
-    Running                 = 1 << 3
-    Alert                   = 1 << 4
-    Not_OS_Running          = 1 << 5        ## output low to indicate to PM MCU that we are up and running ok
-
-    All                     = Modem_Reset | Modem_Power | EN_Select     \
-                            | Running | Alert                           \
                             | Not_OS_Running | Not_Spare_MCU
 
 #=============================================================================
+#!
+#! TODO: Rename this class to LED_Register_Bits
+#!       Make enum symbols all upper case
 #!
 #! IOCTL LED Constants
 #!
 #=============================================================================
 
-class LED_1(IntEnum):
-## IND1 assignments
+class LED( IntEnum ):
+#! IND1 assignments
     Running                 = 1 << 0
     Alert                   = 1 << 1
-    Spare_3G                = 1 << 2        ## IND1 Spare LED on 3G board.
+    Spare_3G                = 1 << 2        #! IND1 Spare LED on 3G board.
     PPS_OK                  = 1 << 3
     Modem_OK                = 1 << 4
     Weather_Station_OK      = 1 << 5
@@ -245,7 +245,7 @@ class LED_1(IntEnum):
     Battery_OK              = 1 << 7
 
     Spare1_3G               = 1 << 8
-    Spare2_3G               = 1 << 9        ## IND2 Spare LED on 3G board.
+    Spare2_3G               = 1 << 9        #! IND2 Spare LED on 3G board.
     Spare3_3G               = 1 << 10
     Spare4_3G               = 1 << 11
     Spare1_RF               = 1 << 12
@@ -256,7 +256,7 @@ class LED_1(IntEnum):
     Debug0                  = 1 << 28
     Debug1                  = 1 << 29
     Debug2                  = 1 << 30
-    Debug3                  = 1 << 30   ## FIXME !!
+    Debug3                  = 1 << 30   #! FIXME !!
 
     All                     = Running | Alert | Spare_3G | PPS_OK           \
                             | Modem_OK | Weather_Station_OK                 \
@@ -265,59 +265,7 @@ class LED_1(IntEnum):
                             | Spare1_RF | Spare2_RF | Spare3_RF | Spare4_RF \
                             | Debug0 | Debug1 | Debug2 | Debug3             \
 
-    Spare                   = Spare_3G | Spare2_3G     ## Use both bits so works with IND1 and IND2 boards.
-
-class LED_2(IntEnum):
-## IND2 Kutu assignments
-#     Running                 = 0             ##FIXME: currently in Control reg !!
-#     Alert                   = 0             ##FIXME: currently in Control reg !!
-
-    Debug0                  = 1 << 0
-    Debug1                  = 1 << 1
-    Debug2                  = 1 << 2
-    Debug3                  = 1 << 3
-
-    Spare1_3G               = 1 << 4
-#     Spare2_3G               = 1 << 2        ## set to bit 2 for backward compatibility with IND1 system.
-    Spare2_3G               = 1 << 5        ## FIXME: remove when FPGA is remapped !!
-    Spare3_3G               = 1 << 6
-    Spare4_3G               = 1 << 7
-    Spare1_RF               = 1 << 8
-    Spare2_RF               = 1 << 9
-    Spare3_RF               = 1 << 10
-    Spare4_RF               = 1 << 11
-
-    Modem_OK                = 1 << 12
-    Weather_Station_OK      = 1 << 13
-    Battery_OK              = 1 << 14
-    Power_OK                = 1 << 15
-    PPS_OK                  = 1 << 16
-
-    All                     = Debug0 | Debug1 | Debug2 | Debug3             \
-                            | Spare1_3G | Spare2_3G | Spare3_3G | Spare4_3G \
-                            | Spare1_RF | Spare2_RF | Spare3_RF | Spare4_RF \
-                            | Modem_OK | Weather_Station_OK                 \
-                            | Battery_OK | Power_OK                         \
-                            | PPS_OK
-
-    Spare                   = Spare2_3G
-
-
-#=============================================================================
-#! Map classes based on selected version of FPGA.
-#! There may be a way of doing this dynamically by reading the FPGA version register.
-#=============================================================================
-
-if IND_FPGA_API == 1:
-    Status = Status_1
-    Control = Control_1
-    LED = LED_1
-elif IND_FPGA_API == 2:
-    Status = Status_2
-    Control = Control_2
-    LED = LED_2
-else:
-    raise Exception("Invalid value for `IND_FPGA_API`")
+    Spare                   = Spare_3G | Spare2_3G     #! Use both bits so works with IND1 and IND2 boards.
 
 #=============================================================================
 
@@ -719,15 +667,16 @@ def adc_capture_address(address=0, dev_hand=None):
         print("IOError: setting capture address.")
         raise
 
-def adc_capture_set_mode(address=0,
-                         mode=Config.Mode_PPS_Debug,
-                         interrupt_enable=False,
-                         capture_count=0,
-                         delay_count=0,
-                         peak_detect_start_count=Config.Peak_Start_Disable,
-                         peak_detect_stop_count=Config.Peak_Stop_Disable,
-                         adc_offset=Config.ADC_Offset,
-                         dev_hand=None):
+def adc_capture_set_mode( address                   = 0,
+                          mode                      = Config.Mode_PPS_Debug,
+                          interrupt_enable          = False,
+                          capture_count             = CAPTURE_COUNT_DEFAULT,
+                          delay_count               = DELAY_COUNT_DEFAULT,
+                          peak_detect_start_count   = PEAK_START_DISABLE_DEFAULT,
+                          peak_detect_stop_count    = PEAK_STOP_DISABLE_DEFAULT,
+                          adc_offset                = ADC_OFFSET_DEFAULT,
+                          dev_hand                  = None
+                        ):
     '''Setup ADC Capture parameters.'''
 
     if not dev_hand:
@@ -745,14 +694,14 @@ def adc_capture_set_mode(address=0,
     cmd.adc_offset = adc_offset
 
     if 1:
-        print("DEBUG: adc_capture_mode_set: cmd.config=0x{:08x}".format(cmd.config))
-        print("DEBUG: adc_capture_mode_set: cmd.interrupt=0x{:08x}".format(cmd.interrupt))
-        print("DEBUG: adc_capture_mode_set: cmd.address=0x{:08x}".format(cmd.address))
-        print("DEBUG: adc_capture_mode_set: cmd.capture_count=0x{:08x}".format(cmd.capture_count))
-        print("DEBUG: adc_capture_mode_set: cmd.delay_count=0x{:08x}".format(cmd.delay_count))
-        print("DEBUG: adc_capture_mode_set: cmd.peak_detect_start_count=0x{:08x}".format(cmd.peak_detect_start_count))
-        print("DEBUG: adc_capture_mode_set: cmd.peak_detect_stop_count=0x{:08x}".format(cmd.peak_detect_stop_count))
-        print("DEBUG: adc_capture_mode_set: cmd.adc_offset={}".format(cmd.adc_offset))
+        print("DEBUG: adc_capture_mode_set: cmd.config                  = 0x{:08x}".format(cmd.config))
+        print("DEBUG: adc_capture_mode_set: cmd.interrupt               = 0x{:08x}".format(cmd.interrupt))
+        print("DEBUG: adc_capture_mode_set: cmd.address                 = 0x{:08x}".format(cmd.address))
+        print("DEBUG: adc_capture_mode_set: cmd.capture_count           = 0x{:08x}".format(cmd.capture_count))
+        print("DEBUG: adc_capture_mode_set: cmd.delay_count             = 0x{:08x}".format(cmd.delay_count))
+        print("DEBUG: adc_capture_mode_set: cmd.peak_detect_start_count = 0x{:08x}".format(cmd.peak_detect_start_count))
+        print("DEBUG: adc_capture_mode_set: cmd.peak_detect_stop_count  = 0x{:08x}".format(cmd.peak_detect_stop_count))
+        print("DEBUG: adc_capture_mode_set: cmd.adc_offset              = {}".format(cmd.adc_offset))
 
     #status = status_get(dev_hand=dev_hand)
 
@@ -764,17 +713,23 @@ def adc_capture_set_mode(address=0,
 
     #status = status_get(dev_hand=dev_hand)
 
-def adc_capture_start(address,
-                      capture_count,
-                      delay_count,
-                      capture_mode='auto',
-                      signed=True,
-                      peak_detect_start_count=Config.Peak_Start_Disable,
-                      peak_detect_stop_count=Config.Peak_Stop_Disable,
-                      adc_offset=Config.ADC_Offset,
-                      test_mode=TestMode.NORMAL,
-                      dev_hand=None):
+def adc_capture_start( address,
+                       capture_count,
+                       delay_count,
+                       capture_mode             = 'auto',
+                       signed                   = True,
+                       peak_detect_start_count  = PEAK_START_DISABLE_DEFAULT,
+                       peak_detect_stop_count   = PEAK_STOP_DISABLE_DEFAULT,
+                       adc_offset               = ADC_OFFSET_DEFAULT,
+                       test_mode                = TestMode.NORMAL,
+                       phase_mode               = Config.PHASE_MODE_DEFAULT,
+                       dev_hand                 = None
+                    ):
     '''Start ADC Capture.'''
+
+    print("DEBUG: adc_capture_start: capture_mode={!r}".format( capture_mode ) )
+    print("DEBUG: adc_capture_start: test_mode={!r}".format( test_mode ) )
+    print("DEBUG: adc_capture_start: phase_mode={!r}".format( phase_mode ) )
 
     if capture_mode not in [ 'auto', 'manual' ]:
         msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
@@ -790,9 +745,11 @@ def adc_capture_start(address,
     mode_start |= Config.ADC_Test_Data_Post_Fifo if test_mode == TestMode.ADC_POST_FIFO else 0
     mode_start |= Config.ADC_Test_Data_Pre_Fifo  if test_mode == TestMode.ADC_PRE_FIFO  else 0
 
-    print("DEBUG: adc_capture_start: capture_mode={}".format(capture_mode))
-    print("DEBUG: adc_capture_start: test_mode={}".format(test_mode))
-    print("DEBUG: adc_capture_start: mode_start=0x{:08x}".format(mode_start))
+    phase_mode_mask = phase_mode_to_config_register_mask.get( phase_mode, Config.PHASE_MODE_DEFAULT )
+
+    mode_start |= phase_mode_mask
+
+    print("DEBUG: adc_capture_start: mode_start=0x{:08x}".format( mode_start ) )
 
     adc_capture_set_mode(address=address,
                          mode=mode_start,
@@ -980,7 +937,7 @@ def fpga_version_get(dev_hand=None):
 
     fpga_version = FPGA_Version()
     try:
-        ## set mutable flag to true to place data in the object.
+        #! set mutable flag to true to place data in the object.
         fcntl.ioctl(dev_hand, IOCTL.IND_USER_FPGA_VERSION, fpga_version, True)
     except IOError:
         print("IOError: FPGA Version Get.")
@@ -988,7 +945,7 @@ def fpga_version_get(dev_hand=None):
 
     return fpga_version
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def adc_clock_count_per_pps_get(dev_hand=None):
     """Get the ADC Clock Count Per PPS reading."""
@@ -1005,7 +962,7 @@ def adc_clock_count_per_pps_get(dev_hand=None):
 
     return value
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def adc_offset_set(adc_offset, dev_hand=None):
     """Set the ADC Offset to be applied to ADC sample stream."""
@@ -1019,7 +976,7 @@ def adc_offset_set(adc_offset, dev_hand=None):
         print("IOError: Set ADC Offset.")
         raise
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def adc_offset_get(dev_hand=None):
     """Set the ADC DC Offset to be applied to ADC sample stream."""
@@ -1036,7 +993,7 @@ def adc_offset_get(dev_hand=None):
 
     return value
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def power_restart_requested(status=None, dev_hand=None):
     """
@@ -1096,65 +1053,41 @@ def power_os_running_set(value=None, dev_hand=None):
     elif value == False:
         power_os_running_off(dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def running_led_off(dev_hand=None):
 
-    if IND_FPGA_API == 1:
-        led = LED.Running
-        leds_modify(off=led, dev_hand=dev_hand)
-    elif IND_FPGA_API == 2:
-        led = Control.Running
-        ctrl_modify(clear=led, dev_hand=dev_hand)
+    led = LED.Running
+    leds_modify(off=led, dev_hand=dev_hand)
 
 def running_led_on(dev_hand=None):
 
-    if IND_FPGA_API == 1:
-        led = LED.Running
-        leds_modify(on=led, dev_hand=dev_hand)
-    elif IND_FPGA_API == 2:
-        led = Control.Running
-        ctrl_modify(set=led, dev_hand=dev_hand)
+    led = LED.Running
+    leds_modify(on=led, dev_hand=dev_hand)
 
 def running_led_toggle(dev_hand=None):
 
-    if IND_FPGA_API == 1:
-        led = LED.Running
-        leds_modify(toggle=led, dev_hand=dev_hand)
-    elif IND_FPGA_API == 2:
-        led = Control.Running
-        ctrl_modify(toggle=led, dev_hand=dev_hand)
+    led = LED.Running
+    leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def alert_led_off(dev_hand=None):
 
-    if IND_FPGA_API == 1:
-        led = LED.Alert
-        leds_modify(off=led, dev_hand=dev_hand)
-    if IND_FPGA_API == 2:
-        led = Control.Alert
-        ctrl_modify(clear=led, dev_hand=dev_hand)
+    led = LED.Alert
+    leds_modify(off=led, dev_hand=dev_hand)
 
 def alert_led_on(dev_hand=None):
 
-    if IND_FPGA_API == 1:
-        led = LED.Alert
-        leds_modify(on=led, dev_hand=dev_hand)
-    if IND_FPGA_API == 2:
-        led = Control.Alert
-        ctrl_modify(set=led, dev_hand=dev_hand)
+    led = LED.Alert
+    leds_modify(on=led, dev_hand=dev_hand)
 
 def alert_led_toggle(dev_hand=None):
 
-    if IND_FPGA_API == 1:
-        led = LED.Alert
-        leds_modify(toggle=led, dev_hand=dev_hand)
-    if IND_FPGA_API == 2:
-        led = Control.Alert
-        ctrl_modify(toggle=led, dev_hand=dev_hand)
+    led = LED.Alert
+    leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def pps_ok_led_off(dev_hand=None):
 
@@ -1209,55 +1142,55 @@ def weather_led_toggle(dev_hand=None):
 
 def power_led_off(dev_hand=None):
 
-## IND1:
+#! IND1:
 #     led = LED.Power_OK
-## IND2:
+#! IND2:
     led = LED.Power_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
 def power_led_on(dev_hand=None):
 
-## IND1:
+#! IND1:
 #     led = LED.Power_OK
-## IND2:
+#! IND2:
     led = LED.Power_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
 def power_led_toggle(dev_hand=None):
 
-## IND1:
+#! IND1:
 #     led = LED.Power_OK
-## IND2:
+#! IND2:
     led = LED.Power_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def battery_led_off(dev_hand=None):
 
-## IND1:
+#! IND1:
 #     led = LED.Battery_OK
-## IND2:
+#! IND2:
     led = LED.Battery_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
 def battery_led_on(dev_hand=None):
 
-## IND1:
+#! IND1:
 #     led = LED.Battery_OK
-## IND2:
+#! IND2:
     led = LED.Battery_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
 def battery_led_toggle(dev_hand=None):
 
-## IND1:
+#! IND1:
 #     led = LED.Battery_OK
-## IND2:
+#! IND2:
     led = LED.Battery_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def spare_led_off(dev_hand=None):
 
@@ -1274,7 +1207,7 @@ def spare_led_toggle(dev_hand=None):
     led = LED.Spare
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def debug_led_off(dev_hand=None):
 
@@ -1294,7 +1227,7 @@ def debug_led_toggle(dev_hand=None):
     led = 0xFFFFFFFF
     leds_modify(toggle=led, dev_hand=dev_hand)
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
 def blinky(count=0, delay=0.1, dev_hand=None):
     """Cycle through all the LEDs."""
@@ -1306,7 +1239,7 @@ def blinky(count=0, delay=0.1, dev_hand=None):
                 LED.Running, LED.Modem_OK, LED.Alert,
                 LED.Weather_Station_OK, LED.Spare ]
 
-    ## append leds in reverse order, omitting end LEDs.
+    #! append leds in reverse order, omitting end LEDs.
     led_seq += list(reversed(led_seq[1:-1]))
 
     remaining = 1 if count == 0 else count
@@ -1387,9 +1320,9 @@ def main():
     led_seq = [ LED.PPS_OK, LED.Running, LED.Modem_OK, LED.Alert, LED.Weather_Station_OK, LED.Spare ]
     led_seq += led_seq[1:-1][::-1]
     for count, led in enumerate(led_seq * 10):
-        ##
+        #!
         #! Cycle LEDs.
-        ##
+        #!
         on = led & LED.All
         off = ~on & LED.All
         if 0:
@@ -1399,9 +1332,9 @@ def main():
 
         leds_modify(on, off, dev_hand=dev_hand)
 
-        ##
+        #!
         #! Cycle Modem control.
-        ##
+        #!
         on = 0
         c = (count >> 2) & Control.All
         if (c & 1): on |= Control.Modem_Reset
