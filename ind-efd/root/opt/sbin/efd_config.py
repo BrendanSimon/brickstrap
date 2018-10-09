@@ -38,33 +38,44 @@ def get_logging_level_names():
 
 #!============================================================================
 
-class CaptureMode(enum.Enum):
+class CaptureMode( enum.Enum ):
     AUTO        = 1
     MANUAL      = 2
 
 #!============================================================================
 
-class PeakDetectMode(enum.Enum):
+class PeakDetectMode( enum.Enum ):
     SQUARED     = 1
     NORMAL      = 2
 #     ABSOLUTE    = 3
 
 #!============================================================================
 
-class TestMode(enum.Enum):
+class TestMode( enum.Enum ):
     NORMAL          = 1
     ADC_POST_FIFO   = 2
     ADC_PRE_FIFO    = 3
 
 #!============================================================================
 
-class ADC_Polarity(enum.Enum):
+class ADC_Polarity( enum.Enum ):
     SIGNED      = 1
     UNSIGNED    = 2
 
 #!============================================================================
 
-class ConfigDefault(object):
+class PhaseMode( enum.Enum ):
+    POLY         = 0
+    RED          = 1
+    WHITE        = 2
+    BLUE         = 3
+
+    #! aliases
+    DEFAULT      = POLY
+
+#!============================================================================
+
+class ConfigDefault( object ):
     """
     Default Configuration Settings.
 
@@ -202,6 +213,8 @@ class ConfigDefault(object):
     save_capture_data = False
 
     test_mode = TestMode.NORMAL
+
+    phase_mode = PhaseMode.DEFAULT
 
     logging_level = logging.getLevelName(logging.WARNING)
 
@@ -441,6 +454,19 @@ class ConfigDefault(object):
 
     #!========================================================================
 
+    def set_phase_mode( self, phase_mode=None ):
+        if phase_mode != None:
+            try:
+                value = phase_mode.upper()
+                self.phase_mode = PhaseMode[ value ]
+                print( "INFO: `phase_mode` set to {}".format( self.phase_mode ) )
+            except KeyError as ex:
+                print( "ERROR: invalid `phase_mode`: {!r}".format( phase_mode ) )
+            except Exception as ex:
+                print( ex.message )
+
+    #!========================================================================
+
     def set_logging_level(self, logging_level=None):
         if logging_level != None:
             level_names = get_logging_level_names()
@@ -549,13 +575,15 @@ class ConfigDefault(object):
 
         print("test_mode = {}".format(self.test_mode))
 
+        print("phase_mode = {}".format( self.phase_mode ))
+
         print("logging_level = {}".format(self.logging_level))
 
         print("-------------------------------------------------------------")
 
 #!============================================================================
 
-class Config(ConfigDefault):
+class Config( ConfigDefault ):
 
     #!
     #! Default values.  Can be overridden by settings file or command line.
@@ -631,6 +659,7 @@ def argh_main():
                  append_gps_data        = config.append_gps_data_to_measurements_log,
                  save_capture_data      = config.save_capture_data,
                  test_mode              = config.test_mode.name.lower(),
+                 phase_mode             = config.phase_mode.name.lower(),
                  logging_level          = config.logging_level.lower(),
                  ):
 
@@ -685,6 +714,9 @@ def argh_main():
 
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
+
+        if phase_mode != config.phase_mode.name.lower():
+            config.set_phase_mode( phase_mode )
 
         if logging_level != config.logging_level.lower():
             config.set_logging_level(logging_level)
