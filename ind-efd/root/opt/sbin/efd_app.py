@@ -436,24 +436,24 @@ class EFD_App(object):
         signed = self.config.adc_polarity_is_signed()
         print("DEBUG: signed = {!r}".format(signed))
 
-        #peak_detect_start_count=ind.Config.Peak_Start_Disable
-        #peak_detect_stop_count=ind.Config.Peak_Stop_Disable
         peak_detect_start_count = 0
         peak_detect_stop_count  = self.config.capture_count
 
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count  = peak_detect_stop_count
 
-        ind.adc_capture_start(address=self.adc_capture_buffer_offset[self.next_bank],
-                              capture_count=self.config.capture_count,
-                              delay_count=self.config.delay_count,
-                              capture_mode=self.config.capture_mode,
-                              signed=signed,
-                              peak_detect_start_count=peak_detect_start_count,
-                              peak_detect_stop_count=peak_detect_stop_count,
-                              adc_offset=self.config.adc_offset,
-                              test_mode=self.config.test_mode,
-                              dev_hand=self.dev_hand)
+        ind.adc_capture_start( address                  = self.adc_capture_buffer_offset[ self.next_bank ],
+                               capture_count            = self.config.capture_count,
+                               delay_count              = self.config.delay_count,
+                               capture_mode             = self.config.capture_mode,
+                               signed                   = signed,
+                               peak_detect_start_count  = peak_detect_start_count,
+                               peak_detect_stop_count   = peak_detect_stop_count,
+                               adc_offset               = self.config.adc_offset,
+                               test_mode                = self.config.test_mode,
+                               phase_mode               = self.config.phase_mode,
+                               dev_hand                 = self.dev_hand
+                            )
 
     def adc_semaphore_get(self):
         #print("ADC Semaphore Get")
@@ -2034,6 +2034,7 @@ def argh_main():
                  append_gps_data        = config.append_gps_data_to_measurements_log,
                  save_capture_data      = config.save_capture_data,
                  test_mode              = config.test_mode.name.lower(),
+                 phase_mode             = config.phase_mode.name.lower(),
                  debug                  = False,
                  logging_level          = config.logging_level,
                  ):
@@ -2089,6 +2090,9 @@ def argh_main():
 
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
+
+        if phase_mode != config.phase_mode.name.lower():
+            config.set_phase_mode( phase_mode )
 
         if debug:
             config.peak_detect_numpy_debug  = True
