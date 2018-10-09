@@ -1,4 +1,4 @@
-SUITE="jessie"
+SUITE="buster"
 BACKPORTS="${SUITE}-backports"
 ARCH="armhf"
 #DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://mirror.aarnet.edu.au/debian"}
