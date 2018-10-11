@@ -215,13 +215,13 @@ class Production_Test_App(object):
     def i2c_0_test(self):
         exp = """\
      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
-10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-50: -- UU -- -- UU UU UU UU -- -- -- -- -- -- -- -- 
-60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+00:          -- -- -- -- -- -- -- -- -- -- -- -- --\x20
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\x20
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\x20
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\x20
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\x20
+50: -- UU -- -- UU UU UU UU -- -- -- -- -- -- -- --\x20
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\x20
 70: -- -- -- -- -- -- -- --\
 """.strip()
 
@@ -258,7 +258,14 @@ class Production_Test_App(object):
         errors = 0
 
         self.config = Config()
-        self.config.set_capture_mode('manual')
+        cfg = self.config
+
+        cfg.set_capture_mode('manual')
+
+        #cfg.set_phase_mode( 'poly' )
+        #cfg.set_phase_mode( 'red' )
+        #cfg.set_phase_mode( 'white' )
+        #cfg.set_phase_mode( 'blue' )
 
         self.dev_hand = ind.get_device_handle()
 
@@ -267,12 +274,19 @@ class Production_Test_App(object):
 
         #ind.adc_capture_stop(dev_hand=self.dev_hand)
 
-        signed = self.config.capture_data_polarity_is_signed()
+        signed = cfg.adc_polarity_is_signed()
         peak_detect_start_count = 0
-        peak_detect_stop_count = self.config.capture_count - 1
+        peak_detect_stop_count = cfg.capture_count - 1
 
-        ind.adc_capture_start(address=0, capture_count=self.config.capture_count, delay_count=self.config.delay_count, signed=signed, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=self.dev_hand)
-
+        ind.adc_capture_start( address                  = 0,
+                               capture_count            = cfg.capture_count,
+                               delay_count              = cfg.delay_count,
+                               signed                   = signed,
+                               peak_detect_start_count  = peak_detect_start_count,
+                               peak_detect_stop_count   = peak_detect_stop_count,
+                               phase_mode               = cfg.phase_mode,
+                               dev_hand                 = self.dev_hand
+                            )
 
         for i in xrange(100):
             ind.adc_trigger(dev_hand=self.dev_hand)
@@ -283,7 +297,7 @@ class Production_Test_App(object):
                     break
                 time.sleep(0.01)
 
-            maxmin = ind.adc_capture_maxmin_get(dev_hand=self.dev_hand)
+        maxmin = ind.adc_capture_maxmin_normal_get( dev_hand=self.dev_hand )
 
         peak_max_red = maxmin.max_ch0_data
         peak_min_red = maxmin.min_ch0_data
@@ -303,7 +317,7 @@ class Production_Test_App(object):
         ## Digilent Analog Discovery 2:
         ##   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
         ##   5V 25Hz 1%duty pulse input => max is ~ +17700, min is ~ -15900
-        ## RIGOL DG1022 Signal Geneertor:
+        ## RIGOL DG1022 Signal Generator:
         ##   5V 25Hz 1%duty pulse input => max is ~ +19200, min is ~ -18800
         exp_max = 19200
         exp_min = -18800
@@ -388,12 +402,8 @@ class Production_Test_App(object):
 
     ##------------------------------------------------------------------------
 
-    def main(self):
-        """Main entry for running the produciton tests."""
-
-        colorama.init(autoreset=True)
-
-        self.banner_start()
+    def test_all( self ):
+        """Run all test functions."""
 
         self.test_func( self.superuser_test )
         self.test_func( self.services_stop )
@@ -408,12 +418,23 @@ class Production_Test_App(object):
         self.test_func( self.ttyS1_test )
         #self.test_func( self.services_start )
 
+    ##------------------------------------------------------------------------
+
+    def main(self):
+        """Main entry for running the production tests."""
+
+        colorama.init(autoreset=True)
+
+        self.banner_start()
+
+        self.test_all()
+
         self.banner_end()
         print
 
 ##============================================================================
 
-def argh_main(debug=False):
+def argh_main( debug=False ):
     """Main entry if running this module directly."""
 
     global DEBUG
@@ -437,5 +458,5 @@ def argh_main(debug=False):
 ##============================================================================
 
 if __name__ == "__main__":
-    argh.dispatch_command(argh_main)
+    argh.dispatch_command( argh_main )
 
