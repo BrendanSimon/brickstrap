@@ -614,6 +614,7 @@ class Config( ConfigDefault ):
         self.save_capture_data                   = bool( int( getattr(settings, 'SAVE_CAPTURE_DATA',                   ConfigDefault.save_capture_data) ) )
         fft_size                                 = int(       getattr(settings, 'FFT_SIZE',                            ConfigDefault.fft_size) )
         self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
+        phase_mode                               =            getattr(settings, 'PHASE_MODE',                          None )
         peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
         capture_count                            =            getattr(settings, 'CAPTURE_COUNT',                       None)
         logging_level                            =            getattr(settings, 'LOGGING_LEVEL',                       None)
@@ -624,6 +625,7 @@ class Config( ConfigDefault ):
         self.set_efd_ping_uris()
         self.set_web_uris()
         self.set_measurements_log_field_names()
+        self.set_phase_mode( phase_mode )
         self.set_peak_detect_mode(peak_detect_mode)
         self.set_logging_level(logging_level)
 
