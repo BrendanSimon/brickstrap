@@ -10,7 +10,7 @@ HOSTNAME="EFD-0000"
 
 #! set PHASE_MODE to one of: "POLY", "RED, "WHITE", or "BLUE"
 #! default is "POLY" if not specified.
-PHASE_MODE="RED"
+PHASE_MODE="POLY"
 
 #! set ADC_OFFSET (DC Offset)
 #! default is 0 if not specified.
