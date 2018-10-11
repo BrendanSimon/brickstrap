@@ -14,7 +14,8 @@ import mmap
 import time
 import array
 import struct
-#from collections import namedtuple
+
+import logging
 
 #!
 #! Defaults.
@@ -693,15 +694,14 @@ def adc_capture_set_mode( address                   = 0,
     cmd.peak_detect_stop_count = peak_detect_stop_count
     cmd.adc_offset = adc_offset
 
-    if 1:
-        print("DEBUG: adc_capture_mode_set: cmd.config                  = 0x{:08x}".format(cmd.config))
-        print("DEBUG: adc_capture_mode_set: cmd.interrupt               = 0x{:08x}".format(cmd.interrupt))
-        print("DEBUG: adc_capture_mode_set: cmd.address                 = 0x{:08x}".format(cmd.address))
-        print("DEBUG: adc_capture_mode_set: cmd.capture_count           = 0x{:08x}".format(cmd.capture_count))
-        print("DEBUG: adc_capture_mode_set: cmd.delay_count             = 0x{:08x}".format(cmd.delay_count))
-        print("DEBUG: adc_capture_mode_set: cmd.peak_detect_start_count = 0x{:08x}".format(cmd.peak_detect_start_count))
-        print("DEBUG: adc_capture_mode_set: cmd.peak_detect_stop_count  = 0x{:08x}".format(cmd.peak_detect_stop_count))
-        print("DEBUG: adc_capture_mode_set: cmd.adc_offset              = {}".format(cmd.adc_offset))
+    logging.info( "adc_capture_mode_set: cmd.config                  = 0x{:08x}".format( cmd.config ) )
+    logging.info( "adc_capture_mode_set: cmd.interrupt               = 0x{:08x}".format( cmd.interrupt ) )
+    logging.info( "adc_capture_mode_set: cmd.address                 = 0x{:08x}".format( cmd.address ) )
+    logging.info( "adc_capture_mode_set: cmd.capture_count           = 0x{:08x}".format( cmd.capture_count ) )
+    logging.info( "adc_capture_mode_set: cmd.delay_count             = 0x{:08x}".format( cmd.delay_count ) )
+    logging.info( "adc_capture_mode_set: cmd.peak_detect_start_count = 0x{:08x}".format( cmd.peak_detect_start_count ) )
+    logging.info( "adc_capture_mode_set: cmd.peak_detect_stop_count  = 0x{:08x}".format( cmd.peak_detect_stop_count ) )
+    logging.info( "adc_capture_mode_set: cmd.adc_offset              = {}".format( cmd.adc_offset ) )
 
     #status = status_get(dev_hand=dev_hand)
 
@@ -727,9 +727,9 @@ def adc_capture_start( address,
                     ):
     '''Start ADC Capture.'''
 
-    print("DEBUG: adc_capture_start: capture_mode={!r}".format( capture_mode ) )
-    print("DEBUG: adc_capture_start: test_mode={!r}".format( test_mode ) )
-    print("DEBUG: adc_capture_start: phase_mode={!r}".format( phase_mode ) )
+    logging.info( "adc_capture_start: capture_mode={!r}".format( capture_mode ) )
+    logging.info( "adc_capture_start: test_mode={!r}".format( test_mode ) )
+    logging.info( "adc_capture_start: phase_mode={!r}".format( phase_mode ) )
 
     if capture_mode not in [ 'auto', 'manual' ]:
         msg = "capture_mode should be 'auto' or 'manual', not {!r}".format(capture_mode)
@@ -749,7 +749,7 @@ def adc_capture_start( address,
 
     mode_start |= phase_mode_mask
 
-    print("DEBUG: adc_capture_start: mode_start=0x{:08x}".format( mode_start ) )
+    logging.info( "adc_capture_start: mode_start=0x{:08x}".format( mode_start ) )
 
     adc_capture_set_mode(address=address,
                          mode=mode_start,
