@@ -2039,8 +2039,6 @@ def argh_main():
                  logging_level          = config.logging_level,
                  ):
 
-        print(__name__)
-
         #! override user settings file if command line argument differs.
 
         if capture_count != config.capture_count:
