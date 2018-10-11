@@ -17,6 +17,19 @@ import struct
 
 import logging
 
+##############################################################################
+#!
+#! TODO:
+#!
+#! could a IND or IND_Driver class (especially to maintain dev_handle)
+#!
+#! could refactor this module into separate modules as an ind package.
+#! eg. ind.leds, ind.modem, ind.adc, ...
+#!
+#! make constants all upper case
+#!
+##############################################################################
+
 #!
 #! Defaults.
 #!
@@ -26,7 +39,7 @@ BANK_COUNT = 2
 
 max_channels = 3
 
-SAMPLE_SIZE = ctypes.sizeof(ctypes.c_uint16)
+SAMPLE_SIZE = ctypes.sizeof( ctypes.c_uint16 )
 
 max_capture_count = 10 * 1024 * 1024
 
@@ -35,14 +48,7 @@ max_capture_size = max_capture_count * SAMPLE_SIZE * max_channels * BANK_COUNT
 
 mmap_memory_size = 128 * 1024 * 1024
 
-#print("DEBUG: max_capture_size={}".format(max_capture_size))
-#print("DEBUG: mmap_memory_size={}".format(mmap_memory_size))
-assert(max_capture_size <= mmap_memory_size)
-
-#!
-#! FIXME: could refactor this module into separate modules as an ind package.
-#! FIXME: eg. ind.leds, ind.modem, ind.adc, ...
-#!
+assert( max_capture_size <= mmap_memory_size )
 
 #!===========================================================================
 #!  Interfaces to IND driver below.
@@ -235,7 +241,6 @@ class Control( IntEnum ):
 #=============================================================================
 
 class LED( IntEnum ):
-#! IND1 assignments
     Running                 = 1 << 0
     Alert                   = 1 << 1
     Spare_3G                = 1 << 2        #! IND1 Spare LED on 3G board.
@@ -1142,25 +1147,16 @@ def weather_led_toggle(dev_hand=None):
 
 def power_led_off(dev_hand=None):
 
-#! IND1:
-#     led = LED.Power_OK
-#! IND2:
     led = LED.Power_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
 def power_led_on(dev_hand=None):
 
-#! IND1:
-#     led = LED.Power_OK
-#! IND2:
     led = LED.Power_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
 def power_led_toggle(dev_hand=None):
 
-#! IND1:
-#     led = LED.Power_OK
-#! IND2:
     led = LED.Power_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
@@ -1168,25 +1164,16 @@ def power_led_toggle(dev_hand=None):
 
 def battery_led_off(dev_hand=None):
 
-#! IND1:
-#     led = LED.Battery_OK
-#! IND2:
     led = LED.Battery_OK
     leds_modify(off=led, dev_hand=dev_hand)
 
 def battery_led_on(dev_hand=None):
 
-#! IND1:
-#     led = LED.Battery_OK
-#! IND2:
     led = LED.Battery_OK
     leds_modify(on=led, dev_hand=dev_hand)
 
 def battery_led_toggle(dev_hand=None):
 
-#! IND1:
-#     led = LED.Battery_OK
-#! IND2:
     led = LED.Battery_OK
     leds_modify(toggle=led, dev_hand=dev_hand)
 
