@@ -13,7 +13,7 @@ This module handles configuration information for EFD applications.
 import argh
 import os.path
 import enum
-import logging
+import fileinput
 
 import logging
 
@@ -605,38 +605,71 @@ class Config( ConfigDefault ):
 
     ##========================================================================
 
-    def read_settings_file(self):
-        #! Using 'import' is quick and dirty method to read in settings from a file.
+    def read_settings_file( self ):
+        #! Using 'import' is QUICK-AND-DIRTY method to read/write settings from/to a file.
         #! It relies on settings.py being available in the python path to load the 'module'
         #! Currently a symlink is used from settings.py in app directory to the settings file.
-        import settings
+        try:
+            reload( settings )
+        except NameError:
+            import settings
 
-        self.serial_number                       =            getattr(settings, 'SERIAL_NUMBER',                       self.serial_number)
-        self.site_name                           =            getattr(settings, 'SITE_NAME',                           self.site_name)
-        self.reporting_sms_phone_numbers         = list(      getattr(settings, 'REPORTING_SMS_PHONE_NUMBERS',         self.reporting_sms_phone_numbers) )
-        self.pd_event_trigger_voltage            = float(     getattr(settings, 'PD_EVENT_TRIGGER_VOLTAGE',            self.pd_event_trigger_voltage) )
-        self.pd_event_reporting_interval         = int(       getattr(settings, 'PD_EVENT_REPORTING_INTERVAL',         self.pd_event_reporting_interval) )
-        self.efd_ping_servers                    = list(      getattr(settings, 'EFD_PING_SERVERS',                    self.efd_ping_servers) )
-        self.web_server                          =            getattr(settings, 'WEB_SERVER',                          self.web_server)
-        self.timezone                            =            getattr(settings, 'TIMEZONE',                            self.timezone)
-        self.append_gps_data_to_measurements_log = bool( int( getattr(settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log) ) )
-        self.save_capture_data                   = bool( int( getattr(settings, 'SAVE_CAPTURE_DATA',                   ConfigDefault.save_capture_data) ) )
-        fft_size                                 = int(       getattr(settings, 'FFT_SIZE',                            ConfigDefault.fft_size) )
-        self.adc_offset                          = int(       getattr(settings, 'ADC_OFFSET',                          self.adc_offset ) )
-        phase_mode                               =            getattr(settings, 'PHASE_MODE',                          None )
-        peak_detect_mode                         =            getattr(settings, 'PEAK_DETECT_MODE',                    None)
-        capture_count                            =            getattr(settings, 'CAPTURE_COUNT',                       None)
-        logging_level                            =            getattr(settings, 'LOGGING_LEVEL',                       None)
+        self.serial_number                       =            getattr( settings, 'SERIAL_NUMBER',                       self.serial_number )
+        self.site_name                           =            getattr( settings, 'SITE_NAME',                           self.site_name )
+        self.reporting_sms_phone_numbers         = list(      getattr( settings, 'REPORTING_SMS_PHONE_NUMBERS',         self.reporting_sms_phone_numbers ) )
+        self.pd_event_trigger_voltage            = float(     getattr( settings, 'PD_EVENT_TRIGGER_VOLTAGE',            self.pd_event_trigger_voltage ) )
+        self.pd_event_reporting_interval         = int(       getattr( settings, 'PD_EVENT_REPORTING_INTERVAL',         self.pd_event_reporting_interval ) )
+        self.efd_ping_servers                    = list(      getattr( settings, 'EFD_PING_SERVERS',                    self.efd_ping_servers ) )
+        self.web_server                          =            getattr( settings, 'WEB_SERVER',                          self.web_server )
+        self.timezone                            =            getattr( settings, 'TIMEZONE',                            self.timezone )
+        self.append_gps_data_to_measurements_log = bool( int( getattr( settings, 'APPEND_GPS_DATA_TO_MEASUREMENTS_LOG', self.append_gps_data_to_measurements_log ) ) )
+        self.save_capture_data                   = bool( int( getattr( settings, 'SAVE_CAPTURE_DATA',                   ConfigDefault.save_capture_data ) ) )
+        fft_size                                 = int(       getattr( settings, 'FFT_SIZE',                            ConfigDefault.fft_size ) )
+        self.adc_offset                          = int(       getattr( settings, 'ADC_OFFSET',                          self.adc_offset ) )
+        phase_mode                               =            getattr( settings, 'PHASE_MODE',                          None )
+        peak_detect_mode                         =            getattr( settings, 'PEAK_DETECT_MODE',                    None )
+        capture_count                            =            getattr( settings, 'CAPTURE_COUNT',                       None )
+        logging_level                            =            getattr( settings, 'LOGGING_LEVEL',                       None )
 
-        self.set_capture_count(capture_count)
+        self.set_capture_count( capture_count )
         #self.set_serial_number()
-        self.set_fft_size(fft_size)
+        self.set_fft_size( fft_size )
         self.set_efd_ping_uris()
         self.set_web_uris()
         self.set_measurements_log_field_names()
         self.set_phase_mode( phase_mode )
-        self.set_peak_detect_mode(peak_detect_mode)
-        self.set_logging_level(logging_level)
+        self.set_peak_detect_mode( peak_detect_mode )
+        self.set_logging_level( logging_level )
+
+    ##========================================================================
+
+    def settings_file_set( self, key, value ):
+        #! Using 'import' is QUICK-AND-DIRTY method to read/write settings from/to a file.
+        #! It relies on settings.py being available in the python path to load the 'module'
+        #! Currently a symlink is used from settings.py in app directory to the settings file.
+        try:
+            reload( settings )
+        except NameError:
+            import settings
+
+        filename = settings.__file__.replace( '.pyc', '.py' )
+
+        new_line = '='.join( [ key, repr( value ) ] )
+
+        #! search for existing setting and replace it
+        set = False
+        inplace = True
+        for line in fileinput.input( filename, inplace=inplace ):
+            line = line.rstrip( '\r\n' )
+            if line.startswith( key ):
+                set = True
+                line = new_line
+            print( line )
+
+        #! append setting if it was not replaced above
+        if not set:
+            with open( filename, 'a' ) as f:
+                f.write( '\n' + new_line + '\n' )
 
 ##############################################################################
 
@@ -730,11 +763,13 @@ def argh_main():
             config.set_phase_mode( phase_mode )
 
         if logging_level != config.logging_level.lower():
-            config.set_logging_level(logging_level)
+            config.set_logging_level( logging_level )
 
-        print("\n")
-        print("Config settings (modified)")
-        config.show_all()
+        logging.basicConfig( level=config.logging_level )
+
+        effective_log_level = logging.getLogger().getEffectiveLevel()
+        if effective_log_level <= logging.INFO:
+            config.show_all()
 
     #!------------------------------------------------------------------------
 
