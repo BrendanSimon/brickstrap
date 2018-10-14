@@ -486,6 +486,7 @@ class Read_Capture_Buffers_App(object):
             if self.config.pps_delay:
                 time.sleep(self.config.pps_delay)
 
+            self.adc_semaphore_set( 0 )
             self.adc_trigger()
             ret = self.adc_semaphore_wait()
         else:
@@ -495,7 +496,6 @@ class Read_Capture_Buffers_App(object):
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
 
-        self.adc_semaphore_set(0)
         ret = self.adc_data_ready_wait()
         return ret
 
