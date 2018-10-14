@@ -362,22 +362,28 @@ class EFD_App(object):
 
         self.sensors.cleanup()
 
-    def adc_numpy_array(self):
-        mem = ind.adc_memory_map(dev_hand=self.dev_hand)
-        print("ADC Memory: {!r}".format(mem))
+    def adc_numpy_array( self ):
+        mem = ind.adc_memory_map( dev_hand=self.dev_hand )
+        logging.info( "ADC Memory: {!r}".format( mem ) )
+
         #! Numpy array holds little-endian 16-bit integers.
         signed = self.config.adc_polarity_is_signed()
+
         dtype = np.dtype('<i2') if signed else np.dtype('<u2')
         dtype_size = dtype.itemsize
-        mem_size = len(mem)
+
+        mem_size = len( mem )
         length = mem_size // dtype_size
-        print("DEBUG: dtype_size={!r} len(mem)={!r} length={!r}".format(dtype_size, mem_size, length))
-        shape = (length,)
-        np_array = np.ndarray(shape=shape, dtype=dtype, buffer=mem)
+        logging.debug( "DEBUG: dtype_size={!r} len(mem)={!r} length={!r}".format( dtype_size, mem_size, length ) )
+
+        shape = ( length, )
+        np_array = np.ndarray( shape=shape, dtype=dtype, buffer=mem )
+        logging.debug( "np_array={!r}".format( np_array ) )
 
         #! the memory offset for each bank of the capture buffer.
         bank_size = mem_size // self.config.bank_count
-        self.adc_capture_buffer_offset = [ bank_size * i for i in range(self.config.bank_count) ]
+        self.adc_capture_buffer_offset = [ bank_size * i for i in range( self.config.bank_count ) ]
+        logging.debug( "self.adc_capture_buffer_offset={!r}".format( self.adc_capture_buffer_offset ) )
 
         return np_array
 
@@ -2098,9 +2104,14 @@ def argh_main():
             config.peak_detect_debug        = True
             logging_level                   = 'debug'
 
-        if logging_level != config.logging_level:
+        if logging_level != config.logging_level.lower():
             config.set_logging_level(logging_level)
 
+        logging.basicConfig( level=config.logging_level )
+
+        #effective_log_level = logging.getLogger().getEffectiveLevel()
+        #if effective_log_level <= logging.INFO:
+        #    config.show_all()
         config.show_all()
 
         #!--------------------------------------------------------------------
