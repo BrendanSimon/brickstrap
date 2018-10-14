@@ -17,17 +17,21 @@ import os.path
 import time
 import arrow
 import subprocess
-#import numpy as np
-#import math
+import logging
+import traceback
+
 import colorama
 from colorama import Fore as FG, Back as BG, Style as ST
 
+#import numpy as np
+#import math
+
 #sys.path.insert(1, '/opt/sbin')
 #sys.path.insert(1, '/mnt/data/etc')
-sys.path.append('.')
+#sys.path.append('.')
 sys.path.append('..')
-sys.path.append('/opt/sbin')
-sys.path.append('/mnt/data/etc')
+#sys.path.append('/opt/sbin')
+#sys.path.append('/mnt/data/etc')
 
 import ind
 from settings import SERIAL_NUMBER
@@ -38,7 +42,24 @@ from efd_config import Config
 class Production_Test_App(object):
 
     error_count = 0
-    pass_count = 0
+    pass_count  = 0
+
+    ##------------------------------------------------------------------------
+
+    def __init__( self, config ):
+        self.config = config
+
+    ##------------------------------------------------------------------------
+
+    ## TODO: could put in base class IND_App ??
+    def init( self ):
+        pass
+
+    ##------------------------------------------------------------------------
+
+    ## TODO: could put in base class IND_App ??
+    def cleanup( self ):
+        pass
 
     ##------------------------------------------------------------------------
 
@@ -263,21 +284,20 @@ class Production_Test_App(object):
 
         cfg.set_capture_mode('manual')
 
-        #cfg.set_phase_mode( 'poly' )
-        #cfg.set_phase_mode( 'red' )
-        #cfg.set_phase_mode( 'white' )
-        #cfg.set_phase_mode( 'blue' )
-
         self.dev_hand = ind.get_device_handle()
 
         ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
-        #ind.fpga_reset(dev_hand=self.dev_hand)
+        #ind.fpga_reset( dev_hand=self.dev_hand )
 
-        #ind.adc_capture_stop(dev_hand=self.dev_hand)
+        #ind.adc_capture_stop( dev_hand=self.dev_hand )
+
+        self.prev_bank  = 1
+        self.bank       = 0
 
         signed = cfg.adc_polarity_is_signed()
         peak_detect_start_count = 0
         peak_detect_stop_count = cfg.capture_count - 1
+        adc_offset = 0
 
         ind.adc_capture_start( address                  = 0,
                                capture_count            = cfg.capture_count,
@@ -285,35 +305,59 @@ class Production_Test_App(object):
                                signed                   = signed,
                                peak_detect_start_count  = peak_detect_start_count,
                                peak_detect_stop_count   = peak_detect_stop_count,
+                               adc_offset               = adc_offset,
                                phase_mode               = cfg.phase_mode,
                                dev_hand                 = self.dev_hand
                             )
 
-        for i in xrange(100):
-            ind.adc_trigger(dev_hand=self.dev_hand)
+        for i in xrange( 100 ):
+
+            ind.adc_semaphore_set( 0, dev_hand=self.dev_hand )
+
+            ind.adc_trigger( dev_hand=self.dev_hand )
 
             while True:
-                sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
+                sem = ind.adc_semaphore_get( dev_hand=self.dev_hand )
                 if sem:
                     break
-                time.sleep(0.01)
+                time.sleep( 0.01 )
 
-        maxmin = ind.adc_capture_maxmin_normal_get( dev_hand=self.dev_hand )
+        #!
+        #! Retrieve info from driver.
+        #!
+        #maxmin_normal = ind.adc_capture_maxmin_normal_get( dev_hand=self.dev_hand )
+        capture_info_lst  = ind.adc_capture_info_list_get( dev_hand=self.dev_hand )
 
-        peak_max_red = maxmin.max_ch0_data
-        peak_min_red = maxmin.min_ch0_data
-        peak_max_wht = maxmin.max_ch1_data
-        peak_min_wht = maxmin.min_ch1_data
-        peak_max_blu = maxmin.max_ch2_data
-        peak_min_blu = maxmin.min_ch2_data
+        #!
+        #! Synchronise DMA capture memory.
+        #!
+        ind.dma_mem_sync_bank(self.bank, dev_hand=self.dev_hand)
 
-        if DEBUG:
-            print("DEBUG: peak_max_red = {!r}".format(peak_max_red))
-            print("DEBUG: peak_min_red = {!r}".format(peak_min_red))
-            print("DEBUG: peak_max_wht = {!r}".format(peak_max_wht))
-            print("DEBUG: peak_min_wht = {!r}".format(peak_min_wht))
-            print("DEBUG: peak_max_blu = {!r}".format(peak_max_blu))
-            print("DEBUG: peak_min_blu = {!r}".format(peak_min_blu))
+
+
+        capture_info_prev = capture_info_lst[ self.prev_bank ]
+        capture_info      = capture_info_lst[ self.bank ]
+        logging.debug( "" )
+        logging.debug( "capture_info_prev = {!r}\n".format( capture_info_prev ) )
+        logging.debug( "capture_info      = {!r}\n".format( capture_info ) )
+
+        maxmin_normal   = capture_info.maxmin_normal
+        maxmin_squared  = capture_info.maxmin_squared
+        #adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
+
+        peak_max_red = maxmin_normal.max_ch0_data
+        peak_min_red = maxmin_normal.min_ch0_data
+        peak_max_wht = maxmin_normal.max_ch1_data
+        peak_min_wht = maxmin_normal.min_ch1_data
+        peak_max_blu = maxmin_normal.max_ch2_data
+        peak_min_blu = maxmin_normal.min_ch2_data
+
+        logging.info( "peak_max_red = {!r}".format( peak_max_red ) )
+        logging.info( "peak_min_red = {!r}".format( peak_min_red ) )
+        logging.info( "peak_max_wht = {!r}".format( peak_max_wht ) )
+        logging.info( "peak_min_wht = {!r}".format( peak_min_wht ) )
+        logging.info( "peak_max_blu = {!r}".format( peak_max_blu ) )
+        logging.info( "peak_min_blu = {!r}".format( peak_min_blu ) )
 
         ## Digilent Analog Discovery 2:
         ##   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
@@ -353,7 +397,7 @@ class Production_Test_App(object):
             self.error("ADC peak min blu failed.")
             errors += 1
 
-        #ind.adc_capture_stop(dev_hand=self.dev_hand)
+        ind.adc_capture_stop( dev_hand=self.dev_hand )
 
         return errors
 
@@ -389,6 +433,21 @@ class Production_Test_App(object):
 
     ##------------------------------------------------------------------------
 
+    def adc_offset_test( self ):
+
+        from adc_offset import ADC_Offset_App
+
+        app = ADC_Offset_App( config=self.config )
+
+        try:
+            app.init()
+            #app.main()
+            app.adc_offset_test_set()
+        except Exception:
+            app.cleanup()
+
+    ##------------------------------------------------------------------------
+
     def test_func(self, func):
         try:
             msg = func.__name__ + "()"
@@ -414,6 +473,7 @@ class Production_Test_App(object):
         self.test_func( self.i2c_0_test )
         self.test_func( self.rtc_test )
         self.test_func( self.fpga_test )
+        self.test_func( self.adc_offset_test )
         self.test_func( self.adc_test )
         self.test_func( self.blinky_test )
         self.test_func( self.ttyS1_test )
@@ -433,31 +493,116 @@ class Production_Test_App(object):
         self.banner_end()
         print
 
-##============================================================================
+##############################################################################
 
-def argh_main( debug=False ):
+
+def argh_main():
     """Main entry if running this module directly."""
 
-    global DEBUG
-    DEBUG = debug
+    config = Config()
 
-    app = Production_Test_App()
+    #! override defaults with settings in user settings file.
+    config.read_settings_file()
 
-    try:
-        app.main()
-    except (KeyboardInterrupt):
-        ## ctrl+c key press.
-        print("KeyboardInterrupt -- exiting ...")
-    except (SystemExit):
-        ## sys.exit() called.
-        print("SystemExit -- exiting ...")
-    finally:
-        print(ST.RESET_ALL)
-        print("Cleaning up.")
-        print("Done.  Exiting.")
+    #!
+    #! override config defaults this app.
+    #!
+
+    config.capture_mode             = 'manual'
+
+    config.show_capture_debug       = True
+
+    #!
+    #! additional config items for this app only !!
+    #!
+
+    #!------------------------------------------------------------------------
+
+    def app_main( capture_count         = config.capture_count,
+                  capture_mode          = config.capture_mode,
+                  pps_delay             = config.pps_delay,
+                  adc_polarity          = config.adc_polarity.name.lower(),
+                  adc_offset            = config.adc_offset,
+                  show_measurements     = config.show_measurements,
+                  show_capture_buffers  = config.show_capture_buffers,
+                  show_capture_debug    = config.show_capture_debug,
+                  phase_mode            = config.phase_mode.name.lower(),
+                  debug                 = False,
+                  logging_level         = config.logging_level,
+                 ):
+
+        #! override user settings file if command line argument differs.
+
+        if capture_count != config.capture_count:
+            config.set_capture_count( capture_count )
+
+        if capture_mode != config.capture_mode:
+            config.set_capture_mode( capture_mode )
+
+        if pps_delay != config.pps_delay:
+            config.set_pps_delay( pps_delay )
+
+        if adc_polarity != config.adc_polarity.name.lower():
+            config.set_adc_polarity( adc_polarity )
+
+        if adc_offset != config.adc_offset:
+            config.set_adc_offset( adc_offset )
+
+        if show_measurements != config.show_measurements:
+            config.set_show_measurements( show_measurements )
+
+        if show_capture_buffers != config.show_capture_buffers:
+            config.set_show_capture_buffers( show_capture_buffers )
+
+        if show_capture_debug != config.show_capture_debug:
+            config.set_show_capture_debug( show_capture_debug )
+
+        if phase_mode != config.phase_mode.name.lower():
+            config.set_phase_mode( phase_mode )
+
+        if debug:
+            config.peak_detect_numpy_debug  = True
+            config.peak_detect_fpga_debug   = True
+            config.peak_detect_debug        = True
+            logging_level                   = 'debug'
+
+        if logging_level != config.logging_level.lower():
+            config.set_logging_level( logging_level )
+
+        logging.basicConfig( level=config.logging_level )
+
+        effective_log_level = logging.getLogger().getEffectiveLevel()
+        if effective_log_level <= logging.INFO:
+            config.show_all()
+
+        #!--------------------------------------------------------------------
+
+        app = Production_Test_App( config=config )
+        app.init()
+        try:
+            app.main()
+        except (KeyboardInterrupt):
+            #! ctrl+c key press.
+            print("KeyboardInterrupt -- exiting ..." )
+        except (SystemExit):
+            #! sys.exit() called.
+            print( "SystemExit -- exiting ..." )
+        except (Exception) as exc:
+            #! An unhandled exception !!
+            print( traceback.format_exc() )
+            print( "Exception: {}".format(exc.message) )
+            print( "Unhandled Exception -- exiting..." )
+        finally:
+            print( "Cleaning up." )
+            app.cleanup()
+            print( "Done.  Exiting." )
+
+    #!------------------------------------------------------------------------
+
+    argh.dispatch_command( app_main )
 
 ##============================================================================
 
 if __name__ == "__main__":
-    argh.dispatch_command( argh_main )
+    argh_main()
 
