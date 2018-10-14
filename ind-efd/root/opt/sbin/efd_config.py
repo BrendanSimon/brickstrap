@@ -63,14 +63,24 @@ class ADC_Polarity( enum.Enum ):
 
 #!============================================================================
 
-class PhaseMode( enum.Enum ):
+class Phase_Mode( enum.Enum ):
     POLY         = 0
     RED          = 1
     WHITE        = 2
     BLUE         = 3
 
-    #! aliases
-    DEFAULT      = POLY
+    #! aliases -
+    #DEFAULT      = POLY
+
+#! aliases
+#!
+#! NOTE: Python 2 will display name of DEFAULT as "DEFAULT" for Enum
+#!                                            and "POLY"    for IntEnum
+#!       Python 3 will display name of DEFAULT as "POLY"    for Enum and IntEnum
+#!
+#!       Therefore use an object external to the Enum class
+#!
+PHASE_MODE_DEFAULT  = Phase_Mode.POLY
 
 #!============================================================================
 
@@ -213,7 +223,7 @@ class ConfigDefault( object ):
 
     test_mode = TestMode.NORMAL
 
-    phase_mode = PhaseMode.DEFAULT
+    phase_mode = PHASE_MODE_DEFAULT
 
     logging_level = logging.getLevelName(logging.WARNING)
 
@@ -457,7 +467,7 @@ class ConfigDefault( object ):
         if phase_mode != None:
             try:
                 value = phase_mode.upper()
-                self.phase_mode = PhaseMode[ value ]
+                self.phase_mode = Phase_Mode[ value ]
                 print( "INFO: `phase_mode` set to {}".format( self.phase_mode ) )
             except KeyError as ex:
                 print( "ERROR: invalid `phase_mode`: {!r}".format( phase_mode ) )
