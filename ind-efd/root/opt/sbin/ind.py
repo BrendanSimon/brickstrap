@@ -5,7 +5,7 @@
 from enum import IntEnum
 
 from efd_config import TestMode
-from efd_config import PhaseMode
+from efd_config import Phase_Mode
 
 import ioctl
 import ctypes
@@ -132,10 +132,10 @@ class Config( IntEnum ):
 
 phase_mode_to_config_register_mask = \
 {
-    PhaseMode.POLY  : Config.PHASE_MODE_POLY,
-    PhaseMode.RED   : Config.PHASE_MODE_CH_0,
-    PhaseMode.WHITE : Config.PHASE_MODE_CH_1,
-    PhaseMode.BLUE  : Config.PHASE_MODE_CH_2,
+    Phase_Mode.POLY  : Config.PHASE_MODE_POLY,
+    Phase_Mode.RED   : Config.PHASE_MODE_CH_0,
+    Phase_Mode.WHITE : Config.PHASE_MODE_CH_1,
+    Phase_Mode.BLUE  : Config.PHASE_MODE_CH_2,
 }
 
 #=============================================================================
