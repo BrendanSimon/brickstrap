@@ -1,23 +1,23 @@
 #!/bin/bash
- 
+
 NOW=$(date +%Y%m%dT%H%M%S)
 
 #VERSION="0.12.0-dev"
 #VERSION="sepl-dev-${NOW}"
-VERSION="0.12.0-dev-buster"
- 
+VERSION="0.12.0-rc1-buster"
+
 BOARD="ind-efd"
- 
+
 OUT="${BOARD}-v${VERSION}"
- 
+
 OUT_LOG="${OUT}.log"
- 
+
 OUT_TXT="${OUT}.txt"
- 
+
 OUT_TAR="${OUT}.tar"
- 
+
 OUT_TGZ="${OUT_TAR}.gz"
- 
+
 BRICKSTRAP="../brickstrap/brickstrap.sh"
 
 COMMAND=${@:-"all"}
@@ -56,7 +56,7 @@ fi
 # -d = output directory (also used for .tar and .img filenames)
 # -f = force build if output directory already exists.
 #
- 
+
 echo "BOARD = ${BOARD}"
 echo "OUT = ${OUT}"
 

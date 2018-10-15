@@ -97,7 +97,7 @@ class ConfigDefault( object ):
     #! Default values.  Can be overridden by settings file or command line.
     #!
 
-    version_str = '0.12.0-dev'
+    version_str = '0.12.0-rc1-buster'
 
     serial_number = '0'
 
