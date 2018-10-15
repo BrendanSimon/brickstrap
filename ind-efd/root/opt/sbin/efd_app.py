@@ -525,12 +525,15 @@ class EFD_App(object):
 
     def adc_data_ready_wait(self):
         #print("ADC Data Ready Wait")
+
+        #! semaphore must be set to zero (even if using select !!)
+        self.adc_semaphore_set(0)
+
         if self.config.capture_mode == 'manual':
             #! fake pps delay
             if self.config.pps_delay:
                 time.sleep(self.config.pps_delay)
 
-            self.adc_semaphore_set(0)
             self.adc_trigger()
             ret = self.adc_semaphore_wait()
         else:
