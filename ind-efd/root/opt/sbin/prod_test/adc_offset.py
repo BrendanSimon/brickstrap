@@ -87,13 +87,22 @@ class ADC_Offset_App( object ):
 
     #! TODO: could put in base class IND_App ??
     def init( self ):
-        pass
+        """Initialise the app"""
 
-    #!------------------------------------------------------------------------
+        colorama.init( autoreset=True )
 
-    #! TODO: could put in base class IND_App ??
+        self.banner_start()
+        self.superuser_test()
+        self.services_stop()
+
+    ##------------------------------------------------------------------------
+
+    ## TODO: could put in base class IND_App ??
     def cleanup( self ):
-        pass
+        """Cleanup the app on exit"""
+
+        #self.services_start()
+        self.banner_end()
 
     #!------------------------------------------------------------------------
 
@@ -254,12 +263,14 @@ class ADC_Offset_App( object ):
     #!------------------------------------------------------------------------
 
     def adc_offset_test_run( self, mode ):
-        errors = 0
 
         logging.info( "" )
         logging.info( "----------------------------------------------" )
         logging.info( "{} adc offset".format( mode ) )
         logging.info( "----------------------------------------------" )
+
+        #! error count of start of func so we can check against it later
+        error_count = self.error_count
 
         cfg = self.config
 
@@ -305,9 +316,10 @@ class ADC_Offset_App( object ):
         self.prev_bank  = 1
         self.bank       = 0
 
-        signed = cfg.adc_polarity_is_signed()
+        capture_mode            = 'manual'
+        signed                  = cfg.adc_polarity_is_signed()
         peak_detect_start_count = 0
-        peak_detect_stop_count = cfg.capture_count - 1
+        peak_detect_stop_count  = cfg.capture_count - 1
 
         #! use configuration setting if verify mode
         adc_offset = cfg.adc_offset if mode == 'verify' else 0
@@ -315,6 +327,7 @@ class ADC_Offset_App( object ):
         ind.adc_capture_start( address                  = 0,
                                capture_count            = cfg.capture_count,
                                delay_count              = cfg.delay_count,
+                               capture_mode             = capture_mode,
                                signed                   = signed,
                                peak_detect_start_count  = peak_detect_start_count,
                                peak_detect_stop_count   = peak_detect_stop_count,
@@ -339,6 +352,8 @@ class ADC_Offset_App( object ):
         #repetitions = 11
         #repetitions = 111
 
+        sem = 0
+
         for i in xrange( repetitions ):
 
             ind.adc_semaphore_set( 0, dev_hand=self.dev_hand )
@@ -354,7 +369,7 @@ class ADC_Offset_App( object ):
                 if time.time() > timeout:
                     print( "TIMEOUT: waiting for adc semaphore" )
                     break
-                #time.sleep( 0.01 )
+                time.sleep( 0 )
 
             if sem:
                 logging.info( "---------------------------------------------------" )
@@ -431,27 +446,21 @@ class ADC_Offset_App( object ):
 
                     if not ( exp_min <= peak_max_red <= exp_max ):
                         self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_max_red, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min <= peak_max_wht <= exp_max ):
                         self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_max_wht, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min <= peak_max_blu <= exp_max ):
                         self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_max_blu, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min < peak_min_red <= exp_max ):
                         self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_min_red, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min < peak_min_wht <= exp_max ):
                         self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_min_wht, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min < peak_min_blu <= exp_max ):
                         self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_min_blu, exp_max ) )
-                        errors += 1
 
                     #!
                     #! Numpy max/min (to verify FPGA registers)
@@ -475,27 +484,21 @@ class ADC_Offset_App( object ):
 
                     if not ( exp_min <= peak_max_red <= exp_max ):
                         self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_max_red, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min <= peak_max_wht <= exp_max ):
                         self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_max_wht, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min <= peak_max_blu <= exp_max ):
                         self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_max_blu, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min < peak_min_red <= exp_max ):
                         self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_min_red, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min < peak_min_wht <= exp_max ):
                         self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_min_wht, exp_max ) )
-                        errors += 1
 
                     if not ( exp_min < peak_min_blu <= exp_max ):
                         self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( exp_min, peak_min_blu, exp_max ) )
-                        errors += 1
 
         ind.adc_capture_stop( dev_hand=self.dev_hand )
 
@@ -555,14 +558,12 @@ class ADC_Offset_App( object ):
             if abs( adc_offset_diff ) > ADC_OFFSET_DIFF_MARGIN:
                 self.error( "ADC_OFFSET difference out of range ({!r} <= {!r} <= {!r})".format( -ADC_OFFSET_DIFF_MARGIN, adc_offset_diff, ADC_OFFSET_DIFF_MARGIN ) )
 
-        #! set new adc offset setting, if set mode and no errors
+        #! set new adc offset setting, if in set mode and no errors
         if mode == 'set':
-            if errors:
+            if self.error_count != error_count:
                 self.error( "can't set ADC_OFFSET due to previous errors !!" )
             else:
                 self.adc_offset_test_write_setting( all_set )
-
-        return errors
 
     #!------------------------------------------------------------------------
 
@@ -584,19 +585,33 @@ class ADC_Offset_App( object ):
 
     #!------------------------------------------------------------------------
 
+    def adc_offset_test_run_mode_and_verify( self, mode ):
+        """Run adc offset mode ('calculate' or 'set') and verify."""
+
+        #! confirm 50 ohm  terminator is connected.
+        while True:
+            print( FG.CYAN + "Is 50 ohm terminator connected? (y/n)" )
+            ans = sys.stdin.readline().strip().upper()
+            if ans == 'Y':
+                break
+            elif ans == 'N':
+                self.error( "50 ohm terminator not connected !!" )
+                break
+
+        if ans == 'Y':
+            #! calculate and set adc offset setting
+            self.adc_offset_test_run( mode=mode )
+
+            #! verify adc offset setting
+            self.adc_offset_test_run( mode='verify' )
+
+    #!------------------------------------------------------------------------
+
     def adc_offset_test_set( self ):
         """Run adc offset calculation, update settings file, and verify.
-        Import this function and call from other test apps.  e.g. prod_test."""
+        Import this app/function and call from other test apps.  e.g. prod_test."""
 
-        errors = 0
-
-        #! calculate and set adc offset setting
-        errors += self.adc_offset_test_run( mode='set' )
-
-        #! verify adc offset setting
-        errors += self.adc_offset_test_run( mode='verify' )
-
-        return errors
+        self.adc_offset_test_run_mode_and_verify( mode='set' )
 
     #!------------------------------------------------------------------------
 
@@ -604,34 +619,27 @@ class ADC_Offset_App( object ):
         """Top level adc offset test function.
         Run adc offset in 'calculate' or 'set' mode, the in 'verify' mode."""
 
-        errors = 0
-
         mode = self.config.adc_offset_mode
 
         if mode != 'set':
             mode = 'calculate'
 
-        self.adc_offset_test_run( mode=mode )
-
-        #! verify adc offset setting
-        errors += self.adc_offset_test_run( mode='verify' )
-
-        return errors
+        self.adc_offset_test_run_mode_and_verify( mode=mode )
 
     #!------------------------------------------------------------------------
 
-    def test_func( self, func ):
+    def test_func( self, test_num, func ):
+        func_name = func.__name__ + "()"
+        head = "test {}: {}".format( test_num, func_name )
         try:
-            msg = func.__name__ + "()"
-            ret = func()
-            if not ret:
-                self.passed( msg )
+            error_count = self.error_count
+            func()
+            if self.error_count != error_count:
+                self.error( head + " failed !!")
             else:
-                logging.info( "ret = {!r}".format( ret ) )
-                self.error( msg + " failed !!")
-                #raise Exception()
-        except Exception as ex:
-            self.error( msg + " failed !!")
+                self.passed( head )
+        except Exception:
+            self.error( head + " failed to complete correctly !!" )
             raise
 
     #!------------------------------------------------------------------------
@@ -639,24 +647,20 @@ class ADC_Offset_App( object ):
     def test_all( self ):
         """Run all test functions"""
 
-        self.test_func( self.superuser_test )
-        self.test_func( self.services_stop )
+        test_functions = \
+        [
+            self.adc_offset_test,
+        ]
 
-        self.test_func( self.adc_offset_test )
+        for test_num, func in enumerate( test_functions, start=1 ):
+            self.test_func( test_num, func )
 
     #!------------------------------------------------------------------------
 
     def main( self ):
         """Main entry for running the production tests."""
 
-        colorama.init( autoreset=True )
-
-        self.banner_start()
-
         self.test_all()
-
-        self.banner_end()
-        print
 
 
 ##############################################################################
@@ -687,21 +691,21 @@ def argh_main():
 
     #!------------------------------------------------------------------------
 
-    def app_main( capture_count         = config.capture_count,
-                  capture_mode          = config.capture_mode,
-                  pps_delay             = config.pps_delay,
-                  adc_polarity          = config.adc_polarity.name.lower(),
-                  adc_offset            = config.adc_offset,
-                  show_measurements     = config.show_measurements,
-                  show_capture_buffers  = config.show_capture_buffers,
-                  show_capture_debug    = config.show_capture_debug,
-                  phase_mode            = config.phase_mode.name.lower(),
-                  debug                 = False,
-                  logging_level         = config.logging_level,
+    def argh_main2( capture_count           = config.capture_count,
+                    capture_mode            = config.capture_mode,
+                    pps_delay               = config.pps_delay,
+                    adc_polarity            = config.adc_polarity.name.lower(),
+                    adc_offset              = config.adc_offset,
+                    show_measurements       = config.show_measurements,
+                    show_capture_buffers    = config.show_capture_buffers,
+                    show_capture_debug      = config.show_capture_debug,
+                    phase_mode              = config.phase_mode.name.lower(),
+                    debug                   = False,
+                    logging_level           = config.logging_level,
 
-                  #! app specific config settings
-                  adc_offset_mode       = config.adc_offset_mode,
-                 ):
+                    #! app specific config settings
+                    adc_offset_mode         = config.adc_offset_mode,
+                  ):
 
         #! override user settings file if command line argument differs.
 
@@ -761,25 +765,25 @@ def argh_main():
         app.init()
         try:
             app.main()
-        except (KeyboardInterrupt):
+        except KeyboardInterrupt:
             #! ctrl+c key press.
-            print("KeyboardInterrupt -- exiting ..." )
-        except (SystemExit):
+            app.error( "KeyboardInterrupt -- exiting ..." )
+        except SystemExit:
             #! sys.exit() called.
-            print( "SystemExit -- exiting ..." )
-        except (Exception) as exc:
+            logging.info( "SystemExit -- exiting ..." )
+        except Exception as exc:
             #! An unhandled exception !!
-            print( traceback.format_exc() )
-            print( "Exception: {}".format(exc.message) )
-            print( "Unhandled Exception -- exiting..." )
+            logging.debug( traceback.format_exc() )
+            logging.info( "Exception: {}".format(exc.message) )
+            app.error( "Unhandled Exception -- exiting..." )
         finally:
-            print( "Cleaning up." )
+            logging.info( "Cleaning up." )
             app.cleanup()
-            print( "Done.  Exiting." )
+            print( "Done." )
 
     #!------------------------------------------------------------------------
 
-    argh.dispatch_command( app_main )
+    argh.dispatch_command( argh_main2 )
 
 #!============================================================================
 
