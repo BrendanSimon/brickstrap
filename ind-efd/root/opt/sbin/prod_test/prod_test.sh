@@ -15,7 +15,7 @@ sudo mount -o remount,rw ${LOG_DIR}
 #cd ${PROD_TEST_DIR}
 #pwd
 #echo "Executing ${PROD_TEST}"
-sudo ${PROD_TEST} 2>&1 | tee ${LOG_FILE_TMP}
+sudo ${PROD_TEST} "$@" 2>&1 | tee ${LOG_FILE_TMP}
 sudo bash -c "cat ${LOG_FILE_TMP} >> ${LOG_FILE}"
 rm ${LOG_FILE_TMP}
 
