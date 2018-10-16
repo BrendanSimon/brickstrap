@@ -53,13 +53,22 @@ class Production_Test_App(object):
 
     ## TODO: could put in base class IND_App ??
     def init( self ):
-        pass
+        """Initialise the app"""
+
+        colorama.init( autoreset=True )
+
+        self.banner_start()
+        self.superuser_test()
+        self.services_stop()
 
     ##------------------------------------------------------------------------
 
     ## TODO: could put in base class IND_App ??
     def cleanup( self ):
-        pass
+        """Cleanup the app on exit"""
+
+        #self.services_start()
+        self.banner_end()
 
     ##------------------------------------------------------------------------
 
@@ -74,6 +83,8 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def shell_command(self, cmd):
+        """Return output of an executable, which is executed in a shell."""
+
         ret = None
         try:
             ret = subprocess.check_output(cmd, shell=True)
@@ -86,6 +97,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def banner_start(self):
+
         timestamp = arrow.now()
         self.start_timestamp = timestamp
         self.start_timestamp_str = timestamp.format("YYYY-MM-DD hh:mm:ss")
@@ -102,6 +114,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def banner_end(self):
+
         timestamp = arrow.now()
         self.end_timestamp = timestamp
         self.end_timestamp_str = timestamp.format("YYYY-MM-DD hh:mm:ss")
@@ -125,6 +138,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def superuser_test(self):
+
         filename = '/root/prod_test_was_here.txt'
         try:
             self.shell_command('touch ' + filename)
@@ -136,6 +150,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def services_stop(self):
+
         #print("Stopping services...")
 
         ## Stop the ntp service.
@@ -185,6 +200,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def disk_usage_test(self):
+
         out = self.shell_command('df -h')
         lines = out.split('\n')
         for l in lines[1:]:
@@ -214,6 +230,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def memory_usage_test(self):
+
         out = self.shell_command('free -h')
         lines = out.split('\n')
         #print(FG.CYAN +"l = {!r}".format(l))
@@ -221,12 +238,13 @@ class Production_Test_App(object):
         #print("DEBUG: items={!r}".format(items))
         mem_type, size = items[0:2]
         #print("DEBUG: mem_type={!r}, size={!r}".format(mem_type, size))
-        if mem_type != 'Mem:' or size != '1.0G':
+        if ( mem_type != 'Mem:' ) or ( '1.0G' not in size ):
             self.error("memory not valid: mem_type={!r}, size={!r}".format(mem_type, size))
 
     ##------------------------------------------------------------------------
 
     def usb_test(self):
+
         out = self.shell_command('lsusb')
         if 'Linux Foundation 2.0 root hub' not in out:
             self.error("USB root hub not found")
@@ -234,6 +252,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def i2c_0_test( self ):
+
         exp = \
             "     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n"   \
             "00:          -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
@@ -256,6 +275,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def rtc_test(self):
+
         try:
             out = self.shell_command('hwclock')
             #print("DEBUG: out={!r}".format(out))
@@ -265,6 +285,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def fpga_test(self):
+
         self.dev_hand = ind.get_device_handle()
 
         ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
@@ -277,9 +298,20 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def adc_test(self):
-        errors = 0
 
-        self.config = Config()
+        #! confirm signal generated is connected and setup correctly.
+        while True:
+            msg = FG.CYAN + "Setup signal generator => 10Vpp 1MHz sine input"
+            #msg = FG.CYAN + "Setup signal generator => 5V 25Hz 1% duty pulse input"
+            print( msg )
+            print( FG.CYAN + "Is signal generator setup correctly? (y/n)" )
+            ans = sys.stdin.readline().strip().upper()
+            if ans == 'Y':
+                break
+            elif ans == 'N':
+                self.error( "signal generator not setup correctly !!" )
+                return
+
         cfg = self.config
 
         cfg.set_capture_mode('manual')
@@ -294,46 +326,62 @@ class Production_Test_App(object):
         self.prev_bank  = 1
         self.bank       = 0
 
-        signed = cfg.adc_polarity_is_signed()
+        capture_mode            = 'manual'
+        signed                  = cfg.adc_polarity_is_signed()
         peak_detect_start_count = 0
-        peak_detect_stop_count = cfg.capture_count - 1
-        adc_offset = 0
+        peak_detect_stop_count  = cfg.capture_count - 1
 
         ind.adc_capture_start( address                  = 0,
                                capture_count            = cfg.capture_count,
                                delay_count              = cfg.delay_count,
+                               capture_mode             = capture_mode,
                                signed                   = signed,
                                peak_detect_start_count  = peak_detect_start_count,
                                peak_detect_stop_count   = peak_detect_stop_count,
-                               adc_offset               = adc_offset,
+                               adc_offset               = cfg.adc_offset,
                                phase_mode               = cfg.phase_mode,
                                dev_hand                 = self.dev_hand
                             )
 
-        for i in xrange( 100 ):
+        #! TODO: make this a config setting
+        #repetitions = 1
+        #repetitions = 3
+        repetitions = 11
+        #repetitions = 111
 
+        sem = 0
+
+        for i in xrange( repetitions ):
+
+            logging.info( "Trigger ADC capture" )
             ind.adc_semaphore_set( 0, dev_hand=self.dev_hand )
-
             ind.adc_trigger( dev_hand=self.dev_hand )
 
+            timeout = time.time() + 1
             while True:
                 sem = ind.adc_semaphore_get( dev_hand=self.dev_hand )
                 if sem:
+                    #print( "OK: waiting for adc semaphore" )
                     break
-                time.sleep( 0.01 )
+                if time.time() > timeout:
+                    self.error( "TIMEOUT: waiting for adc semaphore" )
+                    break
+                time.sleep( 0 )
+
+        if not sem:
+            return
 
         #!
         #! Retrieve info from driver.
         #!
         #maxmin_normal = ind.adc_capture_maxmin_normal_get( dev_hand=self.dev_hand )
-        capture_info_lst  = ind.adc_capture_info_list_get( dev_hand=self.dev_hand )
+        capture_info_lst = ind.adc_capture_info_list_get( dev_hand=self.dev_hand )
 
         #!
         #! Synchronise DMA capture memory.
         #!
-        ind.dma_mem_sync_bank(self.bank, dev_hand=self.dev_hand)
-
-
+        logging.info( "Synchronising capture memory..." )
+        ind.dma_mem_sync_bank( self.bank, dev_hand=self.dev_hand )
 
         capture_info_prev = capture_info_lst[ self.prev_bank ]
         capture_info      = capture_info_lst[ self.bank ]
@@ -359,14 +407,14 @@ class Production_Test_App(object):
         logging.info( "peak_max_blu = {!r}".format( peak_max_blu ) )
         logging.info( "peak_min_blu = {!r}".format( peak_min_blu ) )
 
-        ## Digilent Analog Discovery 2:
-        ##   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
-        ##   5V 25Hz 1%duty pulse input => max is ~ +17700, min is ~ -15900
-        ## RIGOL DG1022 Signal Generator:
-        ##   5V 25Hz 1%duty pulse input => max is ~ +19200, min is ~ -18800
+        #! Digilent Analog Discovery 2:
+        #!   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
+        #!   5V 25Hz 1% duty pulse input => max is ~ +17700, min is ~ -15900
+        #! RIGOL DG1022 Signal Generator:
+        #!   5V 25Hz 1% duty pulse input => max is ~ +19200, min is ~ -18800
         exp_max = 19200
         exp_min = -18800
-        tolerance = int(exp_max * 0.05)
+        tolerance = int( exp_max * 0.05 )
 
         exp_max_lo = exp_max - tolerance
         exp_max_hi = exp_max + tolerance
@@ -374,36 +422,29 @@ class Production_Test_App(object):
         exp_min_hi = exp_min + tolerance
 
         if not (exp_max_lo < peak_max_red < exp_max_hi):
-            self.error("ADC peak max red failed.")
-            errors += 1
+            self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( exp_max_lo, peak_max_red, exp_max_hi ) )
 
         if not (exp_max_lo < peak_max_wht < exp_max_hi):
-            self.error("ADC peak max wht failed.")
-            errors += 1
+            self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( exp_max_lo, peak_max_wht, exp_max_hi ) )
 
         if not (exp_max_lo < peak_max_blu < exp_max_hi):
-            self.error("ADC peak max blu failed.")
-            errors += 1
+            self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( exp_max_lo, peak_max_blu, exp_max_hi ) )
 
         if not (exp_min_lo < peak_min_red < exp_min_hi):
-            self.error("ADC peak min red failed.")
-            errors += 1
+            self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( exp_min_lo, peak_min_red, exp_min_hi ) )
 
         if not (exp_min_lo < peak_min_wht < exp_min_hi):
-            self.error("ADC peak min wht failed.")
-            errors += 1
+            self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( exp_min_lo, peak_min_wht, exp_min_hi ) )
 
         if not (exp_min_lo < peak_min_blu < exp_min_hi):
-            self.error("ADC peak min blu failed.")
-            errors += 1
+            self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( exp_min_lo, peak_min_blu, exp_min_hi ) )
 
         ind.adc_capture_stop( dev_hand=self.dev_hand )
-
-        return errors
 
     ##------------------------------------------------------------------------
 
     def blinky_test(self):
+
         while True:
             print(FG.CYAN + "Please check all LEDs are working...")
             time.sleep(1)
@@ -419,6 +460,7 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def ttyS1_test(self):
+
         delay = 0.5
         while True:
             print(FG.CYAN + "Connect XBee serial adapter...")
@@ -434,64 +476,66 @@ class Production_Test_App(object):
     ##------------------------------------------------------------------------
 
     def adc_offset_test( self ):
+        """Set ADC offset ii import and run the adc_offset app."""
 
         from adc_offset import ADC_Offset_App
 
         app = ADC_Offset_App( config=self.config )
 
         try:
-            app.init()
+            #app.init()
             #app.main()
             app.adc_offset_test_set()
-        except Exception:
-            app.cleanup()
+        finally:
+            #app.cleanup()
+            pass
 
     ##------------------------------------------------------------------------
 
-    def test_func(self, func):
+    def test_func( self, test_num, func ):
+
+        func_name = func.__name__ + "()"
+        head = "test {}: {}".format( test_num, func_name )
         try:
-            msg = func.__name__ + "()"
-            ret = func()
-            if ret:
-                print("DEBUG: ret = {!r}".format(ret))
-                raise Exception()
-            self.passed(msg)
-        except Exception as ex:
-            msg = func.__name__ + "() failed !!"
-            self.error(msg)
+            error_count = self.error_count
+            func()
+            if self.error_count != error_count:
+                self.error( head + " failed !!")
+            else:
+                self.passed( head )
+        except Exception:
+            self.error( head + " failed to complete correctly !!" )
+            raise
 
     ##------------------------------------------------------------------------
 
     def test_all( self ):
         """Run all test functions."""
 
-        self.test_func( self.superuser_test )
-        self.test_func( self.services_stop )
-        self.test_func( self.disk_usage_test )
-        self.test_func( self.memory_usage_test )
-        self.test_func( self.usb_test )
-        self.test_func( self.i2c_0_test )
-        self.test_func( self.rtc_test )
-        self.test_func( self.fpga_test )
-        self.test_func( self.adc_offset_test )
-        self.test_func( self.adc_test )
-        self.test_func( self.blinky_test )
-        self.test_func( self.ttyS1_test )
-        #self.test_func( self.services_start )
+        test_functions = \
+        [
+            self.disk_usage_test,
+            self.memory_usage_test,
+            self.usb_test,
+            self.i2c_0_test,
+            self.rtc_test,
+            self.fpga_test,
+            self.adc_offset_test,
+            self.adc_test,
+            self.blinky_test,
+            self.ttyS1_test,
+        ]
+
+        for test_num, func in enumerate( test_functions, start=1 ):
+            self.test_func( test_num, func )
 
     ##------------------------------------------------------------------------
 
     def main(self):
         """Main entry for running the production tests."""
 
-        colorama.init(autoreset=True)
-
-        self.banner_start()
-
         self.test_all()
 
-        self.banner_end()
-        print
 
 ##############################################################################
 
@@ -518,18 +562,18 @@ def argh_main():
 
     #!------------------------------------------------------------------------
 
-    def app_main( capture_count         = config.capture_count,
-                  capture_mode          = config.capture_mode,
-                  pps_delay             = config.pps_delay,
-                  adc_polarity          = config.adc_polarity.name.lower(),
-                  adc_offset            = config.adc_offset,
-                  show_measurements     = config.show_measurements,
-                  show_capture_buffers  = config.show_capture_buffers,
-                  show_capture_debug    = config.show_capture_debug,
-                  phase_mode            = config.phase_mode.name.lower(),
-                  debug                 = False,
-                  logging_level         = config.logging_level,
-                 ):
+    def argh_main2( capture_count           = config.capture_count,
+                    capture_mode            = config.capture_mode,
+                    pps_delay               = config.pps_delay,
+                    adc_polarity            = config.adc_polarity.name.lower(),
+                    adc_offset              = config.adc_offset,
+                    show_measurements       = config.show_measurements,
+                    show_capture_buffers    = config.show_capture_buffers,
+                    show_capture_debug      = config.show_capture_debug,
+                    phase_mode              = config.phase_mode.name.lower(),
+                    debug                   = False,
+                    logging_level           = config.logging_level,
+                  ):
 
         #! override user settings file if command line argument differs.
 
@@ -576,30 +620,32 @@ def argh_main():
             config.show_all()
 
         #!--------------------------------------------------------------------
+        #! run the app
+        #!--------------------------------------------------------------------
 
         app = Production_Test_App( config=config )
-        app.init()
         try:
+            app.init()
             app.main()
-        except (KeyboardInterrupt):
+        except KeyboardInterrupt:
             #! ctrl+c key press.
-            print("KeyboardInterrupt -- exiting ..." )
-        except (SystemExit):
+            app.error( "KeyboardInterrupt -- exiting ..." )
+        except SystemExit:
             #! sys.exit() called.
-            print( "SystemExit -- exiting ..." )
-        except (Exception) as exc:
+            logging.info( "SystemExit -- exiting ..." )
+        except Exception as exc:
             #! An unhandled exception !!
-            print( traceback.format_exc() )
-            print( "Exception: {}".format(exc.message) )
-            print( "Unhandled Exception -- exiting..." )
+            logging.debug( traceback.format_exc() )
+            logging.info( "Exception: {}".format( exc.message ) )
+            app.error( "Unhandled Exception -- exiting..." )
         finally:
-            print( "Cleaning up." )
+            logging.info( "Cleaning up." )
             app.cleanup()
-            print( "Done.  Exiting." )
+            print( "Done." )
 
     #!------------------------------------------------------------------------
 
-    argh.dispatch_command( app_main )
+    argh.dispatch_command( argh_main2 )
 
 ##============================================================================
 
