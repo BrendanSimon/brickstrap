@@ -12,6 +12,8 @@ It assumes that it has been powered up and all voltage rails tested.
 '''
 
 import argh
+from argh import arg
+
 import sys
 import os.path
 import time
@@ -22,6 +24,9 @@ import traceback
 
 import colorama
 from colorama import Fore as FG, Back as BG, Style as ST
+
+import re
+from tee import StdoutTee, StderrTee
 
 #import numpy as np
 #import math
@@ -36,6 +41,42 @@ sys.path.append('..')
 import ind
 from settings import SERIAL_NUMBER
 from efd_config import Config
+
+#!============================================================================
+#! Filter function to remove control characters (ansi colours) from a string
+#! Used when redirecting stdout to a file using Tee.StdoutTee
+#!============================================================================
+def _remove_control_chars( message ):
+    """Remove control characters (ansi colours) from a string."""
+
+    msg = re.sub( r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', "", message )
+    return msg
+
+
+
+class MyStdoutTee( StdoutTee ):
+    """Override StdoutTee to support no file logging if filename is ''.
+    i.e. output to stdout only
+    """
+
+    def __init__( self, *args , **kwargs ):
+        #! default to remove control chars from file output
+        ff = kwargs.get( 'file_filters', [ _remove_control_chars ] )
+        kwargs[ 'file_filters' ] = ff
+
+        StdoutTee.__init__( self, *args, **kwargs )
+
+    def write( self, message ):
+        try:
+            StdoutTee.write( self, message )
+        except AttributeError:
+            pass
+
+    def __enter__( self ):
+        try:
+            StdoutTee.__enter__( self )
+        except IOError:
+            pass
 
 ##============================================================================
 
@@ -55,7 +96,10 @@ class Production_Test_App(object):
     def init( self ):
         """Initialise the app"""
 
+        #colorama.init()
         colorama.init( autoreset=True )
+        #colorama.init( autoreset=True, wrap=False )
+        #colorama.init( wrap=False )
 
         self.banner_start()
         self.superuser_test()
@@ -109,7 +153,9 @@ class Production_Test_App(object):
                 + "serial number: {}\n".format(SERIAL_NUMBER) \
                 + "======================================================\n"
 
-        print(banner)
+        print( ST.RESET_ALL )
+        print( banner )
+        print( ST.RESET_ALL )
 
     ##------------------------------------------------------------------------
 
@@ -133,7 +179,9 @@ class Production_Test_App(object):
                 + color \
                 + "======================================================\n"
 
-        print(banner)
+        print( ST.RESET_ALL )
+        print( banner )
+        print( ST.RESET_ALL )
 
     ##------------------------------------------------------------------------
 
@@ -301,7 +349,8 @@ class Production_Test_App(object):
 
         #! confirm signal generated is connected and setup correctly.
         while True:
-            msg = FG.CYAN + "Setup signal generator => 10Vpp 1MHz sine input"
+            msg = FG.CYAN + "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input"
+            #msg = FG.CYAN + "Setup signal generator => 10Vpp 1MHz sine input"
             #msg = FG.CYAN + "Setup signal generator => 5V 25Hz 1% duty pulse input"
             print( msg )
             print( FG.CYAN + "Is signal generator setup correctly? (y/n)" )
@@ -344,9 +393,9 @@ class Production_Test_App(object):
                             )
 
         #! TODO: make this a config setting
-        #repetitions = 1
+        repetitions = 1
         #repetitions = 3
-        repetitions = 11
+        #repetitions = 11
         #repetitions = 111
 
         sem = 0
@@ -407,13 +456,18 @@ class Production_Test_App(object):
         logging.info( "peak_max_blu = {!r}".format( peak_max_blu ) )
         logging.info( "peak_min_blu = {!r}".format( peak_min_blu ) )
 
+        #! Signals applied at RF board inputs
+        #!--------------------------------------------------------------------
         #! Digilent Analog Discovery 2:
-        #!   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
-        #!   5V 25Hz 1% duty pulse input => max is ~ +17700, min is ~ -15900
+        #!   10Vpp 1MHz sine input              => max is ~ +18000, min is ~ -14000
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +17700, min is ~ -15900
         #! RIGOL DG1022 Signal Generator:
-        #!   5V 25Hz 1% duty pulse input => max is ~ +19200, min is ~ -18800
-        exp_max = 19200
-        exp_min = -18800
+        #!    5Vpp, 0V offset, 1MHz sine input  => max is ~ +12430, min is ~ -9760
+        #!    5Vpp, 5V offset, 1MHz sine input  => max is ~ +13490, min is ~ -13470
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +19200, min is ~ -18800
+        #!--------------------------------------------------------------------
+        exp_max =  13490
+        exp_min = -13470
         tolerance = int( exp_max * 0.05 )
 
         exp_max_lo = exp_max - tolerance
@@ -562,6 +616,14 @@ def argh_main():
 
     #!------------------------------------------------------------------------
 
+    @arg( '--capture_mode',             choices=['auto','manual'] )
+    @arg( '--adc_polarity',             choices=['signed','unsigned'] )
+    @arg( '-a', '--adc_offset', help='use this adc offset value' )
+    @arg( '-p', '--phase_mode',         choices=['poly','red','white','blue'] )
+    @arg( '-d', '--debug' )
+    @arg( '-l', '--logging_level',      choices=['error','warning','info','debug'] )
+    #! app specific config settings
+    @arg( '-o', '--output_filename', help="append stdout to this file" )
     def argh_main2( capture_count           = config.capture_count,
                     capture_mode            = config.capture_mode,
                     pps_delay               = config.pps_delay,
@@ -573,6 +635,8 @@ def argh_main():
                     phase_mode              = config.phase_mode.name.lower(),
                     debug                   = False,
                     logging_level           = config.logging_level,
+                    #! app specific config settings
+                    output_filename         = '',
                   ):
 
         #! override user settings file if command line argument differs.
@@ -623,25 +687,30 @@ def argh_main():
         #! run the app
         #!--------------------------------------------------------------------
 
-        app = Production_Test_App( config=config )
-        try:
-            app.init()
-            app.main()
-        except KeyboardInterrupt:
-            #! ctrl+c key press.
-            app.error( "KeyboardInterrupt -- exiting ..." )
-        except SystemExit:
-            #! sys.exit() called.
-            logging.info( "SystemExit -- exiting ..." )
-        except Exception as exc:
-            #! An unhandled exception !!
-            logging.debug( traceback.format_exc() )
-            logging.info( "Exception: {}".format( exc.message ) )
-            app.error( "Unhandled Exception -- exiting..." )
-        finally:
-            logging.info( "Cleaning up." )
-            app.cleanup()
-            print( "Done." )
+        #! redirect stdout to a file (as well as to stdout)
+        #stdout_tee = MyStdoutTee( output_filename, file_filters=[ _remove_control_chars ] )
+        stdout_tee = MyStdoutTee( output_filename )
+
+        with stdout_tee:
+            app = Production_Test_App( config=config )
+            try:
+                app.init()
+                app.main()
+            except KeyboardInterrupt:
+                #! ctrl+c key press.
+                app.error( "KeyboardInterrupt -- exiting ..." )
+            except SystemExit:
+                #! sys.exit() called.
+                logging.info( "SystemExit -- exiting ..." )
+            except Exception as exc:
+                #! An unhandled exception !!
+                logging.debug( traceback.format_exc() )
+                logging.info( "Exception: {}".format( exc.message ) )
+                app.error( "Unhandled Exception -- exiting..." )
+            finally:
+                logging.info( "Cleaning up." )
+                app.cleanup()
+                logging.info( "Done." )
 
     #!------------------------------------------------------------------------
 
