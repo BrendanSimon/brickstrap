@@ -266,10 +266,10 @@ class ADC_Offset_App( object ):
 
     def adc_offset_test_run( self, mode ):
 
-        logging.info( "" )
-        logging.info( "----------------------------------------------" )
-        logging.info( "{} adc offset".format( mode ) )
-        logging.info( "----------------------------------------------" )
+        print( "" )
+        print( "----------------------------------------------" )
+        print( "{} adc offset".format( mode ) )
+        print( "----------------------------------------------" )
 
         #! error count of start of func so we can check against it later
         error_count = self.error_count
@@ -374,7 +374,7 @@ class ADC_Offset_App( object ):
                 time.sleep( 0 )
 
             if sem:
-                logging.info( "---------------------------------------------------" )
+                #logging.info( "---------------------------------------------------" )
 
                 #!
                 #! Retrieve info from driver.
@@ -546,14 +546,14 @@ class ADC_Offset_App( object ):
 
         adc_offset_diff = all_set - cfg.adc_offset
 
-        logging.info( "" )
-        logging.info( "----------------------------------------------" )
-        logging.info( "ADC_OFFSET User Setting" )
-        logging.info( "----------------------------------------------" )
-        logging.info( "ADC_OFFSET (existing)   = {:+}".format( cfg.adc_offset ) )
-        logging.info( "ADC_OFFSET (calculated) = {:+}".format( all_set ) )
-        logging.info( "ADC_OFFSET (difference) = {:+}".format( adc_offset_diff ) )
-        logging.info( "" )
+        print( "" )
+        print( "----------------------------------------------" )
+        print( "ADC_OFFSET User Setting" )
+        print( "----------------------------------------------" )
+        print( "ADC_OFFSET (existing)   = {:+}".format( cfg.adc_offset ) )
+        print( "ADC_OFFSET (calculated) = {:+}".format( all_set ) )
+        print( "ADC_OFFSET (difference) = {:+}".format( adc_offset_diff ) )
+        print( "" )
 
         if mode == 'verify':
             ADC_OFFSET_DIFF_MARGIN = 2
@@ -578,7 +578,7 @@ class ADC_Offset_App( object ):
         new_setting = '='.join( [ key, repr(value) ] )
 
         #! write adc offset setting to settings file
-        logging.info( "write to settings file ({})".format( new_setting ) )
+        print( "write to settings file ({})".format( new_setting ) )
         cfg.settings_file_set( key="ADC_OFFSET", value=adc_offset )
 
         #! update config object
@@ -682,8 +682,6 @@ def argh_main():
 
     config.capture_mode = 'manual'
 
-    config.show_capture_debug = True
-
     #!
     #! additional config settings for this app only !!
     #!
@@ -761,7 +759,7 @@ def argh_main():
         logging.basicConfig( level=config.logging_level )
 
         effective_log_level = logging.getLogger().getEffectiveLevel()
-        if effective_log_level <= logging.INFO:
+        if effective_log_level <= logging.DEBUG:
             config.show_all()
 
 

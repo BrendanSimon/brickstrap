@@ -680,7 +680,7 @@ def argh_main():
         logging.basicConfig( level=config.logging_level )
 
         effective_log_level = logging.getLogger().getEffectiveLevel()
-        if effective_log_level <= logging.INFO:
+        if effective_log_level <= logging.DEBUG:
             config.show_all()
 
         #!--------------------------------------------------------------------
