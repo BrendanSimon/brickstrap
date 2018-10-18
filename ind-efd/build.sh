@@ -9,6 +9,10 @@ BOARD="ind-efd"
  
 OUT="${BOARD}-v${VERSION}"
  
+OUT_LOG="${OUT}.log"
+ 
+OUT_TXT="${OUT}.txt"
+ 
 OUT_TAR="${OUT}.tar"
  
 OUT_TGZ="${OUT_TAR}.gz"
@@ -55,8 +59,12 @@ fi
 echo "BOARD = ${BOARD}"
 echo "OUT = ${OUT}"
 
-${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}
- 
+cmd="${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}"
+script -q -c "${cmd}" "${OUT_LOG}"
+
+#! Remove ANSI color codes, etc
+cat "${OUT_LOG}" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" > "${OUT_TXT}"
+
 #
 # Compress the tar image.
 #
