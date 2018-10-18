@@ -15,7 +15,7 @@ OUT_TGZ="${OUT_TAR}.gz"
  
 BRICKSTRAP="../brickstrap/brickstrap.sh"
 
-COMMAND=${1:-"all"}
+COMMAND=${@:-"all"}
 
 
 read -r -d '' USAGE <<-'EOF'
