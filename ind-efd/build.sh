@@ -62,5 +62,6 @@ ${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}
 #
 if [ "${COMMAND}" = "all" ]; then
     cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ}  
+    rm -f ${OUT_TAR}
 fi
 
