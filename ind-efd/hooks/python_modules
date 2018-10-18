@@ -9,6 +9,7 @@
 PY_MODS=(
     "tee"
     "PySensors"
+    "selectors2"
     )
 
 #!
