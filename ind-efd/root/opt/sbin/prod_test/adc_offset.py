@@ -11,6 +11,8 @@ This script is used to verify/set the DC offset compensation for the ADC.
 '''
 
 import argh
+from argh import arg
+
 import sys
 import os.path
 import time
@@ -691,7 +693,17 @@ def argh_main():
 
     #!------------------------------------------------------------------------
 
-    def argh_main2( capture_count           = config.capture_count,
+    @arg( '--capture_mode',             choices=['auto','manual'] )
+    @arg( '--adc_polarity',             choices=['signed','unsigned'] )
+    @arg( '-a', '--adc_offset', help='use this adc offset value' )
+    @arg( '-p', '--phase_mode',         choices=['poly','red','white','blue'] )
+    @arg( '-d', '--debug' )
+    @arg( '-l', '--logging_level',      choices=['error','warning','info','debug'] )
+    #! app specific config settings
+    @arg( '--adc_offset_mode',          choices=['calculate','set'] )
+    @arg( '-s', '--set', help="calculate and set adc offset" )
+    def argh_main2(
+                    capture_count           = config.capture_count,
                     capture_mode            = config.capture_mode,
                     pps_delay               = config.pps_delay,
                     adc_polarity            = config.adc_polarity.name.lower(),
@@ -701,10 +713,11 @@ def argh_main():
                     show_capture_debug      = config.show_capture_debug,
                     phase_mode              = config.phase_mode.name.lower(),
                     debug                   = False,
-                    logging_level           = config.logging_level,
+                    logging_level           = config.logging_level.lower(),
 
                     #! app specific config settings
                     adc_offset_mode         = config.adc_offset_mode,
+                    set                     = False,
                   ):
 
         #! override user settings file if command line argument differs.
@@ -754,6 +767,9 @@ def argh_main():
 
         #! app specific config settings
 
+        if set:
+            adc_offset_mode = 'set'
+
         adc_offset_mode = adc_offset_mode.lower()
         if adc_offset_mode != config.adc_offset_mode:
             config.adc_offset_mode = adc_offset_mode
@@ -779,7 +795,7 @@ def argh_main():
         finally:
             logging.info( "Cleaning up." )
             app.cleanup()
-            print( "Done." )
+            logging.info( "Done." )
 
     #!------------------------------------------------------------------------
 
