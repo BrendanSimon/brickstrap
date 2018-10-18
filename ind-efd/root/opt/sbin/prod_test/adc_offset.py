@@ -31,8 +31,8 @@ import math
 #sys.path.insert(1, '/opt/sbin')
 #sys.path.insert(1, '/mnt/data/etc')
 #sys.path.append('.')
-sys.path.append('..')
-#sys.path.append('/opt/sbin')
+#sys.path.append('..')
+sys.path.append('/opt/sbin')
 #sys.path.append('/mnt/data/etc')
 
 import ind
