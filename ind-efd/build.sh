@@ -61,7 +61,7 @@ ${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}
 # Compress the tar image.
 #
 if [ "${COMMAND}" = "all" ]; then
-    cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ}  
-    rm -f ${OUT_TAR}
+    cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ} && rm -f ${OUT_TAR}
+    ./makeupgrade.sh && rm -f ${OUT_TGZ}
 fi
 
