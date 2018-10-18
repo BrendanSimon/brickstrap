@@ -1,10 +1,10 @@
 #!/usr/bin/env python2
 
-##############################################################################
-##
-##  Author:     Successful Endeavours Pty Ltd
-##
-##############################################################################
+#!============================================================================
+#!
+#!  Author:     Successful Endeavours Pty Ltd
+#!
+#!============================================================================
 
 '''
 This script is used to test production boards off the assembly line.
@@ -41,6 +41,7 @@ sys.path.append('/opt/sbin')
 import ind
 from settings import SERIAL_NUMBER
 from efd_config import Config
+from efd_config import Phase_Mode
 
 #!============================================================================
 #! Filter function to remove control characters (ansi colours) from a string
@@ -78,21 +79,21 @@ class MyStdoutTee( StdoutTee ):
         except IOError:
             pass
 
-##============================================================================
+#!============================================================================
 
 class Production_Test_App(object):
 
     error_count = 0
     pass_count  = 0
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def __init__( self, config ):
         self.config = config
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
-    ## TODO: could put in base class IND_App ??
+    #! TODO: could put in base class IND_App ??
     def init( self ):
         """Initialise the app"""
 
@@ -105,16 +106,16 @@ class Production_Test_App(object):
         self.superuser_test()
         self.services_stop()
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
-    ## TODO: could put in base class IND_App ??
+    #! TODO: could put in base class IND_App ??
     def cleanup( self ):
         """Cleanup the app on exit"""
 
         #self.services_start()
         self.banner_end()
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def error(self, msg):
         print(FG.RED + "ERROR: " + msg + "\n")
@@ -124,7 +125,7 @@ class Production_Test_App(object):
         print(FG.GREEN + "PASS: " + msg + "\n")
         self.pass_count += 1
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def shell_command(self, cmd):
         """Return output of an executable, which is executed in a shell."""
@@ -138,7 +139,7 @@ class Production_Test_App(object):
 
         return ret
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def banner_start(self):
 
@@ -157,7 +158,7 @@ class Production_Test_App(object):
         print( banner )
         print( ST.RESET_ALL )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def banner_end(self):
 
@@ -183,7 +184,7 @@ class Production_Test_App(object):
         print( banner )
         print( ST.RESET_ALL )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def superuser_test(self):
 
@@ -195,34 +196,34 @@ class Production_Test_App(object):
             self.error("superuser test failed !!")
             sys.exit(-1)
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def services_stop(self):
 
         #print("Stopping services...")
 
-        ## Stop the ntp service.
+        #! Stop the ntp service.
         #print("Stopping chrony service...")
         try:
             self.shell_command('systemctl stop chrony')
         except Exception as ex:
             self.error("stopping chrony service failed !!")
 
-        ## Stop modem being power cycled if no network connectivity.
+        #! Stop modem being power cycled if no network connectivity.
         #print("Stopping sepl-modem service...")
         try:
             self.shell_command('systemctl stop sepl-modem')
         except Exception as ex:
             self.error("stopping sepl-modem service failed !!")
 
-        ## Stop the efd sampling, measurement, logging, posting.
+        #! Stop the efd sampling, measurement, logging, posting.
         #print("Stopping efd service...")
         try:
             self.shell_command('systemctl stop efd')
         except Exception as ex:
             self.error("stopping efd service failed !!")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def services_start(self):
         print("Restarting services...")
@@ -245,7 +246,7 @@ class Production_Test_App(object):
         except Exception as ex:
             self.error("starting chrony service failed !!")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def disk_usage_test(self):
 
@@ -275,7 +276,7 @@ class Production_Test_App(object):
                 if unit != 'G' or mag < 27 or mag > 29:
                     self.error("{!r} size not valid ({})".format(mnt, size))
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def memory_usage_test(self):
 
@@ -289,7 +290,7 @@ class Production_Test_App(object):
         if ( mem_type != 'Mem:' ) or ( '1.0G' not in size ):
             self.error("memory not valid: mem_type={!r}, size={!r}".format(mem_type, size))
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def usb_test(self):
 
@@ -297,7 +298,7 @@ class Production_Test_App(object):
         if 'Linux Foundation 2.0 root hub' not in out:
             self.error("USB root hub not found")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def i2c_0_test( self ):
 
@@ -320,7 +321,7 @@ class Production_Test_App(object):
         if out != exp:
             self.error( "i2c-0 device probe mismatch" )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def rtc_test(self):
 
@@ -330,30 +331,32 @@ class Production_Test_App(object):
         except Exception as ex:
             self.error("hwclock command failed")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def fpga_test(self):
 
         self.dev_hand = ind.get_device_handle()
 
-        ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
+        #! NOTE: resetting causes first maxmin values to be all zero for some reason !!
         #ind.fpga_reset(dev_hand=self.dev_hand)
 
         fpga_ver = ind.fpga_version_get(dev_hand=self.dev_hand)
         if fpga_ver.major != 2:
             self.error("Wrong FPGA version")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
-    def adc_test(self):
+    def adc_test_run( self, phase_mode, signal_phase ):
 
         #! confirm signal generated is connected and setup correctly.
         while True:
-            msg = FG.CYAN + "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input"
-            #msg = FG.CYAN + "Setup signal generator => 10Vpp 1MHz sine input"
-            #msg = FG.CYAN + "Setup signal generator => 5V 25Hz 1% duty pulse input"
+            msg = FG.CYAN
+            msg += "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
+            #msg = "Setup signal generator => 10Vpp 1MHz sine input\n"
+            #msg = "Setup signal generator => 5V 25Hz 1% duty pulse input\n"
+            msg += "Connect signal to input channel => {}\n".format( signal_phase.upper() )
+            msg += "Is signal generator setup correctly? (y/n)\n"
             print( msg )
-            print( FG.CYAN + "Is signal generator setup correctly? (y/n)" )
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break
@@ -363,11 +366,9 @@ class Production_Test_App(object):
 
         cfg = self.config
 
-        cfg.set_capture_mode('manual')
-
         self.dev_hand = ind.get_device_handle()
 
-        ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
+        #! NOTE: resetting causes first maxmin values to be all zero for some reason !!
         #ind.fpga_reset( dev_hand=self.dev_hand )
 
         #ind.adc_capture_stop( dev_hand=self.dev_hand )
@@ -379,6 +380,7 @@ class Production_Test_App(object):
         signed                  = cfg.adc_polarity_is_signed()
         peak_detect_start_count = 0
         peak_detect_stop_count  = cfg.capture_count - 1
+        #phase_mode              = cfg.phase_mode
 
         ind.adc_capture_start( address                  = 0,
                                capture_count            = cfg.capture_count,
@@ -388,7 +390,7 @@ class Production_Test_App(object):
                                peak_detect_start_count  = peak_detect_start_count,
                                peak_detect_stop_count   = peak_detect_stop_count,
                                adc_offset               = cfg.adc_offset,
-                               phase_mode               = cfg.phase_mode,
+                               phase_mode               = phase_mode,
                                dev_hand                 = self.dev_hand
                             )
 
@@ -475,27 +477,73 @@ class Production_Test_App(object):
         exp_min_lo = exp_min - tolerance
         exp_min_hi = exp_min + tolerance
 
-        if not (exp_max_lo < peak_max_red < exp_max_hi):
-            self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( exp_max_lo, peak_max_red, exp_max_hi ) )
+        #! thresholds for inputs with no signal (50 ohm terminated)
+        noise_max =  500
+        noise_min = -500
 
-        if not (exp_max_lo < peak_max_wht < exp_max_hi):
-            self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( exp_max_lo, peak_max_wht, exp_max_hi ) )
+        #! assume same signal on all channels (e.g. in single phase mode)
+        red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
 
-        if not (exp_max_lo < peak_max_blu < exp_max_hi):
-            self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( exp_max_lo, peak_max_blu, exp_max_hi ) )
+        #! assume no signal on all channels
+        red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = noise_max, 0, 0, noise_min
+        wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = noise_max, 0, 0, noise_min
+        blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = noise_max, 0, 0, noise_min
 
-        if not (exp_min_lo < peak_min_red < exp_min_hi):
-            self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( exp_min_lo, peak_min_red, exp_min_hi ) )
+        #! set thresholds to noise levels for channels with no input (currently white has only input)
+        if phase_mode == Phase_Mode.POLY:
+            if signal_phase == 'red':
+                red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+            if signal_phase == 'white':
+                wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+            if signal_phase == 'blue':
+                blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        elif phase_mode == Phase_Mode.RED:
+            if signal_phase == 'red':
+                red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        elif phase_mode == Phase_Mode.WHITE:
+            if signal_phase == 'white':
+                wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        elif phase_mode == Phase_Mode.BLUE:
+            if signal_phase == 'blue':
+                blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
 
-        if not (exp_min_lo < peak_min_wht < exp_min_hi):
-            self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( exp_min_lo, peak_min_wht, exp_min_hi ) )
+        if not ( red_exp_max_lo < peak_max_red < red_exp_max_hi ):
+            self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( red_exp_max_lo, peak_max_red, red_exp_max_hi ) )
 
-        if not (exp_min_lo < peak_min_blu < exp_min_hi):
-            self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( exp_min_lo, peak_min_blu, exp_min_hi ) )
+        if not ( wht_exp_max_lo < peak_max_wht < wht_exp_max_hi ):
+            self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_max_lo, peak_max_wht, wht_exp_max_hi ) )
+
+        if not ( blu_exp_max_lo < peak_max_blu < blu_exp_max_hi ):
+            self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_max_lo, peak_max_blu, blu_exp_max_hi ) )
+
+        if not ( red_exp_min_lo < peak_min_red <  red_exp_min_hi ):
+            self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( red_exp_min_lo, peak_min_red, red_exp_min_hi ) )
+
+        if not ( wht_exp_min_lo < peak_min_wht < wht_exp_min_hi ):
+            self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_min_lo, peak_min_wht, wht_exp_min_hi ) )
+
+        if not ( blu_exp_min_lo < peak_min_blu < blu_exp_min_hi ):
+            self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_min_lo, peak_min_blu, blu_exp_min_hi ) )
 
         ind.adc_capture_stop( dev_hand=self.dev_hand )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
+
+    def adc_test( self ):
+        """Run all ADC tests."""
+
+        for sp in [ 'red', 'white', 'blue' ]:
+            pm = Phase_Mode.POLY
+            self.adc_test_run( phase_mode=pm, signal_phase=sp )
+
+        #for pm in Phase_Mode:
+        #    sp = 'white'
+        #    #sp = 'white' if pm == Phase_Mode.POLY else pm.value.lower()
+        #    self.adc_test_run( phase_mode=pm, signal_phase=sp )
+
+    #!------------------------------------------------------------------------
 
     def blinky_test(self):
 
@@ -511,7 +559,7 @@ class Production_Test_App(object):
                 self.error("Blinky failed")
                 break
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def ttyS1_test(self):
 
@@ -527,7 +575,7 @@ class Production_Test_App(object):
                 self.error("ttyS1 test failed")
                 break
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def adc_offset_test( self ):
         """Set ADC offset ii import and run the adc_offset app."""
@@ -544,7 +592,7 @@ class Production_Test_App(object):
             #app.cleanup()
             pass
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def test_func( self, test_num, func ):
 
@@ -561,7 +609,7 @@ class Production_Test_App(object):
             self.error( head + " failed to complete correctly !!" )
             raise
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def test_all( self ):
         """Run all test functions."""
@@ -583,7 +631,7 @@ class Production_Test_App(object):
         for test_num, func in enumerate( test_functions, start=1 ):
             self.test_func( test_num, func )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def main(self):
         """Main entry for running the production tests."""
@@ -591,7 +639,7 @@ class Production_Test_App(object):
         self.test_all()
 
 
-##############################################################################
+#!============================================================================
 
 
 def argh_main():
@@ -716,7 +764,7 @@ def argh_main():
 
     argh.dispatch_command( argh_main2 )
 
-##============================================================================
+#!============================================================================
 
 if __name__ == "__main__":
     argh_main()
