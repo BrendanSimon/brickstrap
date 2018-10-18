@@ -38,9 +38,18 @@ SECONDS=0
 while true ; do
     #! get modem number.
     modem=$(mmcli -L | grep -oP '/Modem/\K\d+(?= )')
+
+    #! get modem status information
+    mmcli_out=$(mmcli -m ${modem})
+
     #! get modem signal quality.
-    signal_quality=$(mmcli -m ${modem} | grep -oP 'signal quality.*')
-    echo "modem: ${modem}, ${signal_quality}"
+    signal_quality=$(echo "${mmcli_out}" | grep -oP 'signal quality:.*')
+
+    #! get modem access technology
+    access_tech=$(echo "${mmcli_out}" | grep -oP 'access tech:.*')
+
+    #! output modem status info
+    echo "modem: ${modem}, ${signal_quality}, ${access_tech}"
 
     echo "Pinging ${ping_server} (count=${ping_count})"
     ping -c ${ping_count} ${ping_server} > /dev/null
