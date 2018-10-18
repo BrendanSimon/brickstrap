@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#!============================================================================
+#!
+#!  Install python modules (not available as a Debian package)
+#!
+#!============================================================================
+
+PY_MODS=(
+    "tee"
+    )
+
+#!
+#! Install Python modules.
+#!
+for mod in ${PY_MODS[@]} ; do
+    echo "Installing python module: '${mod}' ..."
+    ${CHROOTBINDCMD} pip install --upgrade ${mod}
+done
