@@ -44,7 +44,7 @@ def power_on():
 
 #@argh.arg('delay', help='delay in seconds between turning off then on.')
 
-def power_cycle(delay=0.5):
+def power_cycle(delay=5.0):
     """Power cycle the modem."""
 
     power_off()
