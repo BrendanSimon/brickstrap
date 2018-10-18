@@ -30,7 +30,7 @@ function cleanup
 {
     #echo "CLEANUP"
 
-    rm -f "${LOG_FILE_TMP}"
+    sudo -- rm -f "${LOG_FILE_TMP}"
 
     #!
     #! Remount the boot filesystem with read-only permission
