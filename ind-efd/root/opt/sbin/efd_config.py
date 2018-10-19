@@ -13,7 +13,6 @@ This module handles configuration information for EFD applications.
 import argh
 import os.path
 import enum
-import fileinput
 
 import logging
 
@@ -654,22 +653,27 @@ class Config( ConfigDefault ):
 
         filename = settings.__file__.replace( '.pyc', '.py' )
 
-        new_line = '='.join( [ key, repr( value ) ] )
+        new_line = "{}={}\n".format( key, repr( value ) )
+
+        #! read original contents of file into memory
+        with open( filename, 'r' ) as f:
+            lines= f.readlines()
 
         #! search for existing setting and replace it
         set = False
-        inplace = True
-        for line in fileinput.input( filename, inplace=inplace ):
-            line = line.rstrip( '\r\n' )
+        for i, line in enumerate( lines ):
             if line.startswith( key ):
+                lines[ i ] = new_line
                 set = True
-                line = new_line
-            print( line )
 
-        #! append setting if it was not replaced above
-        if not set:
-            with open( filename, 'a' ) as f:
-                f.write( '\n' + new_line + '\n' )
+        #! write lines back to file
+        with open( filename, 'w' ) as f:
+            f.writelines( lines )
+
+            #! append setting if it was not replaced above
+            if not set:
+                with open( filename, 'a' ) as f:
+                    f.write( '\n' + new_line + '\n' )
 
 ##############################################################################
 
