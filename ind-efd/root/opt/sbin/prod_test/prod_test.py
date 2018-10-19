@@ -346,9 +346,11 @@ class Production_Test_App(object):
 
     #!------------------------------------------------------------------------
 
-    def adc_test_run( self, phase_mode, signal_phase ):
+    def signal_generaor_setup( self, signal_phase ):
+        """Confirm signal generated is connected and setup correctly."""
 
-        #! confirm signal generated is connected and setup correctly.
+        ans = None
+
         while True:
             msg = FG.CYAN
             msg += "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
@@ -357,11 +359,24 @@ class Production_Test_App(object):
             msg += "Connect signal to input channel => {}\n".format( signal_phase.upper() )
             msg += "Is signal generator setup correctly? (y/n)\n"
             print( msg )
+
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break
             elif ans == 'N':
                 self.error( "signal generator not setup correctly !!" )
+                break
+
+        return ans
+
+    #!------------------------------------------------------------------------
+
+    def adc_test_run( self, phase_mode, signal_phase, ask=True ):
+
+        #! confirm signal generated is connected and setup correctly.
+        if ask:
+            ans = self.signal_generaor_setup( signal_phase )
+            if ans != 'Y':
                 return
 
         cfg = self.config
@@ -461,15 +476,21 @@ class Production_Test_App(object):
         #! Signals applied at RF board inputs
         #!--------------------------------------------------------------------
         #! Digilent Analog Discovery 2:
-        #!   10Vpp 1MHz sine input              => max is ~ +18000, min is ~ -14000
         #!   5V 25Hz 1% duty pulse input        => max is ~ +17700, min is ~ -15900
-        #! RIGOL DG1022 Signal Generator:
+        #!   10Vpp 1MHz sine input              => max is ~ +18000, min is ~ -14000
+        #!
+        #! RIGOL DG1022 Signal Generator (SWER boards => no mux !!):
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +19200, min is ~ -18800
         #!    5Vpp, 0V offset, 1MHz sine input  => max is ~ +12430, min is ~ -9760
         #!    5Vpp, 5V offset, 1MHz sine input  => max is ~ +13490, min is ~ -13470
-        #!   5V 25Hz 1% duty pulse input        => max is ~ +19200, min is ~ -18800
+        #!
+        #! RIGOL DG1022 Signal Generator (3 Phase boards => with mux !!):
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +?????, min is ~ -?????
+        #!    5Vpp, 0V offset, 1MHz sine input  => max is ~ +?????, min is ~ -?????
+        #!    5Vpp, 5V offset, 1MHz sine input  => max is ~ +12710, min is ~ -11980
         #!--------------------------------------------------------------------
-        exp_max =  13490
-        exp_min = -13470
+        exp_max =  12710
+        exp_min = -11980
         tolerance = int( exp_max * 0.05 )
 
         exp_max_lo = exp_max - tolerance
@@ -481,17 +502,16 @@ class Production_Test_App(object):
         noise_max =  500
         noise_min = -500
 
-        #! assume same signal on all channels (e.g. in single phase mode)
-        red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
-        wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
-        blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
-
+        #!
         #! assume no signal on all channels
+        #!
         red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = noise_max, 0, 0, noise_min
         wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = noise_max, 0, 0, noise_min
         blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = noise_max, 0, 0, noise_min
 
+        #!
         #! set thresholds to noise levels for channels with no input (currently white has only input)
+        #!
         if phase_mode == Phase_Mode.POLY:
             if signal_phase == 'red':
                 red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
@@ -509,39 +529,50 @@ class Production_Test_App(object):
             if signal_phase == 'blue':
                 blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
 
+        #!
+        #! check thresholds for each phase
+        #!
         if not ( red_exp_max_lo < peak_max_red < red_exp_max_hi ):
             self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( red_exp_max_lo, peak_max_red, red_exp_max_hi ) )
-
-        if not ( wht_exp_max_lo < peak_max_wht < wht_exp_max_hi ):
-            self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_max_lo, peak_max_wht, wht_exp_max_hi ) )
-
-        if not ( blu_exp_max_lo < peak_max_blu < blu_exp_max_hi ):
-            self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_max_lo, peak_max_blu, blu_exp_max_hi ) )
 
         if not ( red_exp_min_lo < peak_min_red <  red_exp_min_hi ):
             self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( red_exp_min_lo, peak_min_red, red_exp_min_hi ) )
 
+        if not ( wht_exp_max_lo < peak_max_wht < wht_exp_max_hi ):
+            self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_max_lo, peak_max_wht, wht_exp_max_hi ) )
+
         if not ( wht_exp_min_lo < peak_min_wht < wht_exp_min_hi ):
             self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_min_lo, peak_min_wht, wht_exp_min_hi ) )
+
+        if not ( blu_exp_max_lo < peak_max_blu < blu_exp_max_hi ):
+            self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_max_lo, peak_max_blu, blu_exp_max_hi ) )
 
         if not ( blu_exp_min_lo < peak_min_blu < blu_exp_min_hi ):
             self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_min_lo, peak_min_blu, blu_exp_min_hi ) )
 
+        #! Done - stop adc
         ind.adc_capture_stop( dev_hand=self.dev_hand )
 
     #!------------------------------------------------------------------------
 
-    def adc_test( self ):
+    def adc_test_all( self ):
         """Run all ADC tests."""
 
-        for sp in [ 'red', 'white', 'blue' ]:
-            pm = Phase_Mode.POLY
-            self.adc_test_run( phase_mode=pm, signal_phase=sp )
+        phases = [ 'red', 'white', 'blue' ]
 
-        #for pm in Phase_Mode:
-        #    sp = 'white'
-        #    #sp = 'white' if pm == Phase_Mode.POLY else pm.value.lower()
-        #    self.adc_test_run( phase_mode=pm, signal_phase=sp )
+        for sp in phases:
+            ask = True  #! prompt for signal setup on first change of phase
+            for pm in Phase_Mode:
+                self.adc_test_run( phase_mode=pm, signal_phase=sp, ask=ask )
+                ask = False
+
+    #!------------------------------------------------------------------------
+
+    def adc_test_production( self ):
+        """Run ADC tests for production testing only (minimal user interaction)."""
+
+        #! red phase, poly mode.
+        self.adc_test_run( phase_mode=Phase_Mode.POLY, signal_phase='red' )
 
     #!------------------------------------------------------------------------
 
@@ -623,7 +654,8 @@ class Production_Test_App(object):
             self.rtc_test,
             self.fpga_test,
             self.adc_offset_test,
-            self.adc_test,
+            #self.adc_test_all,
+            self.adc_test_production,
             self.blinky_test,
             self.ttyS1_test,
         ]
