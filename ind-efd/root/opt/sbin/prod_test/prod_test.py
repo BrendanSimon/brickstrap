@@ -629,6 +629,8 @@ class Production_Test_App(object):
             #app.cleanup()
             pass
 
+        self.error_count += app.error_count
+
     #!------------------------------------------------------------------------
 
     def test_func( self, test_num, func ):
