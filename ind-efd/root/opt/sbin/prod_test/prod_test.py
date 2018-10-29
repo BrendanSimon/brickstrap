@@ -18,6 +18,7 @@ import sys
 import os.path
 import time
 import arrow
+from datetime import timedelta
 import subprocess
 import logging
 import traceback
@@ -326,10 +327,49 @@ class Production_Test_App(object):
     def rtc_test(self):
 
         try:
+            #! get current date/time.
+            dt_now = arrow.now().floor('second')
+            logging.debug( "dt_now = {}".format(dt_now) )
+            dt_now_str = dt_now.format("YYYY-MM-DD hh:mm:ss")
+            logging.debug( "rtc_test : dt_now_str = {}".format(dt_now_str) )
+
+            #! first set/configure the RTC to avoid "low voltage" errors.
+            #! new boards usually produce "low voltage" errors,
+            #! caused by a persistent alarm in the RTC, which is set
+            #! when the date/time has not been set/configured.
+#            out = self.shell_command('hwclock --systohc')
+#            logging.debug( "hwclock --systohc : out = {}".format(out) )
+            cmd = 'hwclock --set --date "{}"'.format(dt_now_str)
+            out = self.shell_command(cmd)
+            logging.debug( "{} = {}".format(cmd, out) )
+
+            #! wait for a small period and check the rtc shifted too.
+            delay = 2
+            logging.debug( "hwclock : sleeping {} seconds".format(delay) )
+            time.sleep( delay )
+
+            #! read the rtc to ensure it updates ok (internally)
             out = self.shell_command('hwclock')
-            #print("DEBUG: out={!r}".format(out))
+            logging.debug( "hwclock : out = {}".format(out) )
+
+            #! strip out sub-second values (decimal part)
+            out = out[ : 19 ]
+            logging.debug( "hwclock : out = {}".format(out) )
+
+            #! convert to arrow time object (utc)
+            dt = arrow.get( out )
+            logging.debug( "dt = {}".format(dt) )
+
+            #! increment the previous date/time value.
+            dt_delay = dt_now + timedelta( seconds=delay )
+            logging.debug( "dt_delay = {}".format(dt_delay) )
+
+            #check that it set ok and reports back the same date/time
+            if dt != dt_delay :
+                self.error("hwclock failed to set ok")
+
         except Exception as ex:
-            self.error("hwclock command failed")
+            self.error("rtc_test failed")
 
     #!------------------------------------------------------------------------
 
