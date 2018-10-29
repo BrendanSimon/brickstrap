@@ -27,7 +27,6 @@ import colorama
 from colorama import Fore as FG, Back as BG, Style as ST
 
 import re
-from tee import StdoutTee, StderrTee
 
 #import numpy as np
 #import math
@@ -44,41 +43,6 @@ from settings import SERIAL_NUMBER
 from efd_config import Config
 from efd_config import Phase_Mode
 
-#!============================================================================
-#! Filter function to remove control characters (ansi colours) from a string
-#! Used when redirecting stdout to a file using Tee.StdoutTee
-#!============================================================================
-def _remove_control_chars( message ):
-    """Remove control characters (ansi colours) from a string."""
-
-    msg = re.sub( r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', "", message )
-    return msg
-
-
-
-class MyStdoutTee( StdoutTee ):
-    """Override StdoutTee to support no file logging if filename is ''.
-    i.e. output to stdout only
-    """
-
-    def __init__( self, *args , **kwargs ):
-        #! default to remove control chars from file output
-        ff = kwargs.get( 'file_filters', [ _remove_control_chars ] )
-        kwargs[ 'file_filters' ] = ff
-
-        StdoutTee.__init__( self, *args, **kwargs )
-
-    def write( self, message ):
-        try:
-            StdoutTee.write( self, message )
-        except AttributeError:
-            pass
-
-    def __enter__( self ):
-        try:
-            StdoutTee.__enter__( self )
-        except IOError:
-            pass
 
 #!============================================================================
 
@@ -816,30 +780,25 @@ def argh_main():
         #! run the app
         #!--------------------------------------------------------------------
 
-        #! redirect stdout to a file (as well as to stdout)
-        #stdout_tee = MyStdoutTee( output_filename, file_filters=[ _remove_control_chars ] )
-        stdout_tee = MyStdoutTee( output_filename )
-
-        with stdout_tee:
-            app = Production_Test_App( config=config )
-            try:
-                app.init()
-                app.main()
-            except KeyboardInterrupt:
-                #! ctrl+c key press.
-                app.error( "KeyboardInterrupt -- exiting ..." )
-            except SystemExit:
-                #! sys.exit() called.
-                logging.info( "SystemExit -- exiting ..." )
-            except Exception as exc:
-                #! An unhandled exception !!
-                logging.debug( traceback.format_exc() )
-                logging.info( "Exception: {}".format( exc.message ) )
-                app.error( "Unhandled Exception -- exiting..." )
-            finally:
-                logging.info( "Cleaning up." )
-                app.cleanup()
-                logging.info( "Done." )
+        app = Production_Test_App( config=config )
+        try:
+            app.init()
+            app.main()
+        except KeyboardInterrupt:
+            #! ctrl+c key press.
+            app.error( "KeyboardInterrupt -- exiting ..." )
+        except SystemExit:
+            #! sys.exit() called.
+            logging.info( "SystemExit -- exiting ..." )
+        except Exception as exc:
+            #! An unhandled exception !!
+            logging.debug( traceback.format_exc() )
+            logging.info( "Exception: {}".format( exc.message ) )
+            app.error( "Unhandled Exception -- exiting..." )
+        finally:
+            logging.info( "Cleaning up." )
+            app.cleanup()
+            logging.info( "Done." )
 
     #!------------------------------------------------------------------------
 
