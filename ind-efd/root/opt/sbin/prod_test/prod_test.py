@@ -670,7 +670,8 @@ class Production_Test_App(object):
             #self.adc_test_all,
             self.adc_test_production,
             self.blinky_test,
-            self.ttyS1_test,
+            #! ttyS1/XBee test omitted as no longer loading XBee device
+            #self.ttyS1_test,
         ]
 
         for test_num, func in enumerate( test_functions, start=1 ):
