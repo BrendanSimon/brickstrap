@@ -670,13 +670,20 @@ class Production_Test_App(object):
         func_name = func.__name__ + "()"
         head = "test {}: {}".format( test_num, func_name )
         try:
+            #! get error count before test is run
             error_count = self.error_count
+
+            #! run the test
             func()
+
+            #! check error count after test is run
             if self.error_count != error_count:
                 self.error( head + " failed !!")
             else:
                 self.passed( head )
+
         except Exception:
+            #! treat exception as a test failure
             self.error( head + " failed to complete correctly !!" )
             raise
 
