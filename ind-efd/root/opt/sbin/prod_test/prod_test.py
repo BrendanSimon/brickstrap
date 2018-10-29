@@ -118,6 +118,9 @@ class Production_Test_App(object):
 
     #!------------------------------------------------------------------------
 
+    def ask( self, msg ):
+        print( FG.CYAN + "INFO: " + msg + " : " )
+
     def error(self, msg):
         print(FG.RED + "ERROR: " + msg + "\n")
         self.error_count += 1
@@ -392,13 +395,12 @@ class Production_Test_App(object):
         ans = None
 
         while True:
-            msg = FG.CYAN
-            msg += "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
+            msg = "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
             #msg = "Setup signal generator => 10Vpp 1MHz sine input\n"
             #msg = "Setup signal generator => 5V 25Hz 1% duty pulse input\n"
             msg += "Connect signal to input channel => {}\n".format( signal_phase.upper() )
-            msg += "Is signal generator setup correctly? (y/n)\n"
-            print( msg )
+            msg += "Is signal generator setup correctly? (y/n)"
+            self.ask( msg )
 
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
@@ -622,7 +624,7 @@ class Production_Test_App(object):
             print(FG.CYAN + "Please check all LEDs are working...")
             time.sleep(1)
             ind.blinky(count=2, delay=0.2)
-            print(FG.CYAN + "Did all LEDs illuminate? (y/n)")
+            self.ask( "Did all LEDs illuminate? (y/n)")
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break
@@ -636,9 +638,9 @@ class Production_Test_App(object):
 
         delay = 0.5
         while True:
-            print(FG.CYAN + "Connect XBee serial adapter...")
-            print(FG.CYAN + "Press enter and check for login prompt...")
-            print(FG.CYAN + "Did the login prompt respond? (y/n)")
+            self.ask("Connect XBee serial adapter...")
+            self.ask("Press enter and check for login prompt...")
+            self.ask("Did the login prompt respond? (y/n)")
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break
