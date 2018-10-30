@@ -20,7 +20,7 @@ upgrade_desc="IND EFD Upgrade to '${ver}'"
 
 upgrade_run="./run.sh"
 
-upgrade_archive="ind-efd-${ver}.tar.gz"
+upgrade_archive="ind-efd-root-${ver}.tar.gz"
 
 prog_rel=$0
 prog_abs=$(readlink -m ${prog_rel})
