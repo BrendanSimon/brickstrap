@@ -6,6 +6,7 @@
 #! * add `compress` and `delaycompress` options.
 #!
 
+# no packages own btmp -- we'll rotate it here
 /var/log/btmp {
     missingok
     size 1M

@@ -6,6 +6,7 @@
 #! * add `compress` and `delaycompress` options.
 #!
 
+# no packages own wtmp -- we'll rotate it here
 /var/log/wtmp {
     missingok
     size 1M
