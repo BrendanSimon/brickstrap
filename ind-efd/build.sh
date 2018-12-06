@@ -2,7 +2,7 @@
 
 NOW=$(date +%Y%m%dT%H%M%S)
 
-VERSION="0.12.0"
+VERSION="0.12.1-rc1"
 #VERSION="sepl-dev-${NOW}"
 
 BOARD="ind-efd"
@@ -84,15 +84,17 @@ echo "DATA_TGZ = ${DATA_TGZ}"
 #! exit immediately on any errors
 set -e
 
-if [ "${COMMAND}" = "all" ] || [  "${COMMAND}" = "create-tar" ] ; then
-    #! run brickstrap script to generate ${OUT_TAR} => ${ROOT_TAR}
-    cmd="${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}"
-    script -q -c "${cmd}" "${OUT_LOG}"
-    mv "${OUT_TAR}" "${ROOT_TAR}"
-
-    #! Remove ANSI color codes, etc
-    cat "${OUT_LOG}" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" > "${OUT_TXT}"
-fi
+case "${COMMAND}" in
+    "all" | "run-multistrap" | "create-tar" | "shell" )
+        #! run brickstrap script to generate ${OUT_TAR} => ${ROOT_TAR}
+        cmd="${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}"
+        script -q -c "${cmd}" "${OUT_LOG}"
+        mv "${OUT_TAR}" "${ROOT_TAR}"
+    
+        #! Remove ANSI color codes, etc
+        cat "${OUT_LOG}" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" > "${OUT_TXT}"
+        ;;
+esac
 
 #
 # Make boot filesystem image.
@@ -101,38 +103,41 @@ fi
 # Make upgrade script.
 # Remove tar image (to save space)
 #
-if [ "${COMMAND}" = "all" ] || [  "${COMMAND}" = "post" ] ; then
-    #! Make boot filesystem image (extract `/boot/flash/*` from rootfs image)
-    echo "extract and compress boot fs => ${DATA_TGZ}"
-    rm -rf "${TMP_DIR}" && mkdir -p "${TMP_DIR}"
-    tar -x --strip-components=3 -f "${ROOT_TAR}" -C "${TMP_DIR}" "./boot/flash/"
-    tar czf "${BOOT_TGZ}" -C "${TMP_DIR}" .
-    rm -rf "${TMP_DIR}"
+case "${COMMAND}" in
+    "all" | "post" )
+        #! Make boot filesystem image (extract `/boot/flash/*` from rootfs image)
+        echo "extract and compress boot fs => ${DATA_TGZ}"
+        rm -rf "${TMP_DIR}" && mkdir -p "${TMP_DIR}"
+        tar -x --strip-components=3 -f "${ROOT_TAR}" -C "${TMP_DIR}" "./boot/flash/"
+        tar czf "${BOOT_TGZ}" -C "${TMP_DIR}" .
+        rm -rf "${TMP_DIR}"
 
-    #! Make data filesystem image (extract `/flash/data/*` from rootfs image)
-    echo "extract and compress data fs => ${DATA_TGZ}"
-    rm -rf "${TMP_DIR}" && mkdir -p "${TMP_DIR}"
-    tar -x --strip-components=3 -f "${ROOT_TAR}" -C "${TMP_DIR}" "./flash/data"
-    tar czf "${DATA_TGZ}" -C "${TMP_DIR}" .
-    rm -rf "${TMP_DIR}"
+        #! Make data filesystem image (extract `/flash/data/*` from rootfs image)
+        echo "extract and compress data fs => ${DATA_TGZ}"
+        rm -rf "${TMP_DIR}" && mkdir -p "${TMP_DIR}"
+        tar -x --strip-components=3 -f "${ROOT_TAR}" -C "${TMP_DIR}" "./flash/data"
+        tar czf "${DATA_TGZ}" -C "${TMP_DIR}" .
+        rm -rf "${TMP_DIR}"
 
-    #! compress rootfs tar image
-    echo "compress root fs => ${ROOT_TGZ}"
-    cat "${ROOT_TAR}" | gzip --best --rsyncable > "${ROOT_TGZ}"
+        #! compress rootfs tar image
+        echo "compress root fs => ${ROOT_TGZ}"
+        cat "${ROOT_TAR}" | gzip --best --rsyncable > "${ROOT_TGZ}"
 
-    #! remove root fs tar image
-    rm -f "${ROOT_TAR}"
+        #! remove root fs tar image
+        rm -f "${ROOT_TAR}"
 
-    #! make upgrade script
-    echo "make upgrade image"
-    ./makeupgrade.sh
+        #! make upgrade script
+        echo "make upgrade image"
+        ./makeupgrade.sh
 
-    #! Remove data fs files from root fs archive.
-    #! don't remove -- let SD card production tool and upgrade script remove them
-    #gzip -cd "${ROOT_TGZ}" | tar f - --delete "./flash" | gzip -c > "_tmp_${ROOT_TGZ}"
-    #mv "_tmp_${ROOT_TGZ}" "${ROOT_TGZ}"
+        #! Remove data fs files from root fs archive.
+        #! don't remove -- let SD card production tool and upgrade script remove them
+        #gzip -cd "${ROOT_TGZ}" | tar f - --delete "./flash" | gzip -c > "_tmp_${ROOT_TGZ}"
+        #mv "_tmp_${ROOT_TGZ}" "${ROOT_TGZ}"
 
-    #! don't delete root archive -- need for SD card production
-    #rm -f ${ROOT_TGZ}
-fi
+        #! don't delete root archive -- need for SD card production
+        #rm -f ${ROOT_TGZ}
+
+        ;;
+esac
 
