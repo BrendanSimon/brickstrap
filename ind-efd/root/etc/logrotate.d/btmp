@@ -1,0 +1,16 @@
+#!
+#! SEPL: Custom config file.
+#!
+#! * Change from `monthly` to `size 1M`.
+#! * Change from `rotate 1` to `rotate 7`.
+#! * add `compress` and `delaycompress` options.
+#!
+
+/var/log/btmp {
+    missingok
+    size 1M
+    create 0660 root utmp
+    rotate 7
+    compress
+    delaycompress
+}
