@@ -1,18 +1,18 @@
 #!/bin/bash
- 
+
 NOW=$(date +%Y%m%dT%H%M%S)
 
-VERSION="0.11.1-rc3"
+VERSION="0.11.2"
 #VERSION="sepl-dev-${NOW}"
- 
+
 BOARD="ind-efd"
- 
+
 OUT="${BOARD}-v${VERSION}"
- 
+
 OUT_TAR="${OUT}.tar"
- 
+
 OUT_TGZ="${OUT_TAR}.gz"
- 
+
 BRICKSTRAP="../brickstrap/brickstrap.sh"
 
 COMMAND=${1:-"all"}
@@ -45,22 +45,22 @@ if [ -z "${COMMAND}" ]; then
     exit -1
 fi
 
-#
-# Build everything.
-# -b = board definition directory (looks in brickstrap source dir by default)
-# -d = output directory (also used for .tar and .img filenames)
-# -f = force build if output directory already exists.
-#
- 
+#!
+#! Build everything.
+#! -b = board definition directory (looks in brickstrap source dir by default)
+#! -d = output directory (also used for .tar and .img filenames)
+#! -f = force build if output directory already exists.
+#!
+
 echo "BOARD = ${BOARD}"
 echo "OUT = ${OUT}"
 
 ${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}
- 
-#
-# Compress the tar image.
-#
+
+#!
+#! Compress the tar image.
+#!
 if [ "${COMMAND}" = "all" ]; then
-    cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ}  
+    cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ}
 fi
 

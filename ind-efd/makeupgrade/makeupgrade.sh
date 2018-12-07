@@ -1,14 +1,14 @@
 #!/bin/bash
 
-## Exit on any error.
+#! Exit on any error.
 set -o errexit
 
-##
-## Make a runnable patch file from contents of a directory.
-## Uses the `makeself` utility.
-## 
+#!
+#! Make a runnable patch file from contents of a directory.
+#! Uses the `makeself` utility.
+#!
 
-ver="v0.11.1-rc3"
+ver="v0.11.2"
 
 upgrade_name="ind-efd-upgrade-${ver}"
 
@@ -33,7 +33,7 @@ echo "DEBUG: prog     = '${prog}'"
 source_dir=$(dirname ${prog_abs})
 #source_dir=$(dirname ${prog})
 
-##===========================================================================
+#============================================================================
 
 echo "Making '${upgrade_desc}'"
 if false ; then
@@ -43,7 +43,7 @@ if false ; then
     echo "    upgrade_archive = '${upgrade_archive}'"
 fi
 
-## Make upgrade directory, copy in run script and other files.
+#! Make upgrade directory, copy in run script and other files.
 echo "Create upgrade directory: '${upgrade_dir}'..."
 rm --force --recursive "${upgrade_dir}"
 mkdir --parents "${upgrade_dir}"
@@ -54,10 +54,10 @@ rsync "${source_dir}/${upgrade_run}" "${upgrade_dir}/"
 echo "Copying upgrade archive to upgrade directory..."
 rsync "${upgrade_archive}" "${upgrade_dir}/"
 
-## Makeself
+#! Makeself
 echo "Running 'makeself'..."
 makeself ${upgrade_dir} ${upgrade_out} "${upgrade_desc}" ${upgrade_run}
 
 echo "Finished making '${upgrade_desc}'"
 
-##===========================================================================
+#============================================================================

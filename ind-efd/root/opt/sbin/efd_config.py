@@ -78,7 +78,7 @@ class ConfigDefault(object):
     #! Default values.  Can be overridden by settings file or command line.
     #!
 
-    version_str = '0.11.1-rc3'
+    version_str = '0.11.2'
 
     serial_number = '0'
 
