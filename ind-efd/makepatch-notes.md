@@ -12,14 +12,14 @@ Create rootfs for your version (only required if it doesn't exist already)
 Enter the brickstrap (qemu) shell and run `tar` command.
 
     $ ../brickstrap/ind-efd/build.sh shell
-    # tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/xxx.tgz \
+    # tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/patch.tgz \
         <list-of-files>
     # exit
 
 Create a patch directory for your arhive and script to run.
 
     $ mkdir ind-efd-patch-vA.B.C-to-vX.Y.Z
-    $ cp xxx.tgz to ind-efd-patch-vA.B.C-to-vX.Y.Z/
+    $ cp patch.tgz to ind-efd-patch-vA.B.C-to-vX.Y.Z/
 
 Create/edit your run script, specific to your patch directory contents.
 
@@ -30,7 +30,7 @@ execute the run script.
 
 **See `makepatch.sh` to automate this step**
 
-    ## makeself.sh [args] archive_dir file_name label startup_script [script_args]
+    #! makeself.sh [args] archive_dir file_name label startup_script [script_args]
 
     $ makeself.sh ind-efd-vA.B.C-to-vX.Y.Z \
         ind-efd-patch-vA.b.C-to-vX.Y.X.run \
@@ -40,7 +40,7 @@ execute the run script.
 v0.10.0 to v0.10.1
 ------------------
 
-tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/xxx.tgz \
+tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/patch.tgz \
     /opt/sbin/efd_config.py
     /etc/systemd/system/serial-getty@ttyS1.service
     /etc/chrony/chrony.conf
@@ -55,7 +55,7 @@ tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/xxx.tgz \
 v0.10.1 to v0.10.2
 ------------------
 
-tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/xxx.tgz \
+tar czvf /host-rootfs/home/brendan/SEPL/brickstrap/build/patch.tgz \
     /opt/sbin/efd_config.py \
     /etc/systemd/system/chrony.service \
     /etc/apt/sources.list
