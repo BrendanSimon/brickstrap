@@ -28,31 +28,28 @@ PD_EVENT_TRIGGER_VOLTAGE=0.5
 #! defaults to 300 (5 minutes) if not specified.
 PD_EVENT_REPORTING_INTERVAL=300
 
-#REPORTING_SMS_PHONE_NUMBERS=""
 #REPORTING_SMS_PHONE_NUMBERS="+61417000000","+61417000000"
 REPORTING_SMS_PHONE_NUMBERS="+61470000000",
 
 #! set the GSM network APN (used for 3G cellular comms)
 #! default is "telstra.extranet" if not specified.
-#NETWORK_APN="telstra.extranet"
+NETWORK_APN="telstra.extranet"
 
 #! Server to ping to check internet connection is ok.
 PING_SERVER="203.14.0.251"
 
 #! Number of ping packets to send when checking internet connection.
 #! default is 10 if not specified.
-#PING_COUNT=10
+PING_COUNT=10
 
 #! Number of seconds of no internet (ping response) before rebooting (powerdown) system
 #! default is 600 (10 minutes) if not specified.
-#PING_REBOOT_TIMEOUT=600
+PING_REBOOT_TIMEOUT=600
 
 WEB_SERVER="http://www.efd-portal.com.au:81"
 
 #EFD_PING_SERVERS="http://www.efd-portal.com.au:81 http://portal.efdweb.com"
 EFD_PING_SERVERS="http://portal.efdweb.com"
-
-TIMEZONE="Australia/Melbourne"
 
 #! set FFT size (must be power of 2).
 #! default is 256 if not specified.

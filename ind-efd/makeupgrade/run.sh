@@ -19,6 +19,8 @@ upgrade_root_mnt="/tmp/upgrade"
 current_uenv="/boot/flash/uEnv.txt"
 upgrade_uenv="/boot/flash/uEnv_tmp.txt"
 
+settings_upgrade="${upgrade_root_mnt}/flash/settings"
+
 settings_file="/mnt/data/etc/settings"
 settings_orig_dir="/mnt/data/etc/ORIG"
 settings_prev_dir="/mnt/data/etc/PREV"
@@ -177,7 +179,7 @@ cmd mkdir -p "${settings_prev_dir}"
 cmd cp "${settings_file}" "${settings_prev_dir}/"
 
 echo -e "\nCopy new default user settings file..."
-cmd cp "${upgrade_root_mnt}/opt/sbin/settings_new" "${settings_new}"
+cmd cp "${settings_upgrade}" "${settings_new}"
 
 ## Get system setting values and overwrite default values in
 ## the new settings file.

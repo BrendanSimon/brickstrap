@@ -108,8 +108,8 @@ class ADC_Offset_App( object ):
 
     #!------------------------------------------------------------------------
 
-    def info( self, msg ):
-        print( FG.CYAN + "INFO: " + msg + "\n" )
+    def ask( self, msg ):
+        print( FG.CYAN + "INFO: " + msg + " : " )
 
     def error( self, msg ):
         print( FG.RED + "ERROR: " + msg + "\n" )
@@ -592,7 +592,7 @@ class ADC_Offset_App( object ):
 
         #! confirm 50 ohm  terminator is connected.
         while True:
-            print( FG.CYAN + "Is 50 ohm terminator connected? (y/n)" )
+            self.ask( "Is 50 ohm terminator connected? (y/n)" )
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break

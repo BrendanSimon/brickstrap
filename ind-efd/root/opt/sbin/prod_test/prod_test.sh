@@ -12,6 +12,8 @@ LOG_DIR="${LOG_DIR:-${BOOT_DIR}}"
 
 LOG_FILE="${LOG_FILE:-${LOG_DIR}/prodtest.txt}"
 
+LOG_FILE_TMP="${LOG_FILE_TMP:-/tmp/prod_tmp.txt}"
+
 
 
 #! is log file in the read-only boot filesystem?
@@ -61,7 +63,14 @@ fi
 #cd ${PROG_DIR}
 #echo "Executing ${PROG}"
 
-sudo -- "${PROG}" -o "${LOG_FILE}" "$@"
+#sudo -- "${PROG}" -o "${LOG_FILE}" "$@"
+
+#! use `script` to allow colours to work with redirection.
+cmd="${PROG} $@ 2>&1"
+sudo -- script -q -c "${cmd}" "${LOG_FILE_TMP}"
+
+#! use `sed` strip colour codes from output and save to file
+sudo -- bash -c "cat ${LOG_FILE_TMP} | sed -r 's/(\x9B|\x1B\[)([0-9]{1,2}(;[0-9]{1,2})?)?[mGK]//g' >> ${LOG_FILE}"
 
 
 

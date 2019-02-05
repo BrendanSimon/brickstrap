@@ -18,6 +18,7 @@ import sys
 import os.path
 import time
 import arrow
+from datetime import timedelta
 import subprocess
 import logging
 import traceback
@@ -26,7 +27,6 @@ import colorama
 from colorama import Fore as FG, Back as BG, Style as ST
 
 import re
-from tee import StdoutTee, StderrTee
 
 #import numpy as np
 #import math
@@ -43,41 +43,6 @@ from settings import SERIAL_NUMBER
 from efd_config import Config
 from efd_config import Phase_Mode
 
-#!============================================================================
-#! Filter function to remove control characters (ansi colours) from a string
-#! Used when redirecting stdout to a file using Tee.StdoutTee
-#!============================================================================
-def _remove_control_chars( message ):
-    """Remove control characters (ansi colours) from a string."""
-
-    msg = re.sub( r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', "", message )
-    return msg
-
-
-
-class MyStdoutTee( StdoutTee ):
-    """Override StdoutTee to support no file logging if filename is ''.
-    i.e. output to stdout only
-    """
-
-    def __init__( self, *args , **kwargs ):
-        #! default to remove control chars from file output
-        ff = kwargs.get( 'file_filters', [ _remove_control_chars ] )
-        kwargs[ 'file_filters' ] = ff
-
-        StdoutTee.__init__( self, *args, **kwargs )
-
-    def write( self, message ):
-        try:
-            StdoutTee.write( self, message )
-        except AttributeError:
-            pass
-
-    def __enter__( self ):
-        try:
-            StdoutTee.__enter__( self )
-        except IOError:
-            pass
 
 #!============================================================================
 
@@ -116,6 +81,9 @@ class Production_Test_App(object):
         self.banner_end()
 
     #!------------------------------------------------------------------------
+
+    def ask( self, msg ):
+        print( FG.CYAN + "INFO: " + msg + " : " )
 
     def error(self, msg):
         print(FG.RED + "ERROR: " + msg + "\n")
@@ -326,10 +294,49 @@ class Production_Test_App(object):
     def rtc_test(self):
 
         try:
+            #! get current date/time.
+            dt_now = arrow.now().floor('second')
+            logging.debug( "dt_now = {}".format(dt_now) )
+            dt_now_str = dt_now.format("YYYY-MM-DD hh:mm:ss")
+            logging.debug( "rtc_test : dt_now_str = {}".format(dt_now_str) )
+
+            #! first set/configure the RTC to avoid "low voltage" errors.
+            #! new boards usually produce "low voltage" errors,
+            #! caused by a persistent alarm in the RTC, which is set
+            #! when the date/time has not been set/configured.
+#            out = self.shell_command('hwclock --systohc')
+#            logging.debug( "hwclock --systohc : out = {}".format(out) )
+            cmd = 'hwclock --set --date "{}"'.format(dt_now_str)
+            out = self.shell_command(cmd)
+            logging.debug( "{} = {}".format(cmd, out) )
+
+            #! wait for a small period and check the rtc shifted too.
+            delay = 2
+            logging.debug( "hwclock : sleeping {} seconds".format(delay) )
+            time.sleep( delay )
+
+            #! read the rtc to ensure it updates ok (internally)
             out = self.shell_command('hwclock')
-            #print("DEBUG: out={!r}".format(out))
+            logging.debug( "hwclock : out = {}".format(out) )
+
+            #! strip out sub-second values (decimal part)
+            out = out[ : 19 ]
+            logging.debug( "hwclock : out = {}".format(out) )
+
+            #! convert to arrow time object (utc)
+            dt = arrow.get( out )
+            logging.debug( "dt = {}".format(dt) )
+
+            #! increment the previous date/time value.
+            dt_delay = dt_now + timedelta( seconds=delay )
+            logging.debug( "dt_delay = {}".format(dt_delay) )
+
+            #check that it set ok and reports back the same date/time
+            if dt != dt_delay :
+                self.error("hwclock failed to set ok")
+
         except Exception as ex:
-            self.error("hwclock command failed")
+            self.error("rtc_test failed")
 
     #!------------------------------------------------------------------------
 
@@ -352,13 +359,12 @@ class Production_Test_App(object):
         ans = None
 
         while True:
-            msg = FG.CYAN
-            msg += "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
+            msg = "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
             #msg = "Setup signal generator => 10Vpp 1MHz sine input\n"
             #msg = "Setup signal generator => 5V 25Hz 1% duty pulse input\n"
             msg += "Connect signal to input channel => {}\n".format( signal_phase.upper() )
-            msg += "Is signal generator setup correctly? (y/n)\n"
-            print( msg )
+            msg += "Is signal generator setup correctly? (y/n)"
+            self.ask( msg )
 
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
@@ -582,7 +588,7 @@ class Production_Test_App(object):
             print(FG.CYAN + "Please check all LEDs are working...")
             time.sleep(1)
             ind.blinky(count=2, delay=0.2)
-            print(FG.CYAN + "Did all LEDs illuminate? (y/n)")
+            self.ask( "Did all LEDs illuminate? (y/n)")
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break
@@ -596,9 +602,9 @@ class Production_Test_App(object):
 
         delay = 0.5
         while True:
-            print(FG.CYAN + "Connect XBee serial adapter...")
-            print(FG.CYAN + "Press enter and check for login prompt...")
-            print(FG.CYAN + "Did the login prompt respond? (y/n)")
+            self.ask("Connect XBee serial adapter...")
+            self.ask("Press enter and check for login prompt...")
+            self.ask("Did the login prompt respond? (y/n)")
             ans = sys.stdin.readline().strip().upper()
             if ans == 'Y':
                 break
@@ -623,6 +629,8 @@ class Production_Test_App(object):
             #app.cleanup()
             pass
 
+        self.error_count += app.error_count
+
     #!------------------------------------------------------------------------
 
     def test_func( self, test_num, func ):
@@ -630,13 +638,20 @@ class Production_Test_App(object):
         func_name = func.__name__ + "()"
         head = "test {}: {}".format( test_num, func_name )
         try:
+            #! get error count before test is run
             error_count = self.error_count
+
+            #! run the test
             func()
+
+            #! check error count after test is run
             if self.error_count != error_count:
                 self.error( head + " failed !!")
             else:
                 self.passed( head )
+
         except Exception:
+            #! treat exception as a test failure
             self.error( head + " failed to complete correctly !!" )
             raise
 
@@ -657,7 +672,8 @@ class Production_Test_App(object):
             #self.adc_test_all,
             self.adc_test_production,
             self.blinky_test,
-            self.ttyS1_test,
+            #! ttyS1/XBee test omitted as no longer loading XBee device
+            #self.ttyS1_test,
         ]
 
         for test_num, func in enumerate( test_functions, start=1 ):
@@ -767,30 +783,25 @@ def argh_main():
         #! run the app
         #!--------------------------------------------------------------------
 
-        #! redirect stdout to a file (as well as to stdout)
-        #stdout_tee = MyStdoutTee( output_filename, file_filters=[ _remove_control_chars ] )
-        stdout_tee = MyStdoutTee( output_filename )
-
-        with stdout_tee:
-            app = Production_Test_App( config=config )
-            try:
-                app.init()
-                app.main()
-            except KeyboardInterrupt:
-                #! ctrl+c key press.
-                app.error( "KeyboardInterrupt -- exiting ..." )
-            except SystemExit:
-                #! sys.exit() called.
-                logging.info( "SystemExit -- exiting ..." )
-            except Exception as exc:
-                #! An unhandled exception !!
-                logging.debug( traceback.format_exc() )
-                logging.info( "Exception: {}".format( exc.message ) )
-                app.error( "Unhandled Exception -- exiting..." )
-            finally:
-                logging.info( "Cleaning up." )
-                app.cleanup()
-                logging.info( "Done." )
+        app = Production_Test_App( config=config )
+        try:
+            app.init()
+            app.main()
+        except KeyboardInterrupt:
+            #! ctrl+c key press.
+            app.error( "KeyboardInterrupt -- exiting ..." )
+        except SystemExit:
+            #! sys.exit() called.
+            logging.info( "SystemExit -- exiting ..." )
+        except Exception as exc:
+            #! An unhandled exception !!
+            logging.debug( traceback.format_exc() )
+            logging.info( "Exception: {}".format( exc.message ) )
+            app.error( "Unhandled Exception -- exiting..." )
+        finally:
+            logging.info( "Cleaning up." )
+            app.cleanup()
+            logging.info( "Done." )
 
     #!------------------------------------------------------------------------
 
