@@ -8,13 +8,24 @@ SITE_NAME="EFD-0000"
 
 HOSTNAME="EFD-0000"
 
+#! set PHASE_MODE to one of: "poly", "red, "white", or "blue"
+#! default is "poly" if not specified.
+PHASE_MODE="poly"
+
+#! set ADC_OFFSET (DC Offset)
+#! default is 0 if not specified.
 ADC_OFFSET=0
 
-#PEAK_DETECT_MODE="squared"
+#! set PEAK_DETECT_MODE to on of: "normal", "squared"
+#! default is "normal" if not specified.
 PEAK_DETECT_MODE="normal"
 
+#! set voltage threshold for partial discharge event trigger.
+#! defaults to X.X if not specified.
 PD_EVENT_TRIGGER_VOLTAGE=0.5
 
+#! set interval between successive reporting alerts (SMS).
+#! defaults to 300 (5 minutes) if not specified.
 PD_EVENT_REPORTING_INTERVAL=300
 
 #REPORTING_SMS_PHONE_NUMBERS=""
@@ -25,9 +36,11 @@ REPORTING_SMS_PHONE_NUMBERS="+61470000000",
 PING_SERVER="203.14.0.251"
 
 #! Number of ping packets to send when checking internet connection.
+#! default is 10 if not specified.
 #PING_COUNT=10
 
-#! Number of seconds of no internet (ping response) before power cycling modem.
+#! Number of seconds of no internet (ping response) before rebooting (powerdown) system
+#! default is 600 (10 minutes) if not specified.
 #PING_REBOOT_TIMEOUT=600
 
 WEB_SERVER="http://www.efd-portal.com.au:81"
@@ -37,6 +50,8 @@ EFD_PING_SERVERS="http://portal.efdweb.com"
 
 TIMEZONE="Australia/Melbourne"
 
+#! set FFT size (must be power of 2).
+#! default is 256 if not specified.
 FFT_SIZE=256
 
 ETH0_MAC_ADDRESS="00:0a:35:EF:00:00"
@@ -68,7 +83,7 @@ APPEND_GPS_DATA_TO_MEASUREMENTS_LOG=1
 # XBee Baud: values: 9600, 19200, 38400, 57600, 115200 (default=3 => 9600)
 #XBEE_BAUD=38400
 
-# XBee API mode: 0=transparent (default), 1=API (no escaped ctrl), 2=API(with escaped ctrl)
+# XBee API mode: 0=transparent (default), 1=API (no escaped ctrl), 2=API (with escaped ctrl)
 #XBEE_API=0
 
 #XBEE_PARITY=n  # values 0~4, default=0

@@ -362,22 +362,28 @@ class EFD_App(object):
 
         self.sensors.cleanup()
 
-    def adc_numpy_array(self):
-        mem = ind.adc_memory_map(dev_hand=self.dev_hand)
-        print("ADC Memory: {!r}".format(mem))
+    def adc_numpy_array( self ):
+        mem = ind.adc_memory_map( dev_hand=self.dev_hand )
+        logging.info( "ADC Memory: {!r}".format( mem ) )
+
         #! Numpy array holds little-endian 16-bit integers.
         signed = self.config.adc_polarity_is_signed()
+
         dtype = np.dtype('<i2') if signed else np.dtype('<u2')
         dtype_size = dtype.itemsize
-        mem_size = len(mem)
+
+        mem_size = len( mem )
         length = mem_size // dtype_size
-        print("DEBUG: dtype_size={!r} len(mem)={!r} length={!r}".format(dtype_size, mem_size, length))
-        shape = (length,)
-        np_array = np.ndarray(shape=shape, dtype=dtype, buffer=mem)
+        logging.debug( "DEBUG: dtype_size={!r} len(mem)={!r} length={!r}".format( dtype_size, mem_size, length ) )
+
+        shape = ( length, )
+        np_array = np.ndarray( shape=shape, dtype=dtype, buffer=mem )
+        logging.debug( "np_array={!r}".format( np_array ) )
 
         #! the memory offset for each bank of the capture buffer.
         bank_size = mem_size // self.config.bank_count
-        self.adc_capture_buffer_offset = [ bank_size * i for i in range(self.config.bank_count) ]
+        self.adc_capture_buffer_offset = [ bank_size * i for i in range( self.config.bank_count ) ]
+        logging.debug( "self.adc_capture_buffer_offset={!r}".format( self.adc_capture_buffer_offset ) )
 
         return np_array
 
@@ -436,24 +442,24 @@ class EFD_App(object):
         signed = self.config.adc_polarity_is_signed()
         print("DEBUG: signed = {!r}".format(signed))
 
-        #peak_detect_start_count=ind.Config.Peak_Start_Disable
-        #peak_detect_stop_count=ind.Config.Peak_Stop_Disable
         peak_detect_start_count = 0
         peak_detect_stop_count  = self.config.capture_count
 
         self.peak_detect_start_count = peak_detect_start_count
         self.peak_detect_stop_count  = peak_detect_stop_count
 
-        ind.adc_capture_start(address=self.adc_capture_buffer_offset[self.next_bank],
-                              capture_count=self.config.capture_count,
-                              delay_count=self.config.delay_count,
-                              capture_mode=self.config.capture_mode,
-                              signed=signed,
-                              peak_detect_start_count=peak_detect_start_count,
-                              peak_detect_stop_count=peak_detect_stop_count,
-                              adc_offset=self.config.adc_offset,
-                              test_mode=self.config.test_mode,
-                              dev_hand=self.dev_hand)
+        ind.adc_capture_start( address                  = self.adc_capture_buffer_offset[ self.next_bank ],
+                               capture_count            = self.config.capture_count,
+                               delay_count              = self.config.delay_count,
+                               capture_mode             = self.config.capture_mode,
+                               signed                   = signed,
+                               peak_detect_start_count  = peak_detect_start_count,
+                               peak_detect_stop_count   = peak_detect_stop_count,
+                               adc_offset               = self.config.adc_offset,
+                               test_mode                = self.config.test_mode,
+                               phase_mode               = self.config.phase_mode,
+                               dev_hand                 = self.dev_hand
+                            )
 
     def adc_semaphore_get(self):
         #print("ADC Semaphore Get")
@@ -519,6 +525,10 @@ class EFD_App(object):
 
     def adc_data_ready_wait(self):
         #print("ADC Data Ready Wait")
+
+        #! semaphore must be set to zero (even if using select !!)
+        self.adc_semaphore_set(0)
+
         if self.config.capture_mode == 'manual':
             #! fake pps delay
             if self.config.pps_delay:
@@ -534,7 +544,6 @@ class EFD_App(object):
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
 
-        self.adc_semaphore_set(0)
         ret = self.adc_data_ready_wait()
         return ret
 
@@ -2034,11 +2043,10 @@ def argh_main():
                  append_gps_data        = config.append_gps_data_to_measurements_log,
                  save_capture_data      = config.save_capture_data,
                  test_mode              = config.test_mode.name.lower(),
+                 phase_mode             = config.phase_mode.name.lower(),
                  debug                  = False,
                  logging_level          = config.logging_level,
                  ):
-
-        print(__name__)
 
         #! override user settings file if command line argument differs.
 
@@ -2090,15 +2098,23 @@ def argh_main():
         if test_mode != config.test_mode.name.lower():
             config.set_test_mode(test_mode)
 
+        if phase_mode != config.phase_mode.name.lower():
+            config.set_phase_mode( phase_mode )
+
         if debug:
             config.peak_detect_numpy_debug  = True
             config.peak_detect_fpga_debug   = True
             config.peak_detect_debug        = True
             logging_level                   = 'debug'
 
-        if logging_level != config.logging_level:
+        if logging_level != config.logging_level.lower():
             config.set_logging_level(logging_level)
 
+        logging.basicConfig( level=config.logging_level )
+
+        #effective_log_level = logging.getLogger().getEffectiveLevel()
+        #if effective_log_level <= logging.INFO:
+        #    config.show_all()
         config.show_all()
 
         #!--------------------------------------------------------------------

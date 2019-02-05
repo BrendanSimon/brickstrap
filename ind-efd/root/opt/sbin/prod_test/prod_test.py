@@ -1,10 +1,10 @@
 #!/usr/bin/env python2
 
-##############################################################################
-##
-##  Author:     Successful Endeavours Pty Ltd
-##
-##############################################################################
+#!============================================================================
+#!
+#!  Author:     Successful Endeavours Pty Ltd
+#!
+#!============================================================================
 
 '''
 This script is used to test production boards off the assembly line.
@@ -12,35 +12,110 @@ It assumes that it has been powered up and all voltage rails tested.
 '''
 
 import argh
+from argh import arg
+
 import sys
 import os.path
 import time
 import arrow
 import subprocess
-#import numpy as np
-#import math
+import logging
+import traceback
+
 import colorama
 from colorama import Fore as FG, Back as BG, Style as ST
 
+import re
+from tee import StdoutTee, StderrTee
+
+#import numpy as np
+#import math
+
 #sys.path.insert(1, '/opt/sbin')
 #sys.path.insert(1, '/mnt/data/etc')
-sys.path.append('.')
-sys.path.append('..')
+#sys.path.append('.')
+#sys.path.append('..')
 sys.path.append('/opt/sbin')
-sys.path.append('/mnt/data/etc')
+#sys.path.append('/mnt/data/etc')
 
 import ind
 from settings import SERIAL_NUMBER
 from efd_config import Config
+from efd_config import Phase_Mode
 
-##============================================================================
+#!============================================================================
+#! Filter function to remove control characters (ansi colours) from a string
+#! Used when redirecting stdout to a file using Tee.StdoutTee
+#!============================================================================
+def _remove_control_chars( message ):
+    """Remove control characters (ansi colours) from a string."""
+
+    msg = re.sub( r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', "", message )
+    return msg
+
+
+
+class MyStdoutTee( StdoutTee ):
+    """Override StdoutTee to support no file logging if filename is ''.
+    i.e. output to stdout only
+    """
+
+    def __init__( self, *args , **kwargs ):
+        #! default to remove control chars from file output
+        ff = kwargs.get( 'file_filters', [ _remove_control_chars ] )
+        kwargs[ 'file_filters' ] = ff
+
+        StdoutTee.__init__( self, *args, **kwargs )
+
+    def write( self, message ):
+        try:
+            StdoutTee.write( self, message )
+        except AttributeError:
+            pass
+
+    def __enter__( self ):
+        try:
+            StdoutTee.__enter__( self )
+        except IOError:
+            pass
+
+#!============================================================================
 
 class Production_Test_App(object):
 
     error_count = 0
-    pass_count = 0
+    pass_count  = 0
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
+
+    def __init__( self, config ):
+        self.config = config
+
+    #!------------------------------------------------------------------------
+
+    #! TODO: could put in base class IND_App ??
+    def init( self ):
+        """Initialise the app"""
+
+        #colorama.init()
+        colorama.init( autoreset=True )
+        #colorama.init( autoreset=True, wrap=False )
+        #colorama.init( wrap=False )
+
+        self.banner_start()
+        self.superuser_test()
+        self.services_stop()
+
+    #!------------------------------------------------------------------------
+
+    #! TODO: could put in base class IND_App ??
+    def cleanup( self ):
+        """Cleanup the app on exit"""
+
+        #self.services_start()
+        self.banner_end()
+
+    #!------------------------------------------------------------------------
 
     def error(self, msg):
         print(FG.RED + "ERROR: " + msg + "\n")
@@ -50,9 +125,11 @@ class Production_Test_App(object):
         print(FG.GREEN + "PASS: " + msg + "\n")
         self.pass_count += 1
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def shell_command(self, cmd):
+        """Return output of an executable, which is executed in a shell."""
+
         ret = None
         try:
             ret = subprocess.check_output(cmd, shell=True)
@@ -62,9 +139,10 @@ class Production_Test_App(object):
 
         return ret
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def banner_start(self):
+
         timestamp = arrow.now()
         self.start_timestamp = timestamp
         self.start_timestamp_str = timestamp.format("YYYY-MM-DD hh:mm:ss")
@@ -76,11 +154,14 @@ class Production_Test_App(object):
                 + "serial number: {}\n".format(SERIAL_NUMBER) \
                 + "======================================================\n"
 
-        print(banner)
+        print( ST.RESET_ALL )
+        print( banner )
+        print( ST.RESET_ALL )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def banner_end(self):
+
         timestamp = arrow.now()
         self.end_timestamp = timestamp
         self.end_timestamp_str = timestamp.format("YYYY-MM-DD hh:mm:ss")
@@ -99,11 +180,14 @@ class Production_Test_App(object):
                 + color \
                 + "======================================================\n"
 
-        print(banner)
+        print( ST.RESET_ALL )
+        print( banner )
+        print( ST.RESET_ALL )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def superuser_test(self):
+
         filename = '/root/prod_test_was_here.txt'
         try:
             self.shell_command('touch ' + filename)
@@ -112,33 +196,34 @@ class Production_Test_App(object):
             self.error("superuser test failed !!")
             sys.exit(-1)
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def services_stop(self):
+
         #print("Stopping services...")
 
-        ## Stop the ntp service.
+        #! Stop the ntp service.
         #print("Stopping chrony service...")
         try:
             self.shell_command('systemctl stop chrony')
         except Exception as ex:
             self.error("stopping chrony service failed !!")
 
-        ## Stop modem being power cycled if no network connectivity.
+        #! Stop modem being power cycled if no network connectivity.
         #print("Stopping sepl-modem service...")
         try:
             self.shell_command('systemctl stop sepl-modem')
         except Exception as ex:
             self.error("stopping sepl-modem service failed !!")
 
-        ## Stop the efd sampling, measurement, logging, posting.
+        #! Stop the efd sampling, measurement, logging, posting.
         #print("Stopping efd service...")
         try:
             self.shell_command('systemctl stop efd')
         except Exception as ex:
             self.error("stopping efd service failed !!")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def services_start(self):
         print("Restarting services...")
@@ -161,9 +246,10 @@ class Production_Test_App(object):
         except Exception as ex:
             self.error("starting chrony service failed !!")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def disk_usage_test(self):
+
         out = self.shell_command('df -h')
         lines = out.split('\n')
         for l in lines[1:]:
@@ -190,9 +276,10 @@ class Production_Test_App(object):
                 if unit != 'G' or mag < 27 or mag > 29:
                     self.error("{!r} size not valid ({})".format(mnt, size))
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def memory_usage_test(self):
+
         out = self.shell_command('free -h')
         lines = out.split('\n')
         #print(FG.CYAN +"l = {!r}".format(l))
@@ -200,151 +287,297 @@ class Production_Test_App(object):
         #print("DEBUG: items={!r}".format(items))
         mem_type, size = items[0:2]
         #print("DEBUG: mem_type={!r}, size={!r}".format(mem_type, size))
-        if mem_type != 'Mem:' or size != '1.0G':
+        if ( mem_type != 'Mem:' ) or ( '1.0G' not in size ):
             self.error("memory not valid: mem_type={!r}, size={!r}".format(mem_type, size))
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def usb_test(self):
+
         out = self.shell_command('lsusb')
         if 'Linux Foundation 2.0 root hub' not in out:
             self.error("USB root hub not found")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
-    def i2c_0_test(self):
-        exp = """\
-     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-00:          -- -- -- -- -- -- -- -- -- -- -- -- -- 
-10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-50: -- UU -- -- UU UU UU UU -- -- -- -- -- -- -- -- 
-60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-70: -- -- -- -- -- -- -- --\
-""".strip()
+    def i2c_0_test( self ):
 
-        out = self.shell_command('i2cdetect -y -r 0').strip()
-        #print("DEBUG: out={!r}".format(out))
-        #print("DEBUG: exp={!r}".format(exp))
+        exp = \
+            "     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f\n"   \
+            "00:          -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
+            "10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
+            "20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
+            "30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
+            "40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
+            "50: -- UU -- -- UU UU UU UU -- -- -- -- -- -- -- -- \n"  \
+            "60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- \n"  \
+            "70: -- -- -- -- -- -- -- --                         \n"                           \
+
+        out = self.shell_command( 'i2cdetect -y -r 0' )
+
+        #print( "DEBUG: out={!r}".format( out ) )
+        #print( "DEBUG: exp={!r}".format( exp ) )
+
         if out != exp:
-            self.error("i2c-0 device probe mismatch")
+            self.error( "i2c-0 device probe mismatch" )
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def rtc_test(self):
+
         try:
             out = self.shell_command('hwclock')
             #print("DEBUG: out={!r}".format(out))
         except Exception as ex:
             self.error("hwclock command failed")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def fpga_test(self):
+
         self.dev_hand = ind.get_device_handle()
 
-        ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
+        #! NOTE: resetting causes first maxmin values to be all zero for some reason !!
         #ind.fpga_reset(dev_hand=self.dev_hand)
 
         fpga_ver = ind.fpga_version_get(dev_hand=self.dev_hand)
         if fpga_ver.major != 2:
             self.error("Wrong FPGA version")
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
-    def adc_test(self):
-        errors = 0
+    def signal_generaor_setup( self, signal_phase ):
+        """Confirm signal generated is connected and setup correctly."""
 
-        self.config = Config()
-        self.config.set_capture_mode('manual')
+        ans = None
+
+        while True:
+            msg = FG.CYAN
+            msg += "Setup signal generator => 5Vpp, 5V offset, 1MHz sine input\n"
+            #msg = "Setup signal generator => 10Vpp 1MHz sine input\n"
+            #msg = "Setup signal generator => 5V 25Hz 1% duty pulse input\n"
+            msg += "Connect signal to input channel => {}\n".format( signal_phase.upper() )
+            msg += "Is signal generator setup correctly? (y/n)\n"
+            print( msg )
+
+            ans = sys.stdin.readline().strip().upper()
+            if ans == 'Y':
+                break
+            elif ans == 'N':
+                self.error( "signal generator not setup correctly !!" )
+                break
+
+        return ans
+
+    #!------------------------------------------------------------------------
+
+    def adc_test_run( self, phase_mode, signal_phase, ask=True ):
+
+        #! confirm signal generated is connected and setup correctly.
+        if ask:
+            ans = self.signal_generaor_setup( signal_phase )
+            if ans != 'Y':
+                return
+
+        cfg = self.config
 
         self.dev_hand = ind.get_device_handle()
 
-        ## NOTE: resetting causes first maxmin values to be all zero for some reason !!
-        #ind.fpga_reset(dev_hand=self.dev_hand)
+        #! NOTE: resetting causes first maxmin values to be all zero for some reason !!
+        #ind.fpga_reset( dev_hand=self.dev_hand )
 
-        #ind.adc_capture_stop(dev_hand=self.dev_hand)
+        #ind.adc_capture_stop( dev_hand=self.dev_hand )
 
-        signed = self.config.capture_data_polarity_is_signed()
+        self.prev_bank  = 1
+        self.bank       = 0
+
+        capture_mode            = 'manual'
+        signed                  = cfg.adc_polarity_is_signed()
         peak_detect_start_count = 0
-        peak_detect_stop_count = self.config.capture_count - 1
+        peak_detect_stop_count  = cfg.capture_count - 1
+        #phase_mode              = cfg.phase_mode
 
-        ind.adc_capture_start(address=0, capture_count=self.config.capture_count, delay_count=self.config.delay_count, signed=signed, peak_detect_start_count=peak_detect_start_count, peak_detect_stop_count=peak_detect_stop_count, dev_hand=self.dev_hand)
+        ind.adc_capture_start( address                  = 0,
+                               capture_count            = cfg.capture_count,
+                               delay_count              = cfg.delay_count,
+                               capture_mode             = capture_mode,
+                               signed                   = signed,
+                               peak_detect_start_count  = peak_detect_start_count,
+                               peak_detect_stop_count   = peak_detect_stop_count,
+                               adc_offset               = cfg.adc_offset,
+                               phase_mode               = phase_mode,
+                               dev_hand                 = self.dev_hand
+                            )
 
+        #! TODO: make this a config setting
+        repetitions = 1
+        #repetitions = 3
+        #repetitions = 11
+        #repetitions = 111
 
-        for i in xrange(100):
-            ind.adc_trigger(dev_hand=self.dev_hand)
+        sem = 0
 
+        for i in xrange( repetitions ):
+
+            logging.info( "Trigger ADC capture" )
+            ind.adc_semaphore_set( 0, dev_hand=self.dev_hand )
+            ind.adc_trigger( dev_hand=self.dev_hand )
+
+            timeout = time.time() + 1
             while True:
-                sem = ind.adc_semaphore_get(dev_hand=self.dev_hand)
+                sem = ind.adc_semaphore_get( dev_hand=self.dev_hand )
                 if sem:
+                    #print( "OK: waiting for adc semaphore" )
                     break
-                time.sleep(0.01)
+                if time.time() > timeout:
+                    self.error( "TIMEOUT: waiting for adc semaphore" )
+                    break
+                time.sleep( 0 )
 
-            maxmin = ind.adc_capture_maxmin_get(dev_hand=self.dev_hand)
+        if not sem:
+            return
 
-        peak_max_red = maxmin.max_ch0_data
-        peak_min_red = maxmin.min_ch0_data
-        peak_max_wht = maxmin.max_ch1_data
-        peak_min_wht = maxmin.min_ch1_data
-        peak_max_blu = maxmin.max_ch2_data
-        peak_min_blu = maxmin.min_ch2_data
+        #!
+        #! Retrieve info from driver.
+        #!
+        #maxmin_normal = ind.adc_capture_maxmin_normal_get( dev_hand=self.dev_hand )
+        capture_info_lst = ind.adc_capture_info_list_get( dev_hand=self.dev_hand )
 
-        if DEBUG:
-            print("DEBUG: peak_max_red = {!r}".format(peak_max_red))
-            print("DEBUG: peak_min_red = {!r}".format(peak_min_red))
-            print("DEBUG: peak_max_wht = {!r}".format(peak_max_wht))
-            print("DEBUG: peak_min_wht = {!r}".format(peak_min_wht))
-            print("DEBUG: peak_max_blu = {!r}".format(peak_max_blu))
-            print("DEBUG: peak_min_blu = {!r}".format(peak_min_blu))
+        #!
+        #! Synchronise DMA capture memory.
+        #!
+        logging.info( "Synchronising capture memory..." )
+        ind.dma_mem_sync_bank( self.bank, dev_hand=self.dev_hand )
 
-        ## Digilent Analog Discovery 2:
-        ##   10Vpp 1MHz sine input      => max is ~ +18000, min is ~ -14000
-        ##   5V 25Hz 1%duty pulse input => max is ~ +17700, min is ~ -15900
-        ## RIGOL DG1022 Signal Geneertor:
-        ##   5V 25Hz 1%duty pulse input => max is ~ +19200, min is ~ -18800
-        exp_max = 19200
-        exp_min = -18800
-        tolerance = int(exp_max * 0.05)
+        capture_info_prev = capture_info_lst[ self.prev_bank ]
+        capture_info      = capture_info_lst[ self.bank ]
+        logging.debug( "" )
+        logging.debug( "capture_info_prev = {!r}\n".format( capture_info_prev ) )
+        logging.debug( "capture_info      = {!r}\n".format( capture_info ) )
+
+        maxmin_normal   = capture_info.maxmin_normal
+        maxmin_squared  = capture_info.maxmin_squared
+        #adc_clock_count_per_pps = capture_info.adc_clock_count_per_pps
+
+        peak_max_red = maxmin_normal.max_ch0_data
+        peak_min_red = maxmin_normal.min_ch0_data
+        peak_max_wht = maxmin_normal.max_ch1_data
+        peak_min_wht = maxmin_normal.min_ch1_data
+        peak_max_blu = maxmin_normal.max_ch2_data
+        peak_min_blu = maxmin_normal.min_ch2_data
+
+        logging.info( "peak_max_red = {!r}".format( peak_max_red ) )
+        logging.info( "peak_min_red = {!r}".format( peak_min_red ) )
+        logging.info( "peak_max_wht = {!r}".format( peak_max_wht ) )
+        logging.info( "peak_min_wht = {!r}".format( peak_min_wht ) )
+        logging.info( "peak_max_blu = {!r}".format( peak_max_blu ) )
+        logging.info( "peak_min_blu = {!r}".format( peak_min_blu ) )
+
+        #! Signals applied at RF board inputs
+        #!--------------------------------------------------------------------
+        #! Digilent Analog Discovery 2:
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +17700, min is ~ -15900
+        #!   10Vpp 1MHz sine input              => max is ~ +18000, min is ~ -14000
+        #!
+        #! RIGOL DG1022 Signal Generator (SWER boards => no mux !!):
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +19200, min is ~ -18800
+        #!    5Vpp, 0V offset, 1MHz sine input  => max is ~ +12430, min is ~ -9760
+        #!    5Vpp, 5V offset, 1MHz sine input  => max is ~ +13490, min is ~ -13470
+        #!
+        #! RIGOL DG1022 Signal Generator (3 Phase boards => with mux !!):
+        #!   5V 25Hz 1% duty pulse input        => max is ~ +?????, min is ~ -?????
+        #!    5Vpp, 0V offset, 1MHz sine input  => max is ~ +?????, min is ~ -?????
+        #!    5Vpp, 5V offset, 1MHz sine input  => max is ~ +12710, min is ~ -11980
+        #!--------------------------------------------------------------------
+        exp_max =  12710
+        exp_min = -11980
+        tolerance = int( exp_max * 0.05 )
 
         exp_max_lo = exp_max - tolerance
         exp_max_hi = exp_max + tolerance
         exp_min_lo = exp_min - tolerance
         exp_min_hi = exp_min + tolerance
 
-        if not (exp_max_lo < peak_max_red < exp_max_hi):
-            self.error("ADC peak max red failed.")
-            errors += 1
+        #! thresholds for inputs with no signal (50 ohm terminated)
+        noise_max =  500
+        noise_min = -500
 
-        if not (exp_max_lo < peak_max_wht < exp_max_hi):
-            self.error("ADC peak max wht failed.")
-            errors += 1
+        #!
+        #! assume no signal on all channels
+        #!
+        red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = noise_max, 0, 0, noise_min
+        wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = noise_max, 0, 0, noise_min
+        blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = noise_max, 0, 0, noise_min
 
-        if not (exp_max_lo < peak_max_blu < exp_max_hi):
-            self.error("ADC peak max blu failed.")
-            errors += 1
+        #!
+        #! set thresholds to noise levels for channels with no input (currently white has only input)
+        #!
+        if phase_mode == Phase_Mode.POLY:
+            if signal_phase == 'red':
+                red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+            if signal_phase == 'white':
+                wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+            if signal_phase == 'blue':
+                blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        elif phase_mode == Phase_Mode.RED:
+            if signal_phase == 'red':
+                red_exp_max_hi, red_exp_max_lo, red_exp_min_hi, red_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        elif phase_mode == Phase_Mode.WHITE:
+            if signal_phase == 'white':
+                wht_exp_max_hi, wht_exp_max_lo, wht_exp_min_hi, wht_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
+        elif phase_mode == Phase_Mode.BLUE:
+            if signal_phase == 'blue':
+                blu_exp_max_hi, blu_exp_max_lo, blu_exp_min_hi, blu_exp_min_lo = exp_max_hi, exp_max_lo, exp_min_hi, exp_min_lo
 
-        if not (exp_min_lo < peak_min_red < exp_min_hi):
-            self.error("ADC peak min red failed.")
-            errors += 1
+        #!
+        #! check thresholds for each phase
+        #!
+        if not ( red_exp_max_lo < peak_max_red < red_exp_max_hi ):
+            self.error( "ADC peak max red failed ({!r} <= {!r} <= {!r})".format( red_exp_max_lo, peak_max_red, red_exp_max_hi ) )
 
-        if not (exp_min_lo < peak_min_wht < exp_min_hi):
-            self.error("ADC peak min wht failed.")
-            errors += 1
+        if not ( red_exp_min_lo < peak_min_red <  red_exp_min_hi ):
+            self.error( "ADC peak min red failed ({!r} <= {!r} <= {!r})".format( red_exp_min_lo, peak_min_red, red_exp_min_hi ) )
 
-        if not (exp_min_lo < peak_min_blu < exp_min_hi):
-            self.error("ADC peak min blu failed.")
-            errors += 1
+        if not ( wht_exp_max_lo < peak_max_wht < wht_exp_max_hi ):
+            self.error( "ADC peak max wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_max_lo, peak_max_wht, wht_exp_max_hi ) )
 
-        #ind.adc_capture_stop(dev_hand=self.dev_hand)
+        if not ( wht_exp_min_lo < peak_min_wht < wht_exp_min_hi ):
+            self.error( "ADC peak min wht failed ({!r} <= {!r} <= {!r})".format( wht_exp_min_lo, peak_min_wht, wht_exp_min_hi ) )
 
-        return errors
+        if not ( blu_exp_max_lo < peak_max_blu < blu_exp_max_hi ):
+            self.error( "ADC peak max blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_max_lo, peak_max_blu, blu_exp_max_hi ) )
 
-    ##------------------------------------------------------------------------
+        if not ( blu_exp_min_lo < peak_min_blu < blu_exp_min_hi ):
+            self.error( "ADC peak min blu failed ({!r} <= {!r} <= {!r})".format( blu_exp_min_lo, peak_min_blu, blu_exp_min_hi ) )
+
+        #! Done - stop adc
+        ind.adc_capture_stop( dev_hand=self.dev_hand )
+
+    #!------------------------------------------------------------------------
+
+    def adc_test_all( self ):
+        """Run all ADC tests."""
+
+        phases = [ 'red', 'white', 'blue' ]
+
+        for sp in phases:
+            ask = True  #! prompt for signal setup on first change of phase
+            for pm in Phase_Mode:
+                self.adc_test_run( phase_mode=pm, signal_phase=sp, ask=ask )
+                ask = False
+
+    #!------------------------------------------------------------------------
+
+    def adc_test_production( self ):
+        """Run ADC tests for production testing only (minimal user interaction)."""
+
+        #! red phase, poly mode.
+        self.adc_test_run( phase_mode=Phase_Mode.POLY, signal_phase='red' )
+
+    #!------------------------------------------------------------------------
 
     def blinky_test(self):
+
         while True:
             print(FG.CYAN + "Please check all LEDs are working...")
             time.sleep(1)
@@ -357,9 +590,10 @@ class Production_Test_App(object):
                 self.error("Blinky failed")
                 break
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
     def ttyS1_test(self):
+
         delay = 0.5
         while True:
             print(FG.CYAN + "Connect XBee serial adapter...")
@@ -372,70 +606,198 @@ class Production_Test_App(object):
                 self.error("ttyS1 test failed")
                 break
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
 
-    def test_func(self, func):
+    def adc_offset_test( self ):
+        """Set ADC offset ii import and run the adc_offset app."""
+
+        from adc_offset import ADC_Offset_App
+
+        app = ADC_Offset_App( config=self.config )
+
         try:
-            msg = func.__name__ + "()"
-            ret = func()
-            if ret:
-                print("DEBUG: ret = {!r}".format(ret))
-                raise Exception()
-            self.passed(msg)
-        except Exception as ex:
-            msg = func.__name__ + "() failed !!"
-            self.error(msg)
+            #app.init()
+            #app.main()
+            app.adc_offset_test_set()
+        finally:
+            #app.cleanup()
+            pass
 
-    ##------------------------------------------------------------------------
+    #!------------------------------------------------------------------------
+
+    def test_func( self, test_num, func ):
+
+        func_name = func.__name__ + "()"
+        head = "test {}: {}".format( test_num, func_name )
+        try:
+            error_count = self.error_count
+            func()
+            if self.error_count != error_count:
+                self.error( head + " failed !!")
+            else:
+                self.passed( head )
+        except Exception:
+            self.error( head + " failed to complete correctly !!" )
+            raise
+
+    #!------------------------------------------------------------------------
+
+    def test_all( self ):
+        """Run all test functions."""
+
+        test_functions = \
+        [
+            self.disk_usage_test,
+            self.memory_usage_test,
+            self.usb_test,
+            self.i2c_0_test,
+            self.rtc_test,
+            self.fpga_test,
+            self.adc_offset_test,
+            #self.adc_test_all,
+            self.adc_test_production,
+            self.blinky_test,
+            self.ttyS1_test,
+        ]
+
+        for test_num, func in enumerate( test_functions, start=1 ):
+            self.test_func( test_num, func )
+
+    #!------------------------------------------------------------------------
 
     def main(self):
-        """Main entry for running the produciton tests."""
+        """Main entry for running the production tests."""
 
-        colorama.init(autoreset=True)
+        self.test_all()
 
-        self.banner_start()
 
-        self.test_func( self.superuser_test )
-        self.test_func( self.services_stop )
-        self.test_func( self.disk_usage_test )
-        self.test_func( self.memory_usage_test )
-        self.test_func( self.usb_test )
-        self.test_func( self.i2c_0_test )
-        self.test_func( self.rtc_test )
-        self.test_func( self.fpga_test )
-        self.test_func( self.adc_test )
-        self.test_func( self.blinky_test )
-        self.test_func( self.ttyS1_test )
-        #self.test_func( self.services_start )
+#!============================================================================
 
-        self.banner_end()
-        print
 
-##============================================================================
-
-def argh_main(debug=False):
+def argh_main():
     """Main entry if running this module directly."""
 
-    global DEBUG
-    DEBUG = debug
+    config = Config()
 
-    app = Production_Test_App()
+    #! override defaults with settings in user settings file.
+    config.read_settings_file()
 
-    try:
-        app.main()
-    except (KeyboardInterrupt):
-        ## ctrl+c key press.
-        print("KeyboardInterrupt -- exiting ...")
-    except (SystemExit):
-        ## sys.exit() called.
-        print("SystemExit -- exiting ...")
-    finally:
-        print(ST.RESET_ALL)
-        print("Cleaning up.")
-        print("Done.  Exiting.")
+    #!
+    #! override config defaults this app.
+    #!
 
-##============================================================================
+    config.capture_mode             = 'manual'
+
+    config.show_capture_debug       = True
+
+    #!
+    #! additional config items for this app only !!
+    #!
+
+    #!------------------------------------------------------------------------
+
+    @arg( '--capture_mode',             choices=['auto','manual'] )
+    @arg( '--adc_polarity',             choices=['signed','unsigned'] )
+    @arg( '-a', '--adc_offset', help='use this adc offset value' )
+    @arg( '-p', '--phase_mode',         choices=['poly','red','white','blue'] )
+    @arg( '-d', '--debug' )
+    @arg( '-l', '--logging_level',      choices=['error','warning','info','debug'] )
+    #! app specific config settings
+    @arg( '-o', '--output_filename', help="append stdout to this file" )
+    def argh_main2( capture_count           = config.capture_count,
+                    capture_mode            = config.capture_mode,
+                    pps_delay               = config.pps_delay,
+                    adc_polarity            = config.adc_polarity.name.lower(),
+                    adc_offset              = config.adc_offset,
+                    show_measurements       = config.show_measurements,
+                    show_capture_buffers    = config.show_capture_buffers,
+                    show_capture_debug      = config.show_capture_debug,
+                    phase_mode              = config.phase_mode.name.lower(),
+                    debug                   = False,
+                    logging_level           = config.logging_level,
+                    #! app specific config settings
+                    output_filename         = '',
+                  ):
+
+        #! override user settings file if command line argument differs.
+
+        if capture_count != config.capture_count:
+            config.set_capture_count( capture_count )
+
+        if capture_mode != config.capture_mode:
+            config.set_capture_mode( capture_mode )
+
+        if pps_delay != config.pps_delay:
+            config.set_pps_delay( pps_delay )
+
+        if adc_polarity != config.adc_polarity.name.lower():
+            config.set_adc_polarity( adc_polarity )
+
+        if adc_offset != config.adc_offset:
+            config.set_adc_offset( adc_offset )
+
+        if show_measurements != config.show_measurements:
+            config.set_show_measurements( show_measurements )
+
+        if show_capture_buffers != config.show_capture_buffers:
+            config.set_show_capture_buffers( show_capture_buffers )
+
+        if show_capture_debug != config.show_capture_debug:
+            config.set_show_capture_debug( show_capture_debug )
+
+        if phase_mode != config.phase_mode.name.lower():
+            config.set_phase_mode( phase_mode )
+
+        if debug:
+            config.peak_detect_numpy_debug  = True
+            config.peak_detect_fpga_debug   = True
+            config.peak_detect_debug        = True
+            logging_level                   = 'debug'
+
+        if logging_level != config.logging_level.lower():
+            config.set_logging_level( logging_level )
+
+        logging.basicConfig( level=config.logging_level )
+
+        effective_log_level = logging.getLogger().getEffectiveLevel()
+        if effective_log_level <= logging.DEBUG:
+            config.show_all()
+
+        #!--------------------------------------------------------------------
+        #! run the app
+        #!--------------------------------------------------------------------
+
+        #! redirect stdout to a file (as well as to stdout)
+        #stdout_tee = MyStdoutTee( output_filename, file_filters=[ _remove_control_chars ] )
+        stdout_tee = MyStdoutTee( output_filename )
+
+        with stdout_tee:
+            app = Production_Test_App( config=config )
+            try:
+                app.init()
+                app.main()
+            except KeyboardInterrupt:
+                #! ctrl+c key press.
+                app.error( "KeyboardInterrupt -- exiting ..." )
+            except SystemExit:
+                #! sys.exit() called.
+                logging.info( "SystemExit -- exiting ..." )
+            except Exception as exc:
+                #! An unhandled exception !!
+                logging.debug( traceback.format_exc() )
+                logging.info( "Exception: {}".format( exc.message ) )
+                app.error( "Unhandled Exception -- exiting..." )
+            finally:
+                logging.info( "Cleaning up." )
+                app.cleanup()
+                logging.info( "Done." )
+
+    #!------------------------------------------------------------------------
+
+    argh.dispatch_command( argh_main2 )
+
+#!============================================================================
 
 if __name__ == "__main__":
-    argh.dispatch_command(argh_main)
+    argh_main()
 

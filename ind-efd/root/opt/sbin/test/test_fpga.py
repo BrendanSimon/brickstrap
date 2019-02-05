@@ -481,6 +481,10 @@ class Read_Capture_Buffers_App(object):
 
     def adc_data_ready_wait(self):
         print("ADC Data Ready Wait")
+        
+        #! semaphore must be set to zero (even if using select !!)
+        self.adc_semaphore_set(0)
+        
         if self.config.capture_mode == 'manual':
             #! fake pps delay
             if self.config.pps_delay:
@@ -495,7 +499,6 @@ class Read_Capture_Buffers_App(object):
     def get_mmap_sample_data(self):
         '''Get sample data from memory mapped buffer.'''
 
-        self.adc_semaphore_set(0)
         ret = self.adc_data_ready_wait()
         return ret
 
@@ -1454,19 +1457,22 @@ class Read_Capture_Buffers_App(object):
                 self.capture_trigger_count += 1
 
             #!
-            #! Retrieve info from FPGA registers.
+            #! Retrieve capture info from driver.
             #!
             capture_info_lst  = ind.adc_capture_info_list_get(dev_hand=self.dev_hand)
-            capture_info_prev = capture_info_lst[self.prev_bank]
-            capture_info      = capture_info_lst[self.bank]
-            logging.debug("")
-            logging.debug("capture_info_prev = {!r}\n".format(capture_info_prev))
-            logging.debug("capture_info      = {!r}\n".format(capture_info))
 
             #!
             #! Synchronise DMA capture memory.
             #!
             ind.dma_mem_sync_bank(self.bank, dev_hand=self.dev_hand)
+
+
+
+            capture_info_prev = capture_info_lst[self.prev_bank]
+            capture_info      = capture_info_lst[self.bank]
+            logging.debug("")
+            logging.debug("capture_info_prev = {!r}\n".format(capture_info_prev))
+            logging.debug("capture_info      = {!r}\n".format(capture_info))
 
             self.maxmin_normal      = capture_info.maxmin_normal
             self.maxmin_squared     = capture_info.maxmin_squared
@@ -1719,7 +1725,7 @@ def argh_main():
     config.read_settings_file()
 
     #!
-    #! override config defaults for test_fpga app.
+    #! override config defaults for this app.
     #!
 
     config.capture_mode             = 'manual'
@@ -1824,10 +1830,14 @@ def argh_main():
             config.peak_detect_debug        = True
             logging_level                   = 'debug'
 
-        if logging_level != config.logging_level:
+        if logging_level != config.logging_level.lower():
             config.set_logging_level(logging_level)
 
-        config.show_all()
+        logging.basicConfig( level=config.logging_level )
+
+        effective_log_level = logging.getLogger().getEffectiveLevel()
+        if effective_log_level <= logging.INFO:
+            config.show_all()
 
         #!--------------------------------------------------------------------
 

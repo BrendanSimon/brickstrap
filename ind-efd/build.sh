@@ -1,21 +1,26 @@
 #!/bin/bash
- 
+
 NOW=$(date +%Y%m%dT%H%M%S)
 
-VERSION="0.11.1-rc3"
+#VERSION="0.12.0-dev"
 #VERSION="sepl-dev-${NOW}"
- 
+VERSION="0.12.0-rc1-buster"
+
 BOARD="ind-efd"
- 
+
 OUT="${BOARD}-v${VERSION}"
- 
+
+OUT_LOG="${OUT}.log"
+
+OUT_TXT="${OUT}.txt"
+
 OUT_TAR="${OUT}.tar"
- 
+
 OUT_TGZ="${OUT_TAR}.gz"
- 
+
 BRICKSTRAP="../brickstrap/brickstrap.sh"
 
-COMMAND=${1:-"all"}
+COMMAND=${@:-"all"}
 
 
 read -r -d '' USAGE <<-'EOF'
@@ -51,16 +56,21 @@ fi
 # -d = output directory (also used for .tar and .img filenames)
 # -f = force build if output directory already exists.
 #
- 
+
 echo "BOARD = ${BOARD}"
 echo "OUT = ${OUT}"
 
-${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}
- 
+cmd="${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}"
+script -q -c "${cmd}" "${OUT_LOG}"
+
+#! Remove ANSI color codes, etc
+cat "${OUT_LOG}" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" > "${OUT_TXT}"
+
 #
 # Compress the tar image.
 #
 if [ "${COMMAND}" = "all" ]; then
-    cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ}  
+    cat ${OUT_TAR} | gzip --best --rsyncable > ${OUT_TGZ} && rm -f ${OUT_TAR}
+    ./makeupgrade.sh && rm -f ${OUT_TGZ}
 fi
 

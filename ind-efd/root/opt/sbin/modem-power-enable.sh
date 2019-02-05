@@ -6,7 +6,9 @@ device="cdc-wdm0"
 
 dev_file="/dev/${device}"
 
-retries=10
+#! Modem now takes longer to come backup
+#! (10 was ok for Jessie, need at least 20 for Buster)
+retries=40
 
 #=============================================================================
 #! Power OFF the modem (takes approximately 2-3 seconds).
@@ -34,7 +36,7 @@ function modem_power_on
 #=============================================================================
 function modem_power_cycle
 {
-    /opt/sbin/modem.py power-cycle
+    /opt/sbin/modem.py power-cycle --delay=5
 }
 
 #=============================================================================

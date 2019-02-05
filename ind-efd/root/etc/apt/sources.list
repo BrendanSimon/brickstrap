@@ -1,6 +1,6 @@
-#deb http://mirror.aarnet.edu.au/debian jessie main contrib
-#deb http://mirror.aarnet.edu.au/debian jessie-backports main contrib
+#deb http://mirror.aarnet.edu.au/debian buster main contrib
+#deb http://mirror.aarnet.edu.au/debian buster-backports main contrib
 
-deb http://debian.mirror.serversaustralia.com.au/debian jessie main contrib
-deb http://debian.mirror.serversaustralia.com.au/debian jessie-backports main contrib
+deb http://debian.mirror.serversaustralia.com.au/debian buster main contrib
+#deb http://debian.mirror.serversaustralia.com.au/debian buster-backports main contrib
 

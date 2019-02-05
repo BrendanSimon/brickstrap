@@ -10,6 +10,13 @@ HOSTNAME="EFD-0000"
 
 ADC_OFFSET=0
 
+#! set PHASE_MODE to one of: "POLY", "RED, "WHITE", or "BLUE"
+#! default is "POLY" if not specified.
+PHASE_MODE="POLY"
+#PHASE_MODE="RED"
+#PHASE_MODE="WHITE"
+#PHASE_MODE="BLUE"
+
 PEAK_DETECT_MODE="squared"
 #PEAK_DETECT_MODE="normal"
 
