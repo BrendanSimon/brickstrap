@@ -1,3 +1,10 @@
+#!
+#! SEPL:
+#!
+#! limit size to 1MB, 7 rotations.
+#! NOTE: time interval is ignored when using `size`.
+#!
+
 /var/log/chrony/*.log {
 	size 1M
 	rotate 7
@@ -6,9 +13,7 @@
 	compress
 	delaycompress
 	sharedscripts
-	create 644
 	postrotate
 		/usr/bin/chronyc -a cyclelogs > /dev/null 2>&1 || true
 	endscript
 }
-

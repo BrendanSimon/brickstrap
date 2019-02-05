@@ -1,8 +1,12 @@
 #!/bin/bash
 
-## script to copy original `logrotate.conf` file,
-## before we override it with our own, just incase we need it for something.
-## New file is in `root/etc/logrotate_SEPL.conf`
+#! script to copy original `logrotate.conf` file,
+#! before we override it with our own, just incase we need it for something.
+#! New file is in `root/etc/logrotate_SEPL.conf`
 
-${CHROOTCMD} cp -a /etc/logrotate.conf /etc/logrotate_ORIG.conf
-${CHROOTCMD} mv /etc/logrotate_SEPL.conf /etc/logrotate.conf
+#! No need for custom logrotate.conf file
+#! Debian Buster now has btmp and wtmp files in /etc/logrotate.d,
+#! which we overwrite using brickstrap ./root/etc/logroate.d/ files
+#!
+#${CHROOTCMD} cp -a /etc/logrotate.conf /etc/logrotate_ORIG.conf
+#${CHROOTCMD} mv /etc/logrotate_SEPL.conf /etc/logrotate.conf

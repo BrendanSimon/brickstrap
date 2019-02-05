@@ -600,7 +600,6 @@ class Production_Test_App(object):
 
     def ttyS1_test(self):
 
-        delay = 0.5
         while True:
             self.ask("Connect XBee serial adapter...")
             self.ask("Press enter and check for login prompt...")
@@ -630,6 +629,22 @@ class Production_Test_App(object):
             pass
 
         self.error_count += app.error_count
+
+    #!------------------------------------------------------------------------
+
+    def ethernet_test( self ):
+        """Test to verify ethernet port is working."""
+
+        while True:
+            self.ask( "Connect ethternet cable to ethernet port..." )
+            self.ask( "Send ping requests to 192.168.2.2" )
+            self.ask( "Were ping responses received? (y/n)" )
+            ans = sys.stdin.readline().strip().upper()
+            if ans == 'Y':
+                break
+            elif ans == 'N':
+                self.error( "Ethernet test failed: No ping responses observed" )
+                break
 
     #!------------------------------------------------------------------------
 
@@ -674,6 +689,7 @@ class Production_Test_App(object):
             self.blinky_test,
             #! ttyS1/XBee test omitted as no longer loading XBee device
             #self.ttyS1_test,
+            self.ethernet_test,
         ]
 
         for test_num, func in enumerate( test_functions, start=1 ):

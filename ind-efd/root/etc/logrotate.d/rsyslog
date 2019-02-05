@@ -1,14 +1,14 @@
-##
-## SEPL:
-##
-## limit size of syslog to 10MB, 7 rotations.
-## limit size of other files to 1MB, 7 rotations.
-## NOTE: time interval is ignored when using `size`.
-##
+#!
+#! SEPL:
+#!
+#! limit size of syslog to 10MB, 7 rotations.
+#! limit size of other files to 1MB, 7 rotations.
+#! NOTE: time interval is ignored when using `size`.
+#!
 
 /var/log/syslog
 {
-	## SEPL: limit size to 10MB
+	#! SEPL: limit size to 10MB
 	size 10M
 	rotate 7
 	missingok
@@ -16,7 +16,7 @@
 	delaycompress
 	compress
 	postrotate
-		invoke-rc.d rsyslog rotate > /dev/null
+        /usr/lib/rsyslog/rsyslog-rotate
 	endscript
 }
 
@@ -33,7 +33,7 @@
 /var/log/debug
 /var/log/messages
 {
-	## SEPL: limit size to 1MB
+	#! SEPL: limit size to 1MB
 	size 1M
 	rotate 7
 	missingok
@@ -42,6 +42,6 @@
 	delaycompress
 	sharedscripts
 	postrotate
-		invoke-rc.d rsyslog rotate > /dev/null
+        /usr/lib/rsyslog/rsyslog-rotate
 	endscript
 }
