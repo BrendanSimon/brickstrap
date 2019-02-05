@@ -1,12 +1,27 @@
 #!/bin/bash
 
 #=============================================================================
+#!
+#! Program/script exit codes, as proposed by:
+#!
+#!   https://www.tldp.org/LDP/abs/html/exitcodes.html
+#!
+#!   * user defined exit error codes should be between 64-113
+#!   * a generic catch all error code of 1 is permissible.
+#!   * 0 for success
+#!
+#=============================================================================
 
 device="cdc-wdm0"
 
 dev_file="/dev/${device}"
 
-retries=10
+#! Modem now takes longer to come backup
+#! (10 was ok for Jessie, need at least 20 for Buster)
+retries=40
+
+#! delay in seconds between power-off and power-on of modem
+modem_power_cycle_delay=5
 
 #=============================================================================
 #! Power OFF the modem (takes approximately 2-3 seconds).
@@ -34,7 +49,7 @@ function modem_power_on
 #=============================================================================
 function modem_power_cycle
 {
-    /opt/sbin/modem.py power-cycle
+    /opt/sbin/modem.py power-cycle --delay="${modem_power_cycle_delay}"
 }
 
 #=============================================================================
@@ -58,7 +73,7 @@ function modem_led_on
 #=============================================================================
 function fatal_error
 {
-    local code="${1:--1}"
+    local code="${1:-1}"
     local mesg="ERROR: $2"
     echo "${mesg}"
     exit ${code}
@@ -78,13 +93,14 @@ if [ ! -e "${dev_file}" ] ; then
     echo "Modem already off"
 else
     modem_power_off
-    for i in $(seq ${retries}) ; do
+    for (( i = 1 ; i <= retries ; i++ )) ; do
         #echo "DEBUG: check modem is off: '${device}' (attempt: ${i})"
         if [ ! -e "${dev_file}" ] ; then
             break
         fi
         sleep 1
-    done || fatal_error 1 "Modem did not turn off !!"
+        false       #! ensure failure on exit when loop overflows
+    done || fatal_error 64 "Modem did not turn off !!"
     echo "Modem is off"
 fi
 
@@ -92,33 +108,45 @@ fi
 #! Turn on the modem.
 #!
 modem_power_on
-for i in $(seq ${retries}) ; do
+for (( i = 1 ; i <= retries ; i++ )) ; do
     #echo "DEBUG: check modem is on: '${device}' (attempt: ${i})"
     if [ -e "${dev_file}" ] ; then
         break
     fi
     sleep 1
-done || fatal_error 2 "Modem did not turn on !!"
+    false       #! ensure failure on exit when loop overflows
+done || fatal_error 65 "Modem did not turn on !!"
 echo "Modem is on"
 
 #!
 #! Wait until the network interface is available
 #!
-for i in $(seq ${retries}) ; do
+for (( i = 1 ; i <= retries ; i++ )) ; do
     #echo "DEBUG: detect NetworkManager device: ${device} (attempt: ${i})"
     nmcli d | grep --quiet "${device}"
-    if [ $? -eq 0 ] ; then
+    if (( $? == 0 )); then
         break
     fi
     sleep 1
-done || fatal_error 3 "could not detect NetworkManager device: '${device}' !!"
+    false       #! ensure failure on exit when loop overflows
+done || fatal_error 66 "could not detect NetworkManager device: '${device}' !!"
 
 #!
 #! Bring up the network connection.
 #!
-nmcli d connect "${device}"
-if [ $? -ne 0 ] ; then
-    fatal_error 4 "NetworkManager failed to connect device: '${device}' !!"
+#! note: nmlci returns 0 on some errors :(
+#!
+#!  # nmcli d connect cdc-wdm0
+#!  Error: Connection activation failed: (1) Unknown error.
+#!  # echo $?
+#!  0
+#!
+out=$( nmcli d connect "${device}" )
+(( ret = $? ))
+echo "${out}" | grep --quiet -i "error"
+(( err = ! $? ))
+if (( ret || err )) ; then
+    fatal_error 67 "NetworkManager failed to connect device: '${device}' !!"
 fi
 
 #!
