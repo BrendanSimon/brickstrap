@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#!=============================================================================
 #!
 #! This script periodically checks to see if the internet connection is up,
 #! and will attempt to reconnect if it is down.
@@ -11,17 +12,47 @@
 #! i.e. it must only be invoked once (by systemd) and no other scripts can
 #! call the modem-power-enable.sh script.
 #!
+#!=============================================================================
+
+
+
+#! Use an emulated version of the BASH internal SECONDS feature
+#! (avoids issues with system wall clock adjustments)
+source /opt/sbin/bash_seconds.sh
+
+
 
 #! Read user settings file.
 source /mnt/data/etc/settings
 
+
+
+#!=============================================================================
 #!
-#! Ping servers.
+#! Check if APN setting needs to be updated in NetworkManager connection profile.
+#!
+#!=============================================================================
+
+/opt/sbin/modem-apn-update.sh
+
+
+
+#!=============================================================================
+#!
+#! Periodically check internet connection by pinging servers that are
+#! known to have high availability.
+#!
+#! Attempt recovery by power cycling modem if pings response fails.
+#!
+#! Attempt recovery by rebooting system if no response for long period.
+#!
+#! Ping servers:
 #! -------------
 #! 8.8.8.8      => Google nameserver.
 #! 203.14.0.250 => Telstra ntp server (tic.ntp.telstra.net).
 #! 203.14.0.251 => Telstra ntp server (toc.ntp.telstra.net).
 #!
+#!=============================================================================
 
 #! get ping server info from user settings file.
 ping_server="${PING_SERVER:-203.14.0.251}"
@@ -32,10 +63,22 @@ ping_count="${PING_COUNT:-10}"
 #! ping reboot timeout (default is 10 minutes => 600 seconds)
 reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
 
-#! use the BASH special builtin `SECONDS` variable to track elapsed time.
-SECONDS=0
+
+
+#!=============================================================================
+#!
+#! Periodically check for ping responses
+#!
+#! Attempt recovery by power cycling modem if pings response fails.
+#!
+#! Attempt recovery by rebooting system if no response for long period.
+#!
+#!=============================================================================
 
 while true ; do
+    #! get the emulated BASH internal SECONDS counter
+    bash_seconds_update
+
     #! get modem number.
     modem=$(mmcli -L | grep -oP '/Modem/\K\d+(?= )')
 

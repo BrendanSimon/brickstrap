@@ -118,8 +118,18 @@ done || fatal_error 3 "could not detect NetworkManager device: '${device}' !!"
 #!
 #! Bring up the network connection.
 #!
-nmcli d connect "${device}"
-if [ $? -ne 0 ] ; then
+#! note: nmlci returns 0 on some errors :(
+#!
+#!  # nmcli d connect cdc-wdm0
+#!  Error: Connection activation failed: (1) Unknown error.
+#!  # echo $?
+#!  0
+#!
+out=$( nmcli d connect "${device}" )
+ret=$?
+echo "${out}" | grep --quiet -i "error"
+err=$?
+if (( ret != 0 || err == 0 )) ; then
     fatal_error 4 "NetworkManager failed to connect device: '${device}' !!"
 fi
 
