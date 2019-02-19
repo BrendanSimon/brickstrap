@@ -19,7 +19,7 @@ upgrade_root_mnt="/tmp/upgrade"
 current_uenv="/boot/flash/uEnv.txt"
 upgrade_uenv="/boot/flash/uEnv_tmp.txt"
 
-settings_upgrade="${upgrade_root_mnt}/flash/settings"
+settings_upgrade="${upgrade_root_mnt}/flash/data/etc/settings"
 
 settings_file="/mnt/data/etc/settings"
 settings_orig_dir="/mnt/data/etc/ORIG"
