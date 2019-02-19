@@ -134,7 +134,21 @@ done
 ## (ensure it's not mounted first)
 ##
 cmd umount "${upgrade_root_dev}" || true
-cmd mkfs.ext4 -F -L "${upgrade_root_name}" "${upgrade_root_dev}"
+
+##
+## ext4 options.
+## Buster has different defaults than Jessie, which causes U-Boot (2014.07)
+## to not read the ext4 filesystem to boot the kernel.
+## Use options compatible with Jessie defaults to work with U-Boot (2014.07)
+##
+## Jessie defaults: ext4_opts="^large_file,^metadata_csum,^64bit,uninit_bg"
+##
+## Ensure 64-bit is DISABLED to be compatible with filesystems formatted by
+## Jessie systems.  `64-bit` is only required for filesystems > 16TB !!
+##
+ext4_opts="^64bit"
+
+cmd mkfs.ext4 -O"${ext4_opts}" -F -L "${upgrade_root_name}" "${upgrade_root_dev}"
 
 ##
 ## Mount the upgrade filesystem.
