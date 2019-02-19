@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Exit on any error.
+#! Exit on any error.
 set -o errexit
 
 prog_full=$0
@@ -26,13 +26,13 @@ settings_new="/mnt/data/etc/settings_NEW"
 
 reboot_delay=3
 
-## Set to "#" to do a dry-run (no actions)
+#! Set to "#" to do a dry-run (no actions)
 #dryrun="#"
 
-## Set to 1 for more diagnostic output.
+#! Set to 1 for more diagnostic output.
 verbose=0
 
-##===========================================================================
+#!===========================================================================
 
 cmd()
 {
@@ -49,14 +49,14 @@ cmd()
     fi
 }
 
-##===========================================================================
+#!===========================================================================
 
 error()
 {
     echo "ERROR: $1"
 }
 
-##===========================================================================
+#!===========================================================================
 
 fatal()
 {
@@ -65,7 +65,7 @@ fatal()
     exit -1
 }
 
-##===========================================================================
+#!===========================================================================
 
 copy_from_current_fs()
 {
@@ -82,21 +82,21 @@ copy_from_current_fs()
     fi
 }
 
-##===========================================================================
+#!===========================================================================
 
 echo "Starting ['${prog_base}']"
 
-##
-## Check for root privileges.
-##
+#!
+#! Check for root privileges.
+#!
 id=$(id --user)
 if [[ ${id} != 0 ]] ; then
     fatal "No superuser privileges.  Try running with 'sudo'"
 fi
 
-##
-## Determine current root filesystem and upgrade root filesystem.
-##
+#!
+#! Determine current root filesystem and upgrade root filesystem.
+#!
 current_root_dev=$(findmnt --noheadings --first-only --output SOURCE)
 
 if [[ "${current_root_dev}" == "${dev_fs2}" ]] ; then
@@ -113,7 +113,7 @@ else
     fatal "Unknown current root device ['${current_root_dev}']"
 fi
 
-## Confirm format
+#! Confirm format
 while true ; do
     echo -e "\nAuto-detected current rootfs on partition ${current_boot_part}"
     echo "Upgrade rootfs will be extracted to partition ${upgrade_boot_part}"
@@ -129,45 +129,45 @@ while true ; do
     fi
 done
 
-##
-## Make a clean filesystem on the upgrade partition.
-## (ensure it's not mounted first)
-##
+#!
+#! Make a clean filesystem on the upgrade partition.
+#! (ensure it's not mounted first)
+#!
 cmd umount "${upgrade_root_dev}" || true
 
-##
-## ext4 options.
-## Buster has different defaults than Jessie, which causes U-Boot (2014.07)
-## to not read the ext4 filesystem to boot the kernel.
-## Use options compatible with Jessie defaults to work with U-Boot (2014.07)
-##
-## Jessie defaults: ext4_opts="^large_file,^metadata_csum,^64bit,uninit_bg"
-##
-## Ensure 64-bit is DISABLED to be compatible with filesystems formatted by
-## Jessie systems.  `64-bit` is only required for filesystems > 16TB !!
-##
+#!
+#! ext4 options.
+#! Buster has different defaults than Jessie, which causes U-Boot (2014.07)
+#! to not read the ext4 filesystem to boot the kernel.
+#! Use options compatible with Jessie defaults to work with U-Boot (2014.07)
+#!
+#! Jessie defaults: ext4_opts="^large_file,^metadata_csum,^64bit,uninit_bg"
+#!
+#! Ensure 64-bit is DISABLED to be compatible with filesystems formatted by
+#! Jessie systems.  `64-bit` is only required for filesystems > 16TB !!
+#!
 ext4_opts="^64bit"
 
 cmd mkfs.ext4 -O"${ext4_opts}" -F -L "${upgrade_root_name}" "${upgrade_root_dev}"
 
-##
-## Mount the upgrade filesystem.
-##
+#!
+#! Mount the upgrade filesystem.
+#!
 mkdir --parents "${upgrade_root_mnt}"
 echo "Mounting the upgrade filesystem ['${upgrade_root_mnt}']"
 cmd mount "${upgrade_root_dev}" "${upgrade_root_mnt}"
 
 cd "${upgrade_root_mnt}"
 
-##
-## Unpack upgrade archive to upgrade filesystem.
-##
+#!
+#! Unpack upgrade archive to upgrade filesystem.
+#!
 echo "Unpacking rootfs archive... ['${archive}' => '${upgrade_root_mnt}']"
 cmd tar --extract --gzip --file "${prog_dir}/${archive}"
 
-##
-## Copy config files from current rootfs to upgrade rootfs.
-##
+#!
+#! Copy config files from current rootfs to upgrade rootfs.
+#!
 copy_from_current_fs /etc/hostname
 copy_from_current_fs /etc/ssh
 copy_from_current_fs /home/sepladmin/.ssh
@@ -175,9 +175,9 @@ copy_from_current_fs /home/sepluser/.ssh
 copy_from_current_fs /home/efdadmin/.ssh
 copy_from_current_fs /home/efduser/.ssh
 
-##
-## Update user settings file (merge exisiting settings).
-##
+#!
+#! Update user settings file (merge exisiting settings).
+#!
 echo -e "\nUpdating user settings..."
 
 if [[ ! -e ${settings_orig_dir} ]] ; then
@@ -193,8 +193,8 @@ cmd cp "${settings_file}" "${settings_prev_dir}/"
 echo -e "\nCopy new default user settings file..."
 cmd cp "${upgrade_root_mnt}/opt/sbin/settings_new" "${settings_new}"
 
-## Get system setting values and overwrite default values in
-## the new settings file.
+#! Get system setting values and overwrite default values in
+#! the new settings file.
 echo -e "\nReplace default user settings with existing settings..."
 pat_old="^(\w+=).*"
 while read -r  line ; do
@@ -206,10 +206,10 @@ done < "${settings_file}"
 
 cmd mv "${settings_new}" "${settings_file}"
 
-##
-## Detect/choose platform type.
-## Check FPGA version first, then fallback to running devicetree.
-##
+#!
+#! Detect/choose platform type.
+#! Check FPGA version first, then fallback to running devicetree.
+#!
 fpga_ver_maj=$("${upgrade_root_mnt}/opt/sbin/fpga_version.py" | grep --no-filename --only-matching --perl-regexp "major += +\K.*")
 let fpga_ver_maj="${fpga_ver_maj}" || true
 
@@ -229,7 +229,7 @@ else
     platform=0
 fi
 
-## Confirm platform.
+#! Confirm platform.
 while true ; do
     if (( platform == 0 )) ; then
         echo -e "\nPlatform could not be auto-detected !!"
@@ -250,15 +250,15 @@ while true ; do
 done
 #echo "Set platform = ${platform}"
 
-##
-## Make boot partition writeable.
-##
+#!
+#! Make boot partition writeable.
+#!
 cmd mount --options remount,rw /boot/flash
 
-##
-## Upgrade the BOOT.bin bootloader/FPGA for the platform.
-## Copies all files from `/boot/flash/`
-##
+#!
+#! Upgrade the BOOT.bin bootloader/FPGA for the platform.
+#! Copies all files from `/boot/flash/`
+#!
 if [[ ! -e "/boot/flash/ORIG" ]] ; then
     echo -e "\nMake backup of original boot files for platform..."
     cmd mkdir -p "/boot/flash/ORIG"
@@ -273,18 +273,18 @@ echo -e "\nUpgrade boot files for platform..."
 cmd cp "${upgrade_root_mnt}/boot/flash/*" "/boot/flash/"
 cmd cp "/boot/flash/BOOT${platform}.bin" "/boot/flash/BOOT.bin"
 
-##
-## Setup the devicetree symlinks for the platform.
-##
+#!
+#! Setup the devicetree symlinks for the platform.
+#!
 echo -e "\nSetup devicetree symlinks for platform..."
 pushd "${upgrade_root_mnt}/boot" > /dev/null
 cmd ln --symbolic --force "zynq-IND${platform}.dtb" "ind.dtb"
 cmd ls -l "ind.dtb"
 popd > /dev/null
 
-##
-## Edit U-Boot enviroment file to boot from new partition.
-##
+#!
+#! Edit U-Boot enviroment file to boot from new partition.
+#!
 while true ; do
     echo -e "\nThe U-Boot environment boot partition needs to be changed\nto use the upgraded firmware"
     echo -n "Change it now? (type: 'YES' or 'NO'): "
@@ -303,10 +303,10 @@ while true ; do
     fi
 done
 
-##
-## Make boot partition read-only.
-## Sync filesystems.
-##
+#!
+#! Make boot partition read-only.
+#! Sync filesystems.
+#!
 echo -e "\nRemount boot partition read-only and sync filesystems..."
 cd ${start_dir}
 cmd sync
@@ -314,9 +314,9 @@ cmd mount --options remount,ro /boot/flash
 cmd umount ${upgrade_root_dev}
 cmd sync
 
-##
-## Prmopt to perform reboot
-##
+#!
+#! Prmopt to perform reboot
+#!
 while true ; do
     echo -e "\nYou need to reboot to use the upgraded firmware"
     echo -n "Do want to reboot now? (type: 'YES' or 'NO'): "
@@ -332,9 +332,9 @@ done
 
 echo "Finished ['${prog_base}']"
 
-##
-## Perform the reboot as last step.
-##
+#!
+#! Perform the reboot as last step.
+#!
 if [[ "${reboot}" == "YES" ]] ; then
     echo "Rebooting in ${reboot_delay} seconds"
     for n in $(seq ${reboot_delay} -1 1) ; do
@@ -347,5 +347,5 @@ if [[ "${reboot}" == "YES" ]] ; then
     cmd reboot
 fi
 
-##===========================================================================
+#!===========================================================================
 
