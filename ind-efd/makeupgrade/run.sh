@@ -101,12 +101,12 @@ fi
 ##
 current_root_dev=$(findmnt --noheadings --first-only --output SOURCE)
 
-if [[ ${current_root_dev} == "${dev_fs2}" ]] ; then
+if [[ "${current_root_dev}" == "${dev_fs2}" ]] ; then
     upgrade_root_dev="${dev_fs1}"
     upgrade_root_name="ROOTFS1"
     upgrade_boot_part="2"
     current_boot_part="3"
-elif [[ ${current_root_dev} == "${dev_fs1}" ]] ; then
+elif [[ "${current_root_dev}" == "${dev_fs1}" ]] ; then
     upgrade_root_dev="${dev_fs2}"
     upgrade_root_name="ROOTFS2"
     upgrade_boot_part="3"
@@ -122,10 +122,10 @@ while true ; do
     echo "WARNING: partition ${upgrade_boot_part} will be erased !!"
     echo -e "\nPlease confirm (type: 'YES' to continue, 'NO' to exit)"
     read r
-    if [[ ${r} == "YES" ]] ; then
+    if [[ "${r}" == "YES" ]] ; then
         echo "Confirmed"
         break
-    elif [[ ${r} == "NO" ]] ; then
+    elif [[ "${r}" == "NO" ]] ; then
         echo "Not confirmed.  Exiting ..."
         exit 1
     fi
@@ -155,11 +155,11 @@ cmd mkfs.ext4 -O"${ext4_opts}" -F -L "${upgrade_root_name}" "${upgrade_root_dev}
 ##
 ## Mount the upgrade filesystem.
 ##
-mkdir --parents ${upgrade_root_mnt}
+mkdir --parents "${upgrade_root_mnt}"
 echo "Mounting the upgrade filesystem ['${upgrade_root_mnt}']"
-cmd mount ${upgrade_root_dev} ${upgrade_root_mnt}
+cmd mount "${upgrade_root_dev}" "${upgrade_root_mnt}"
 
-cd ${upgrade_root_mnt}
+cd "${upgrade_root_mnt}"
 
 ##
 ## Unpack upgrade archive to upgrade filesystem.
@@ -212,14 +212,14 @@ cmd mv "${settings_new}" "${settings_file}"
 ## Detect/choose platform type.
 ## Check FPGA version first, then fallback to running devicetree.
 ##
-fpga_ver_maj=$(${upgrade_root_mnt}/opt/sbin/fpga_version.py | grep --no-filename --only-matching --perl-regexp "major += +\K.*")
+fpga_ver_maj=$("${upgrade_root_mnt}/opt/sbin/fpga_version.py" | grep --no-filename --only-matching --perl-regexp "major += +\K.*")
 let fpga_ver_maj="${fpga_ver_maj}" || true
 
-devtree_model=$(cat /proc/device-tree/model)
+devtree_model="$(cat /proc/device-tree/model)"
 
-if [[ ${fpga_ver_maj} == 2 ]] ; then
+if (( fpga_ver_maj == 2 )) ; then
     platform=2
-elif [[ "${fpga_ver_maj}" == 1 ]] ; then
+elif (( fpga_ver_maj == 1 )) ; then
     platform=1
 elif [[ "${devtree_model}" == "Xilinx Zynq IND-EFD-2" ]] ; then
     platform=2
@@ -233,7 +233,7 @@ fi
 
 ## Confirm platform.
 while true ; do
-    if [[ ${platform} == 0 ]] ; then
+    if (( platform == 0 )) ; then
         echo -e "\nPlatform could not be auto-detected !!"
         echo "Please choose the target platform (type: '1' or '2')"
     else
@@ -241,10 +241,10 @@ while true ; do
         echo "Please confirm/choose the target platform (type: 'YES', '1' or '2')"
     fi
     read p
-    if [[ ${p} == "YES" && ${platform} != 0 ]] ; then
+    if [[ "${p}" == "YES" && ${platform} != 0 ]] ; then
         echo "Confirmed platform = ${platform}"
         break
-    elif [[ ${p} == [1-2] ]] ; then
+    elif [[ "${p}" == [1-2] ]] ; then
         platform=${p}
         echo "Selected platform = ${platform}"
         break
@@ -291,7 +291,7 @@ while true ; do
     echo -e "\nThe U-Boot environment boot partition needs to be changed\nto use the upgraded firmware"
     echo -n "Change it now? (type: 'YES' or 'NO'): "
     read change_uboot_env
-    if [[ ${change_uboot_env} == "YES" ]] ; then
+    if [[ "${change_uboot_env}" == "YES" ]] ; then
         echo "Changing U-Boot env boot partition: ${current_boot_part} to ${upgrade_boot_part}"
         cmd head --lines=1 "${current_uenv}"
         cmd cp "${current_uenv}" "${upgrade_uenv}"
@@ -299,7 +299,7 @@ while true ; do
         cmd mv "${upgrade_uenv}" "${current_uenv}"
         cmd head --lines=1 "${current_uenv}"
         break
-    elif [[ ${change_uboot_env} == "NO" ]] ; then
+    elif [[ "${change_uboot_env}" == "NO" ]] ; then
         echo "You will have to change it manually later to use the new firmware"
         break
     fi
@@ -323,10 +323,10 @@ while true ; do
     echo -e "\nYou need to reboot to use the upgraded firmware"
     echo -n "Do want to reboot now? (type: 'YES' or 'NO'): "
     read reboot
-    if [[ ${reboot} == "YES" ]] ; then
+    if [[ "${reboot}" == "YES" ]] ; then
         echo "Rebooting soon ..."
         break
-    elif [[ ${reboot} == "NO" ]] ; then
+    elif [[ "${reboot}" == "NO" ]] ; then
         echo "You will have to manually reboot later to use the new firmware"
         break
     fi
@@ -337,7 +337,7 @@ echo "Finished ['${prog_base}']"
 ##
 ## Perform the reboot as last step.
 ##
-if [[ ${reboot} == "YES" ]] ; then
+if [[ "${reboot}" == "YES" ]] ; then
     echo "Rebooting in ${reboot_delay} seconds"
     for n in $(seq ${reboot_delay} -1 1) ; do
         echo -n "${n}.."
