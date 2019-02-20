@@ -2,7 +2,7 @@
 
 NOW=$(date +%Y%m%dT%H%M%S)
 
-VERSION="0.12.1-rc1"
+VERSION="0.12.1"
 #VERSION="sepl-dev-${NOW}"
 
 BOARD="ind-efd"
@@ -90,7 +90,7 @@ case "${COMMAND}" in
         cmd="${BRICKSTRAP} -b ${BOARD} -d ${OUT} -f ${COMMAND}"
         script -q -c "${cmd}" "${OUT_LOG}"
         mv "${OUT_TAR}" "${ROOT_TAR}"
-    
+
         #! Remove ANSI color codes, etc
         cat "${OUT_LOG}" | sed "s,\x1B\[[0-9;]*[a-zA-Z],,g" > "${OUT_TXT}"
         ;;
