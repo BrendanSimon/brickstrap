@@ -67,6 +67,33 @@ reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
 
 #!=============================================================================
 #!
+#! Function to reboot the system.
+#!
+#! Currently this is a warm reboot, rather than a cold reboot via `poweroff`
+#! so as to avoid undesireable behaviour of some Power Management Control
+#! systems.
+#!
+#! This function might be expanded to check settings to do a warm or cold reboot.
+#!
+#!=============================================================================
+
+function reboot
+{
+    local msg="Ping server reboot timeout (SECONDS=${SECONDS} > reboot_timeout=${reboot_timeout})"
+
+    if true ; then
+        echo "REBOOT: ${msg}"
+        /sbin/reboot
+    else
+        echo "POWEROFF: ${msg}"
+        /sbin/poweroff
+    fi
+}
+
+
+
+#!=============================================================================
+#!
 #! Periodically check for ping responses
 #!
 #! Attempt recovery by power cycling modem if pings response fails.
@@ -102,8 +129,7 @@ while true ; do
         echo "Got ping response (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout})"
     elif (( SECONDS > reboot_timeout )); then
         #! no reponse for a long time => time to reboot.
-        echo "POWEROFF: Ping server reboot timeout (SECONDS=${SECONDS} > reboot_timeout=${reboot_timeout})"
-        /sbin/poweroff
+        reboot
     else
         #! no reponse => try power cycling modem.
         echo "Ping failed (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout}).  Attempting to restart modem and internet connection..."
