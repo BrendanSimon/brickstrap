@@ -1,0 +1,3 @@
+#! Periodically call chrony watchdog
+#! every 10 minutes
+*/10 * * * * root /opt/sbin/chrony_watchdog.sh
