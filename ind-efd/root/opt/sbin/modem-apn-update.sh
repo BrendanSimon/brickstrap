@@ -2,15 +2,9 @@
 
 #!=============================================================================
 #!
-#! This script periodically checks to see if the internet connection is up,
-#! and will attempt to reconnect if it is down.
-#!
-#! This script is called from systemd and will be restarted if it exits.
-#!
-#! The modem-power-enable.sh script is non-renetrant, which therefore makes
-#! this script non-rentrant too.
-#! i.e. it must only be invoked once (by systemd) and no other scripts can
-#! call the modem-power-enable.sh script.
+#! This script checks if the apn settings in the user settings file has changed.
+#! If it has changed, the script will update the network manager configuration,
+#! reload the configuration and restart the service.
 #!
 #!=============================================================================
 
