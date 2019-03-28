@@ -77,16 +77,16 @@ reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
 #!
 #!=============================================================================
 
-function reboot
+function do_reboot
 {
     local msg="Ping server reboot timeout (SECONDS=${SECONDS} > reboot_timeout=${reboot_timeout})"
 
-    if true ; then
-        echo "REBOOT: ${msg}"
-        /sbin/reboot
-    else
+    if (( 0 )) ; then
         echo "POWEROFF: ${msg}"
         /sbin/poweroff
+    else
+        echo "REBOOT: ${msg}"
+        /sbin/reboot
     fi
 }
 
@@ -129,7 +129,7 @@ while true ; do
         echo "Got ping response (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout})"
     elif (( SECONDS > reboot_timeout )); then
         #! no reponse for a long time => time to reboot.
-        reboot
+        do_reboot
     else
         #! no reponse => try power cycling modem.
         echo "Ping failed (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout}).  Attempting to restart modem and internet connection..."
