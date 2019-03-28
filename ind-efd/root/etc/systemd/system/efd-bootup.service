@@ -1,0 +1,25 @@
+##============================================================================
+##
+##  systemd service to run an efd bootup script, soon after system starts.
+##
+##  The script will likely ensure any changes to the user settings file
+##  will be handled.
+##  e.g. setup or removal of cron files in /etc/cron.d/
+##
+##  Copyright (C) 2019-2019 Successful Endeavours Pty Ltd
+##
+##============================================================================
+
+[Unit]
+Description=Run efd_bootup.sh script
+After=reboot.target auditd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/sbin/efd_bootup.sh
+
+
+[Install]
+WantedBy=multi-user.target
+

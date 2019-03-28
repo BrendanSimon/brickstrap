@@ -66,6 +66,9 @@ $CHROOTCMD chmod ug+x /opt/sbin/modem.py
 $CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
 $CHROOTCMD chmod ug+x /opt/sbin/weather.py
 
+#! Enable efd bootup service -- run at boot via systemd.
+$CHROOTBINDCMD systemctl enable efd-bootup.service
+
 ## Enable efd service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd.service
 
