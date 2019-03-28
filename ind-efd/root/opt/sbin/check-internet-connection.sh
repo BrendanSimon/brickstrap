@@ -65,6 +65,19 @@ reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
 
 
 
+#=============================================================================
+#! run the argument as a command if DEBUG is set
+#=============================================================================
+function debug
+{
+    if (( DEBUG )) ; then
+        #echo "@ = $@"
+        "$@"
+    fi
+}
+
+
+
 #!=============================================================================
 #!
 #! Function to reboot the system.
@@ -123,6 +136,7 @@ while true ; do
 
     echo "Pinging ${ping_server} (count=${ping_count})"
     ping -c ${ping_count} ${ping_server} > /dev/null
+
     if (( $? == 0 )); then
         #! got a response => reset timer.
         SECONDS=0
@@ -132,8 +146,16 @@ while true ; do
         do_reboot
     else
         #! no reponse => try power cycling modem.
+        #! use `timeout` command to allow 180 seconds to complete,
+        #! then send TERM signal to terminate the command,
+        #! then send KILL signal 5 seconds later if still running.
         echo "Ping failed (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout}).  Attempting to restart modem and internet connection..."
-        /opt/sbin/modem-power-enable.sh
+
+        debug echo "DEBUG: check-internet: timeout 0: $(date)"
+
+        timeout --kill-after 5 180 /opt/sbin/modem-power-enable.sh
+
+        debug echo "DEBUG: check-internet: timeout 1: ret=$? : $(date)"
     fi
 
     #! Sleep for 1 minute.
