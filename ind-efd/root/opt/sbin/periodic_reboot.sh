@@ -15,6 +15,10 @@ source /mnt/data/etc/settings
 
 
 
+script_name="$( basename $0 )"
+
+
+
 function do_reboot
 {
     local cmd="false"
@@ -36,7 +40,7 @@ function do_reboot
     echo "${msg}"
 
     #! send message journald/syslog (tag = name of this script)
-    echo "$msg" | systemd-cat -t "$( basename $0 )"
+    echo "${msg}" | systemd-cat -t "${script_name}"
 
     #! do the command
     ${cmd}
