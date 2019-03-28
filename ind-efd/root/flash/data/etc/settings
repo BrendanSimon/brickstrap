@@ -35,6 +35,14 @@ REPORTING_SMS_PHONE_NUMBERS="+61470000000",
 #! default is "telstra.extranet" if not specified.
 NETWORK_APN="telstra.extranet"
 
+#! Periodic Reboot Schedule ( crontab syntax.  e.g. "0 2 * * *" to reboot at 2AM UTC each day )
+#! default is "" if not specified => never do periodic reboot.
+#PERIODIC_REBOOT_SCHED="0 2 * * *"
+
+#! Periodic Reboot Type ( "reboot" | "shutdown" )
+#! default is "reboot" if not specified
+#PERIODIC_REBOOT_TYPE="reboot"
+
 #! Server to ping to check internet connection is ok.
 PING_SERVER="203.14.0.251"
 
