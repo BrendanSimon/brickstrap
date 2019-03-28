@@ -59,12 +59,11 @@ $CHROOTBINDCMD systemctl disable rpcbind.service
 # disable ddclient from running by default.
 #$CHROOTBINDCMD systemctl disable ddclient.service
 
-## make python apps executable.
-$CHROOTCMD chmod ug+x /opt/sbin/efd_app.py
-$CHROOTCMD chmod ug+x /opt/sbin/blinky.py
-$CHROOTCMD chmod ug+x /opt/sbin/modem.py
-$CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
-$CHROOTCMD chmod ug+x /opt/sbin/weather.py
+#! make shell scripts executable.
+$CHROOTCMD chmod ug+x /opt/sbin/*.sh
+
+#! make python apps/scripts executable.
+$CHROOTCMD chmod ug+x /opt/sbin/*.py
 
 #! Enable efd bootup service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd-bootup.service
