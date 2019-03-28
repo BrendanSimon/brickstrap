@@ -1,12 +1,12 @@
-##============================================================================
-##
-## script to setup/modify the systemd config file.
-##
-##============================================================================
+#!============================================================================
+#!
+#! script to setup/modify the systemd config file.
+#!
+#!============================================================================
 
-##----------------------------------------------------------------------------
-## Setup hardware watchdog using systemd.
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
+#! Setup hardware watchdog using systemd.
+#!----------------------------------------------------------------------------
 
 SYSTEMD_DIR=/etc/systemd
 
@@ -16,9 +16,9 @@ SYSTEMD_CONF_ORIG="${SYSTEMD_CONF}.ORIG"
 
 SYSTEMD_CONF_TMP="${SYSTEMD_CONF}.TMP"
 
-## Replace DEVICES="" with DEVICES="/dev/ttyPS1"
-## FIXME: This pattern works but isn't pretty.
-## FIXME: Is there a neater or better way to do this?
+#! Replace DEVICES="" with DEVICES="/dev/ttyPS1"
+#! FIXME: This pattern works but isn't pretty.
+#! FIXME: Is there a neater or better way to do this?
 SED_PATTERNS=""
 SED_PATTERNS="${SED_PATTERNS} s/^.*RuntimeWatchdogSec=.*/RuntimeWatchdogSec=20/ ;"
 SED_PATTERNS="${SED_PATTERNS} s/^.*ShutdownWatchdogSec=.*/ShutdownWatchdogSec=1min/ ;"
@@ -29,34 +29,34 @@ echo "${SYSTEMD_CONF_TMP}"
 echo "SED_PATTERNS = ${SED_PATTERNS}"
 echo "SED_PATTERNS = '${SED_PATTERNS}'"
 
-## Make a copy of the original file.
+#! Make a copy of the original file.
 ${CHROOTCMD} bash -c "cd ${SYSTEMD_DIR} && cp ${SYSTEMD_CONF} ${SYSTEMD_CONF_ORIG}"
 
-## Remove temp file so that it's empty to append to.
+#! Remove temp file so that it's empty to append to.
 ${CHROOTCMD} rm -f "${SYSTEMD_CONF_TMP}"
 
-## apply changes and append to temp file.
+#! apply changes and append to temp file.
 ${CHROOTCMD} bash -c "cd ${SYSTEMD_DIR} && cat ${SYSTEMD_CONF} | sed '${SED_PATTERNS}' >> ${SYSTEMD_CONF_TMP}"
 
-## Copy/Rename temp file back fo conf file.
+#! Copy/Rename temp file back fo conf file.
 ${CHROOTCMD} bash -c "cd ${SYSTEMD_DIR} && mv ${SYSTEMD_CONF_TMP} ${SYSTEMD_CONF}"
 
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
 
-# make sure serial-getty@.service does not try to use the serial port
-# so that it can be used by BrickPi
+#! make sure serial-getty@.service does not try to use the serial port
+#! so that it can be used by BrickPi
 $CHROOTBINDCMD systemctl mask serial-getty@ttyAMA0.service
 
-# disable nfs from running by default since most won't use it
+#! disable nfs from running by default since most won't use it
 $CHROOTBINDCMD systemctl disable nfs-common.service
 $CHROOTBINDCMD systemctl disable rpcbind.service
 
-# disable smbd from running by default. Want to leave nmbd on though.
+#! disable smbd from running by default. Want to leave nmbd on though.
 #$CHROOTBINDCMD systemctl disable smbd.service
-# we really don't want this running - it causes a long timeout on boot
+#! we really don't want this running - it causes a long timeout on boot
 #$CHROOTBINDCMD systemctl mask samba-ad-dc.service
 
-# disable ddclient from running by default.
+#! disable ddclient from running by default.
 #$CHROOTBINDCMD systemctl disable ddclient.service
 
 #! make shell scripts executable.
@@ -68,24 +68,23 @@ $CHROOTCMD chmod ug+x /opt/sbin/*.py
 #! Enable efd bootup service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd-bootup.service
 
-## Enable efd service -- run at boot via systemd.
+#! Enable efd service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd.service
 
-## Enable sepl modem service -- run at boot via systemd.
+#! Enable sepl modem service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable sepl-modem.service
 
-## Enable sepl power supervisor service -- run at boot via systemd.
+#! Enable sepl power supervisor service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable sepl-power-supervisor.service
 
-## Enable sepl shutdown service -- run at boot via systemd.
+#! Enable sepl shutdown service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable sepl-shutdown.service
 
-## Enable serial getty (login prompt) on /dev/ttyS1 (XBEE port).
+#! Enable serial getty (login prompt) on /dev/ttyS1 (XBEE port).
 $CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
 
-## DISABLE logging of RF Sysytem status (Modem, GPS)
+#! DISABLE logging of RF Sysytem status (Modem, GPS)
 $CHROOTBINDCMD systemctl disable efd-rf-status.service
 
-## Enable the serial getty on ttyS1 (XBee @ 38400 baud only)
+#! Enable the serial getty on ttyS1 (XBee @ 38400 baud only)
 $CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
-
