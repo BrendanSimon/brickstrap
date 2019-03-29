@@ -59,11 +59,71 @@ $CHROOTBINDCMD systemctl disable rpcbind.service
 #! disable ddclient from running by default.
 #$CHROOTBINDCMD systemctl disable ddclient.service
 
+
+
 #! make shell scripts executable.
-$CHROOTCMD chmod ug+x /opt/sbin/*.sh
+#! FIXME: why doesn't wildcard work ??
+#! FIXME: this is mess and probably shouldn't be here
+#$CHROOTCMD chmod ug+x /opt/sbin/*.sh
+
+$CHROOTCMD chmod ug+x /opt/sbin/bash_seconds.sh
+$CHROOTCMD chmod ug+x /opt/sbin/check-internet-connection.sh
+$CHROOTCMD chmod ug+x /opt/sbin/chrony_watchdog.sh
+$CHROOTCMD chmod ug+x /opt/sbin/efd-ping.sh
+$CHROOTCMD chmod ug+x /opt/sbin/efd_bootup.sh
+$CHROOTCMD chmod ug+x /opt/sbin/modem-apn-update.sh
+$CHROOTCMD chmod ug+x /opt/sbin/modem-power-enable.sh
+$CHROOTCMD chmod ug+x /opt/sbin/periodic_reboot.sh
+$CHROOTCMD chmod ug+x /opt/sbin/periodic_reboot_update.sh
+$CHROOTCMD chmod ug+x /opt/sbin/send-sms.sh
+
+
 
 #! make python apps/scripts executable.
-$CHROOTCMD chmod ug+x /opt/sbin/*.py
+#! FIXME: why doesn't wildcard work ??
+#! FIXME: this is mess and probably shouldn't be here
+#$CHROOTCMD chmod ug+x /opt/sbin/*.py
+
+$CHROOTCMD chmod ug+x /opt/sbin/alert_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/battery_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/blinky.py
+$CHROOTCMD chmod ug+x /opt/sbin/cloud.py
+$CHROOTCMD chmod ug+x /opt/sbin/ctrl.py
+$CHROOTCMD chmod ug+x /opt/sbin/debug_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_app.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_config.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_gps.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_measurements.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_modem_status.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_rf_status.py
+$CHROOTCMD chmod ug+x /opt/sbin/efd_sensors.py
+$CHROOTCMD chmod ug+x /opt/sbin/fpga_adc_clock_count_per_pps.py
+$CHROOTCMD chmod ug+x /opt/sbin/fpga_version.py
+$CHROOTCMD chmod ug+x /opt/sbin/ind.py
+$CHROOTCMD chmod ug+x /opt/sbin/ioctl.py
+$CHROOTCMD chmod ug+x /opt/sbin/leds.py
+$CHROOTCMD chmod ug+x /opt/sbin/modem.py
+$CHROOTCMD chmod ug+x /opt/sbin/modem_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/persistent_dict.py
+$CHROOTCMD chmod ug+x /opt/sbin/power_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/power_os_running.py
+$CHROOTCMD chmod ug+x /opt/sbin/pps_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/running_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/sepl_power_supervisor.py
+$CHROOTCMD chmod ug+x /opt/sbin/sepl_shutdown_final.py
+#! settings.py fails due to dangling symlink (skip)
+#$CHROOTCMD chmod ug+x /opt/sbin/settings.py
+$CHROOTCMD chmod ug+x /opt/sbin/sigaction.py
+$CHROOTCMD chmod ug+x /opt/sbin/signal2.py
+$CHROOTCMD chmod ug+x /opt/sbin/sigqueue.py
+$CHROOTCMD chmod ug+x /opt/sbin/spare_led.py
+$CHROOTCMD chmod ug+x /opt/sbin/status.py
+$CHROOTCMD chmod ug+x /opt/sbin/test_signal2.py
+$CHROOTCMD chmod ug+x /opt/sbin/tf_mapping.py
+$CHROOTCMD chmod ug+x /opt/sbin/weather.py
+$CHROOTCMD chmod ug+x /opt/sbin/weather_led.py
+
+
 
 #! Enable efd bootup service -- run at boot via systemd.
 $CHROOTBINDCMD systemctl enable efd-bootup.service
