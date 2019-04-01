@@ -55,7 +55,8 @@ ExecStartPost=-sleep 2
 #! killing gpsd does not restart the service if gpsd was not running
 #! e.g. if `systemctl stop gpsd gpsd.socket` was issued.
 #! Explicity restart the service instead
-ExecStartPost=-/bin/systemctl restart gpsd
+ExecStartPost=-/bin/systemctl stop gpsd.service gpsd.socket
+ExecStartPost=-/bin/systemctl restart gpsd.service
 
 PrivateTmp=yes
 
