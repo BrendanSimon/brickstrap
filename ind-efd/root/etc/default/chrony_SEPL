@@ -1,0 +1,17 @@
+#!=============================================================================
+#! Successful Endeavours Pty Ltd
+#!
+#! Modifcations to default chrony settings for Debian Buster.
+#!
+#! - Remove the `-F -1` options as our kernel does not have
+#!   Linux secure computing (seccomp) facility.
+#!
+#!=============================================================================
+
+# This is a configuration file for /etc/init.d/chrony and
+# /lib/systemd/system/chrony.service; it allows you to pass various options to
+# the chrony daemon without editing the init script or service file.
+
+# Options to pass to chrony.
+DAEMON_OPTS=""
+#DAEMON_OPTS="-F -1"

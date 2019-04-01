@@ -1,9 +1,13 @@
 #!/bin/bash
 
-## backup original conf file and replace with a SEPL customised file.
+#! backup original conf file and replace with a SEPL customised file.
 ${CHROOTCMD} cp -a /etc/chrony/chrony.conf      /etc/chrony/chrony_ORIG.conf
 ${CHROOTCMD} cp    /etc/chrony/chrony_SEPL.conf /etc/chrony/chrony.conf
 
-## Enable chrony systemd service.
+#! backup original conf file and replace with a SEPL customised file.
+${CHROOTCMD} cp -a /etc/default/chrony.conf      /etc/default/chrony_ORIG.conf
+${CHROOTCMD} cp    /etc/default/chrony_SEPL.conf /etc/default/chrony.conf
+
+#! Enable chrony systemd service.
 $CHROOTBINDCMD systemctl enable chrony
 
