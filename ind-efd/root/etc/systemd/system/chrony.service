@@ -17,14 +17,29 @@ ConditionCapability=CAP_SYS_TIME
 [Service]
 Type=forking
 PIDFile=/run/chronyd.pid
-## chrony has trouble syncing times that are too old, so reset to year 2000.
-## DEPRECATED: using `gpsd 3.16-3` from `jessie-backports` fixes time sync
-## issues and the kludge to preset date to year 2000 is no longer required.
+
+#! chrony has trouble syncing times that are too old, so reset to year 2000.
+#! DEPRECATED: using `gpsd 3.16-3` from `jessie-backports` fixes time sync
+#! issues and the kludge to preset date to year 2000 is no longer required.
 #ExecStartPre=/bin/bash -c '/usr/bin/test $(date +"%Y") -lt 2000 && date --set="2000-01-01 00:00:00" || true'
+
 ExecStart=/usr/sbin/chronyd
-## kill gpsd after chrony has started to force restart.
-## assumes gpsd has been configured to always restart !!
-ExecStartPost=-/usr/bin/killall -TERM gpsd
+
+ExecStartPost=-/usr/lib/chrony/chrony-helper update-daemon
+
+#! sleep for bit to ensure chronyd initialisation has completed.
+#! e.g. creating sockets for gpsd
+ExecStartPost=-sleep 2
+
+#! kill gpsd after chrony has started to force restart.
+#! assumes gpsd has been configured to always restart !!
+#ExecStartPost=-/usr/bin/killall -TERM gpsd
+
+#! killing gpsd does not restart the service if gpsd was not running
+#! e.g. if `systemctl stop gpsd gpsd.socket` was issued.
+#! Explicity restart the service instead
+ExecStartPost=-/bin/systemctl restart gpsd
+
 PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=full
