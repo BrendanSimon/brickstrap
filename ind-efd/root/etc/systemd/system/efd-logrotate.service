@@ -1,0 +1,39 @@
+#!============================================================================
+#!
+#!  systemd service to run log rotation for efd services.
+#!
+#!  Customised version of /lib/systemd/system/logrotate.service
+#!
+#!  This logrotate-efd service is called hourly instead of daily
+#!  (see efd-logrotate.timer)
+#!
+#!  Copyright (C) 2019-2019 Successful Endeavours Pty Ltd
+#!
+#!============================================================================
+
+[Unit]
+Description=Rotate log files (EFD)
+Documentation=man:logrotate(8) man:logrotate.conf(5)
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/logrotate /etc/logrotate-efd.conf
+
+# performance options
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+# hardening options
+#  details: https://www.freedesktop.org/software/systemd/man/systemd.exec.html
+#  no ProtectHome for userdir logs
+#  no PrivateNetwork for mail deliviery
+#  no ProtectKernelTunables for working SELinux with systemd older than 235
+#  no MemoryDenyWriteExecute for gzip on i686
+PrivateDevices=true
+PrivateTmp=true
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectSystem=full
+RestrictRealtime=true

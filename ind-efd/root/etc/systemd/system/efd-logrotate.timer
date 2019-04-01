@@ -1,0 +1,23 @@
+#!============================================================================
+#!
+#!  systemd timer to run log rotation for efd services.
+#!
+#!  Customised version of /lib/systemd/system/logrotate.timer
+#!
+#!  Copyright (C) 2019-2019 Successful Endeavours Pty Ltd
+#!
+#!============================================================================
+
+[Unit]
+Description=Rotation of log files (EFD Schedule)
+Documentation=man:logrotate(8) man:logrotate.conf(5)
+
+[Timer]
+#OnCalendar=minutely
+#AccuracySec=10s
+OnCalendar=hourly
+AccuracySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
