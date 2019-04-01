@@ -1,31 +1,11 @@
 #!/bin/bash
 
-## script to setup/modify the cron config file.
+#! script to setup/modify the cron config file.
 
-CRON_DIR=/etc/default
+#! backup original conf file and replace with a SEPL customised file.
+${CHROOTCMD} cp -a /etc/default/cron.conf      /etc/default/cron_ORIG.conf
+${CHROOTCMD} cp    /etc/default/cron_SEPL.conf /etc/default/cron.conf
 
-CRON_CONF="${CRON_DIR}/cron"
-
-CRON_CONF_ORIG="${CRON_DIR}/cron_ORIG"
-
-CRON_CONF_SEPL="${CRON_DIR}/cron_SEPL"
-
-
-#echo "${CRON_DIR}"
-#echo "${CRON_CONF}"
-#echo "${CRON_CONF_TMP}"
-#echo "${SED_PATTERNS}"
-
-
-## Make a copy of the original file.
-${CHROOTCMD} cp ${CRON_CONF} ${CRON_CONF_ORIG}
-
-## Copy SEPL config file.
-${CHROOTCMD} cp ${CRON_CONF_SEPL} ${CRON_CONF}
-
-## Search/Replace patterns.
-#${CHROOTCMD} bash -c "cd ${CRON_DIR} && cat ${CRON_CONF} | sed ${SED_PATTERNS} >> ${CRON_CONF_TMP}"
-
-## Enable cron systemd service.
+#! Enable cron systemd service.
 ${CHROOTBINDCMD} systemctl enable cron
 
