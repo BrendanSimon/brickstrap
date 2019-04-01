@@ -18,7 +18,7 @@ libqmi-utils
 usb-modeswitch
 curl
 wget
-ddclient
+#ddclient
 gir1.2-modemmanager-1.0
 tcpdump
 
