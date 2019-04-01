@@ -1,17 +1,33 @@
+#!=============================================================================
 #!
-#! Successful Endeavours
+#! Successful Endeavours Pty Ltd
 #!
 #! Service to log GPS NMEA sentences to disk for diagnostics
 #!
+#!=============================================================================
 
 [Unit]
+
 Description=GPS NMEA Logger service
-After=network.target auditd.service
+
+Requires=gpsd.service
+
+After=network.target auditd.service gpsd.service
+
+#!=============================================================================
 
 [Service]
+
 ExecStart=/opt/sbin/gps_nmea_logger.sh
+
 KillMode=process
+
 Restart=always
 
+#!=============================================================================
+
 [Install]
+
 WantedBy=multi-user.target
+
+#!=============================================================================
