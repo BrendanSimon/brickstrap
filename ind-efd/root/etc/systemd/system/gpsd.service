@@ -1,13 +1,13 @@
-##
-## Successful Endeavours
-##
-## Customised version of /lib/systemd/system/gpsd.service
-##
-## The `Restart=always` stanza was added to keep restart the service if it
-## exits.  We take advantage of this in the chrony.service, which kills
-## `gpsd` after `chronyd` starts, to force `gpsd` to restart after `chronyd`,
-##  which is recommended when using the SOCK driver in `chrony`.
-##
+#!
+#! Successful Endeavours
+#!
+#! Customised version of /lib/systemd/system/gpsd.service
+#!
+#! The `Restart=always` stanza was added to keep restart the service if it
+#! exits.  We take advantage of this in the chrony.service, which kills
+#! `gpsd` after `chronyd` starts, to force `gpsd` to restart after `chronyd`,
+#!  which is recommended when using the SOCK driver in `chrony`.
+#!
 
 [Unit]
 Description=GPS (Global Positioning System) Daemon
