@@ -1,29 +1,46 @@
-##
-## Successful Endeavours
-##
-## There is no `systemd` service file for `chrony` in Deiban Jessie.
-## This file was taken from Debian Stretch sources.
-## The `Restart=always` stanza was added to keep restart the service if it
-## exits (e.g. if `adjtimex()` fails.  See BitBucket issue #118).
-##
+#==============================================================================
+#!
+#!  Successful Endeavours Pty Ltd
+#!
+#!  Customised version of /lib/systemd/system/chrony.service
+#!
+#!  Restart the `gpsd` service after if chrony is (re)started so that the
+#!  socket is avaiable for `gpsd` (if using the SOCK driver).
+#!  The socket must exist before gpsd is started.
+#!
+#!  The `Restart=always` stanza was added to keep restart the service if it
+#!  exits (e.g. if `adjtimex()` fails.  See BitBucket issue #118).
+#!
+#==============================================================================
 
 [Unit]
+
 Description=chrony, an NTP client/server
+
 Documentation=man:chronyd(8) man:chronyc(1) man:chrony.conf(5)
-Conflicts=systemd-timesyncd.service openntpd.service
+
+Conflicts=systemd-timesyncd.service openntpd.service ntp.service ntpsec.service
+
 After=network.target
+
 ConditionCapability=CAP_SYS_TIME
 
+#==============================================================================
+
 [Service]
+
 Type=forking
+
 PIDFile=/run/chronyd.pid
+
+EnvironmentFile=-/etc/default/chrony
 
 #! chrony has trouble syncing times that are too old, so reset to year 2000.
 #! DEPRECATED: using `gpsd 3.16-3` from `jessie-backports` fixes time sync
 #! issues and the kludge to preset date to year 2000 is no longer required.
 #ExecStartPre=/bin/bash -c '/usr/bin/test $(date +"%Y") -lt 2000 && date --set="2000-01-01 00:00:00" || true'
 
-ExecStart=/usr/sbin/chronyd
+ExecStart=/usr/sbin/chronyd $DAEMON_OPTS
 
 ExecStartPost=-/usr/lib/chrony/chrony-helper update-daemon
 
@@ -41,10 +58,19 @@ ExecStartPost=-sleep 2
 ExecStartPost=-/bin/systemctl restart gpsd
 
 PrivateTmp=yes
+
 ProtectHome=yes
+
 ProtectSystem=full
+
 Restart=always
 
+#==============================================================================
+
 [Install]
+
 Alias=chronyd.service
+
 WantedBy=multi-user.target
+
+#==============================================================================
