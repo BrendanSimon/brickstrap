@@ -111,8 +111,10 @@ $CHROOTCMD chmod ug+x /opt/sbin/pps_led.py
 $CHROOTCMD chmod ug+x /opt/sbin/running_led.py
 $CHROOTCMD chmod ug+x /opt/sbin/sepl_power_supervisor.py
 $CHROOTCMD chmod ug+x /opt/sbin/sepl_shutdown_final.py
+
 #! settings.py fails due to dangling symlink (skip)
 #$CHROOTCMD chmod ug+x /opt/sbin/settings.py
+
 $CHROOTCMD chmod ug+x /opt/sbin/sigaction.py
 $CHROOTCMD chmod ug+x /opt/sbin/signal2.py
 $CHROOTCMD chmod ug+x /opt/sbin/sigqueue.py
@@ -125,26 +127,34 @@ $CHROOTCMD chmod ug+x /opt/sbin/weather_led.py
 
 
 
-#! Enable efd bootup service -- run at boot via systemd.
+#! Enable efd bootup service
 $CHROOTBINDCMD systemctl enable efd-bootup.service
 
-#! Enable efd service -- run at boot via systemd.
+#! Enable efd service
 $CHROOTBINDCMD systemctl enable efd.service
 
-#! Enable sepl modem service -- run at boot via systemd.
+#! Enable sepl modem service
 $CHROOTBINDCMD systemctl enable sepl-modem.service
 
-#! Enable sepl power supervisor service -- run at boot via systemd.
+#! Enable sepl power supervisor service
 $CHROOTBINDCMD systemctl enable sepl-power-supervisor.service
 
-#! Enable sepl shutdown service -- run at boot via systemd.
+#! Enable sepl shutdown service
 $CHROOTBINDCMD systemctl enable sepl-shutdown.service
 
 #! Enable serial getty (login prompt) on /dev/ttyS1 (XBEE port).
 $CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
 
+#! Enable the serial getty on ttyS1 (XBee @ 38400 baud only)
+$CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
+
+#! Enable the efd-logrotate service
+$CHROOTBINDCMD systemctl enable efd-logrotate.service
+
+
+
 #! DISABLE logging of RF Sysytem status (Modem, GPS)
 $CHROOTBINDCMD systemctl disable efd-rf-status.service
 
-#! Enable the serial getty on ttyS1 (XBee @ 38400 baud only)
-$CHROOTBINDCMD systemctl enable serial-getty@ttyS1.service
+#! DISABLE the GPS NMEA Logger service
+$CHROOTBINDCMD systemctl disable gps-nmea-logger.service
