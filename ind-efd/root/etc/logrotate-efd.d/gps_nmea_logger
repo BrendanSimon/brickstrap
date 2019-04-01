@@ -1,0 +1,26 @@
+#!
+#! SEPL:
+#!
+#! limit size to 100MB, 7 rotations.
+#!
+#! copytruncate is required as the script does not have hooks to close
+#! the file and reopen a new logfile.
+#!
+#! there is a small time slice between copying and truncating, which means
+#! there is potential for a small loss of data during that period.
+#!
+#! takes about 10 seconds to copy a 100MB file.
+#! takes about 64 seconds to compress a 100MB file (random binary data).
+#! compression ratio is approximately 20:1 for text data.
+#!
+
+/mnt/data/log/gps_nmea/*.log {
+	copytruncate
+	#size 10K
+	size 100M
+	rotate 7
+	missingok
+	notifempty
+	compress
+	delaycompress
+}
