@@ -103,7 +103,7 @@ elif [[ "${cur_periodic_reboot_setting}" == "${periodic_reboot_sched}" ]] ; then
 else
     echo "EFD Periodic Reboot setting is out of date (enabled)"
 
-    #! update Periodic Rebboot setting in cron config file.
+    #! update Periodic Reboot setting in cron config file.
     cron_config_update
     if (( $? != 0 )); then
         exit $?
