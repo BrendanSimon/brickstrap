@@ -41,19 +41,19 @@ class Cloud_Thread(threading.Thread):
             #! continue to loop, wait for data, and process.
             try:
                 self.cloud.wait_and_process()
-            except Exception as exc:
-                print(repr(exc))
-                print(traceback.format_exc())
+            except (Exception) as exc:
+                logging.error( repr(exc) )
+                logging.debug( traceback.format_exc() )
 
             sys.stdout.flush()
 
         self.cloud.cleanup()
 
     def cleanup(self):
-        print('INFO: Cloud_Thread: Cleaning up ...')
+        logging.info( 'Cloud_Thread: Cleaning up ...' )
         self.running = False
         self.join()
-        print('INFO: Cloud_Thread: Done.')
+        logging.info( 'Cloud_Thread: Done.' )
 
 #!============================================================================
 
@@ -102,9 +102,9 @@ class Cloud(object):
         for uri in self.config.efd_ping_uris:
             try:
                 r = requests.get(uri, timeout=5)
-            except Exception as exc:
-                print(repr(exc))
-                print(traceback.format_exc())
+            except (Exception) as exc:
+                logging.error( repr(exc) )
+                logging.debug( traceback.format_exc() )
 
     #!------------------------------------------------------------------------
 
@@ -113,22 +113,22 @@ class Cloud(object):
 
         try:
             r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data, timeout=30)
-        except Exception as exc:
-            print(repr(exc))
-            #print(traceback.format_exc())
+        except (Exception) as exc:
+            logging.error( repr(exc) )
+            logging.debug( traceback.format_exc() )
             raise
         else:
             if 0:
-                print("DEBUG: *******************************************")
-                print("DEBUG: requests.post:")
-                print("DEBUG: requests.headers: data = {}".format(self.web_server_headers))
-                print("DEBUG: requests.post: data = {}".format(data))
-                print("DEBUG: -------------------------------------------")
-                print("DEBUG: post measurements data: r = {!r}".format(r))
-                print("DEBUG: post measurements r.status_code = {}".format(r.status_code))
-                print("DEBUG: post measurements r.headers = {}".format(r.headers))
-                print("DEBUG: post measurements r.text = {}".format(r.text))
-                print("DEBUG: *******************************************")
+                logging.debug( "DEBUG: *******************************************" )
+                logging.debug( "DEBUG: requests.post:" )
+                logging.debug( "DEBUG: requests.headers: data = {}".format( self.web_server_headers ) )
+                logging.debug( "DEBUG: requests.post: data = {}".format( data ) )
+                logging.debug( "DEBUG: -------------------------------------------" )
+                logging.debug( "DEBUG: post measurements data: r = {!r}".format( r ) )
+                logging.debug( "DEBUG: post measurements r.status_code = {}".format( r.status_code ) )
+                logging.debug( "DEBUG: post measurements r.headers = {}".format( r.headers ) )
+                logging.debug( "DEBUG: post measurements r.text = {}".format( r.text ) )
+                logging.debug( "DEBUG: *******************************************" )
 
     #!------------------------------------------------------------------------
 
@@ -176,8 +176,8 @@ class Cloud(object):
             #!
             try:
                 item = self.cloud_queue.get(block=True, timeout=2)
-            except queue.Empty as exc:
-                print(repr(exc))
+            except (queue.Empty) as exc:
+                logging.error( repr(exc) )
                 break
 
             self.spare_led_on()
@@ -188,13 +188,13 @@ class Cloud(object):
             #! Notify the queue that we have processed the retrieved item.
             #!
             try:
-                logging.debug("cloud:notify queue that item has been processed.")
+                logging.debug( "cloud:notify queue that item has been processed." )
                 self.cloud_queue.task_done()
-            except Exception as exc:
-                logging.error("cloud:EXCEPTION: issue `task_done()` to cloud queue after getting next item !!")
-                print(repr(exc))
+            except (Exception) as exc:
+                logging.error( "cloud:EXCEPTION: issue `task_done()` to cloud queue after getting next item !!" )
+                logging.error( repr(exc) )
 
-            logging.debug("cloud:measurements={!r}".format(measurements))
+            logging.debug( "cloud:measurements={!r}".format( measurements ) )
 
             capture_datetime_utc = measurements['datetime_utc']
 
@@ -205,9 +205,9 @@ class Cloud(object):
             self.measurements_log.write(csv_data=csv_data, datetime=capture_datetime_utc)
 
             #! append csv_data to list for posting in a batch.
-            #print("DEBUG: appending next csv_data.")
+            logging.debug( "appending next csv_data." )
             self.csv_data.append(csv_data)
-            #print("DEBUG: appended next csv_data (len={})".format(len(self.csv_data)))
+            logging.debug( "appended next csv_data (len={})".format(len(self.csv_data)) )
 
             new_data = True
 
@@ -216,7 +216,7 @@ class Cloud(object):
         #!
         if len(self.csv_data) < self.config.max_records_per_post:
             #! Not enough data to post.
-            logging.warning("cloud:Not enough data records to post ({}).".format(len(self.csv_data)))
+            logging.warning( "cloud: Not enough data records to post ({}).".format(len(self.csv_data)) )
             return
 
         #!
@@ -225,7 +225,7 @@ class Cloud(object):
         now = time.time()
         if not new_data:
             time_diff = now - self.last_post_time
-            #print("DEBUG: now={}, last_post_time={}, time_diff={}".format(now, self.last_post_time, time_diff))
+            #logging.debug( "cloud: now={}, last_post_time={}, time_diff={}".format(now, self.last_post_time, time_diff) )
             if time_diff < self.config.measurments_post_retry_time_interval:
                 #! Not time to retry last post.
                 logging.info("cloud:Not time to retry last post.")
@@ -246,9 +246,9 @@ class Cloud(object):
         #!
         try:
             self.post_measurements_data(data=post_data)
-        except Exception as exc:
-            print(repr(exc))
-            print(traceback.format_exc())
+        except (Exception) as exc:
+            logging.error( repr(exc) )
+            logging.debug( traceback.format_exc() )
         else:
             logging.info("cloud:Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
             #! clear list to allow more csv data to accumulate from the queue.
@@ -260,6 +260,11 @@ class Cloud(object):
 
 def main():
     """Main entry if running this module directly."""
+
+    import efd_config
+    import arrow
+
+    logging.basicConfig( level='DEBUG' )
 
     #!--------------------------------
 
@@ -284,13 +289,16 @@ def main():
 
         max_cloud_queue_size = 10
 
-    config = Config()
+    config = efd_config.Config()
 
     #!--------------------------------
 
+    capture_datetime_utc    = arrow.utcnow().floor( 'second' )
+    capture_datetime_local  = capture_datetime_utc.to( "Australia/Melbourne" )
+
     measurements = {
-            'datetime_utc'              : 'FIXME',
-            'datetime_local'            : 'FIXME',
+            'datetime_utc'              : capture_datetime_utc,
+            'datetime_local'            : capture_datetime_local,
             'max_volt_red'              : 'FIXME',
             'min_volt_red'              : 'FIXME',
             'max_time_offset_red'       : 'FIXME',
@@ -340,9 +348,9 @@ def main():
                 try:
                     #cloud_queue.put(item=measurements, block=False)
                     cloud_queue.put(item=measurements, block=True)
-                except queue.Full as exc:
+                except (queue.Full) as exc:
                     print("EXCEPTION: queue is full.  i={}".format(i))
-                    print(traceback.format_exc())
+                    logging.debug( traceback.format_exc() )
             print('----------------------------------------')
 
     except (KeyboardInterrupt, SystemExit) as exc:

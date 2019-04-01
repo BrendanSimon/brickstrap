@@ -1789,21 +1789,24 @@ class EFD_App(object):
                 #!
                 try:
                     self.tf_map_red = self.tf_map_calculate(phase=self.red_phase, index=self.peak_normal_max_red.index)
-                except Exception:
+                except (Exception) as exc:
                     self.tf_map_red = tf_mapping.Null_TF_Map
-                    print(traceback.format_exc())
+                    logging.error( str(exc) )
+                    logging.debug( traceback.format_exc() )
 
                 try:
                     self.tf_map_wht = self.tf_map_calculate(phase=self.wht_phase, index=self.peak_normal_max_wht.index)
-                except Exception:
+                except (Exception) as exc:
                     self.tf_map_wht = tf_mapping.Null_TF_Map
-                    print(traceback.format_exc())
+                    logging.error( str(exc) )
+                    logging.debug( traceback.format_exc() )
 
                 try:
                     self.tf_map_blu = self.tf_map_calculate(phase=self.blu_phase, index=self.peak_normal_max_blu.index)
-                except Exception:
+                except (Exception) as exc:
                     self.tf_map_blu = tf_mapping.Null_TF_Map
-                    print(traceback.format_exc())
+                    logging.error( str(exc) )
+                    logging.debug( traceback.format_exc() )
 
                 if self.config.tf_mapping_debug:
                     print("DEBUG: TF Mapping")
@@ -1915,7 +1918,7 @@ class EFD_App(object):
                 logging.debug("efd_app: putting measurements to cloud queue.")
                 logging.debug("efd_app: measurements={!r}".format(self.measurements))
                 self.cloud_queue.put(item=self.measurements, block=False)
-            except queue.Full:
+            except (queue.Full):
                 logging.error("efd_app: EXCEPTION: could not queue measurement data to cloud thread. qsize={}".format(self.cloud_queue.qsize()))
 
             #! FIXME: this could be done in the cloud thread !!
@@ -2131,9 +2134,9 @@ def argh_main():
             print("SystemExit -- exiting ...")
         except (Exception) as exc:
             #! An unhandled exception !!
-            print(traceback.format_exc())
-            print("Exception: {}".format(exc.message))
-            print("Unhandled Exception -- exiting...")
+            logging.debug( traceback.format_exc() )
+            logging.error( str(exc) )
+            logging.error( "Unhandled Exception -- exiting..." )
         finally:
             print("Cleaning up.")
             app.cleanup()
