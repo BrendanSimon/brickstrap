@@ -1,3 +1,4 @@
+#!============================================================================
 #!
 #! Successful Endeavours
 #!
@@ -8,15 +9,28 @@
 #! `gpsd` after `chronyd` starts, to force `gpsd` to restart after `chronyd`,
 #!  which is recommended when using the SOCK driver in `chrony`.
 #!
+#!============================================================================
 
 [Unit]
+
 Description=GPS (Global Positioning System) Daemon
+
 Requires=gpsd.socket
 
+#!============================================================================
+
 [Service]
+
 EnvironmentFile=-/etc/default/gpsd
+
 ExecStart=/usr/sbin/gpsd -N $GPSD_OPTIONS $DEVICES
+
 Restart=always
 
+#!============================================================================
+
 [Install]
+
 Also=gpsd.socket
+
+#!============================================================================

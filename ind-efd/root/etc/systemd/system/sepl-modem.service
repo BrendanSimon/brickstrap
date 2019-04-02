@@ -1,12 +1,32 @@
+#!============================================================================
+#!
+#!  systemd service to monitor status of the internet connection
+#!  (cellular modem) and take corrective action to restore the connection.
+#!
+#!  Copyright (C) 2017-2019 Successful Endeavours Pty Ltd
+#!
+#!=============================================================================
+
 [Unit]
+
 Description=Check Internet Connection
+
 After=network.target auditd.service
 
+#!=============================================================================
+
 [Service]
+
 ExecStart=/opt/sbin/check-internet-connection.sh
+
 KillMode=process
+
 Restart=always
 
+#!=============================================================================
+
 [Install]
+
 WantedBy=multi-user.target
 
+#!=============================================================================

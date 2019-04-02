@@ -1,18 +1,39 @@
+#!============================================================================
+#!
+#!  systemd service to log status of RF systems (Modem, GPS)
+#!
+#!  NOTE: this is not enabled.  Status logging is currently performed in
+#!        `check-internet-connection.sh` scirpt.
+#!
+#!  Copyright (C) 2019-2019 Successful Endeavours Pty Ltd
+#!
+#!============================================================================
+
 [Unit]
+
 Description=Early Fault Detection Daemon
+
 After=network.target auditd.service
 
+#!============================================================================
+
 [Service]
+
 ExecStart=/opt/sbin/efd_app.py
+
+
 ExecReload=/bin/kill -HUP $MAINPID
+
 KillMode=process
+
 Restart=always
-#Type=simple
-#User=example
-#Group=example
+
 Nice=-19
 
-[Install]
-WantedBy=multi-user.target
-#Alias=selp-efd.service
+#!============================================================================
 
+[Install]
+
+WantedBy=multi-user.target
+
+#!============================================================================

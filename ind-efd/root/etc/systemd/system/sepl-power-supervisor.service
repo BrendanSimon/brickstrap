@@ -1,12 +1,32 @@
+#!============================================================================
+#!
+#!  systemd service to monitor whether the external power management controller
+#!  has requested a reboot and to initiate the shutdown.
+#!
+#!  Copyright (C) 2017-2019 Successful Endeavours Pty Ltd
+#!
+#!============================================================================
+
 [Unit]
-Description=Check Internet Connection
+
+Description=Check Power Supervisor
+
 After=basic.target
 
+#!=============================================================================
+
 [Service]
+
 ExecStart=/opt/sbin/sepl_power_supervisor.py
+
 KillMode=process
+
 Restart=always
 
+#!=============================================================================
+
 [Install]
+
 WantedBy=basic.target
 
+#!=============================================================================

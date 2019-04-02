@@ -1,8 +1,10 @@
 #!=============================================================================
 #!
-#! Successful Endeavours Pty Ltd
+#!  Successful Endeavours Pty Ltd
 #!
-#! Service to log GPS NMEA sentences to disk for diagnostics
+#!  Service to log GPS NMEA sentences to disk for diagnostics
+#!
+#!  Copyright (C) 2017-2019 Successful Endeavours Pty Ltd
 #!
 #!=============================================================================
 
