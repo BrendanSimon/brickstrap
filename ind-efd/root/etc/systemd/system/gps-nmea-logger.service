@@ -12,7 +12,18 @@
 
 Description=GPS NMEA Logger service
 
-Requires=gpsd.service
+#Requires=gpsd.service
+
+#! PartOf and BindsTo will cause this service to stop if the listed service is stopped.
+#! This logger is not really "part of" gpsd, so PartOf is not the right answer
+#! BindsTo is close to what we want.
+#! Restarting gpsd will stop this service, however it wont be restarted !!
+#! What we want is for it to be restarted, if it was running, but not restarted
+#! if it wasn't running.
+
+#PartOf=gpsd.service
+
+BindsTo=gpsd.service
 
 After=network.target auditd.service gpsd.service
 
@@ -22,7 +33,12 @@ After=network.target auditd.service gpsd.service
 
 ExecStart=/opt/sbin/gps_nmea_logger.sh
 
-KillMode=process
+#! The gpscat process as part of the logger script doesn't seem to terminate
+#! when this service is stopped (at least not via the binding when gpsd is stopped).
+#! Use control-group to force termination of all child processes.
+
+#KillMode=process
+KillMode=control-group
 
 Restart=always
 
