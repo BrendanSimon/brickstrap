@@ -78,7 +78,8 @@ debug "gps_dev  = ${gps_dev}"
 mkdir -p "${log_dir}"
 
 #! log output of gpscat to log file.
-run gpscat "${gps_dev}" >> "${log_file}"
+debug "gpscat "${gps_dev} >> ${log_file}""
+gpscat "${gps_dev}" >> "${log_file}"
 
 
 
