@@ -21,7 +21,6 @@ After=network.target auditd.service
 
 ExecStart=/opt/sbin/efd_app.py
 
-
 ExecReload=/bin/kill -HUP $MAINPID
 
 KillMode=process
