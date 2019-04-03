@@ -31,6 +31,9 @@ After=network.target auditd.service gpsd.service
 
 [Service]
 
+#! Small delay to ensurre gpsd if fully up.
+ExecStartPre=-sleep 2
+
 ExecStart=/opt/sbin/gps_nmea_logger.sh
 
 #! The gpscat process as part of the logger script doesn't seem to terminate
@@ -40,6 +43,7 @@ ExecStart=/opt/sbin/gps_nmea_logger.sh
 #KillMode=process
 KillMode=control-group
 
+#Restart=on-failure
 Restart=always
 
 #!=============================================================================
