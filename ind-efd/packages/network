@@ -1,24 +1,47 @@
 network-manager
+
 modemmanager
 mobile-broadband-provider-info
+libqmi-utils
+usb-modeswitch
+gir1.2-modemmanager-1.0
+
 ifupdown
 net-tools
 isc-dhcp-client
 iputils-ping
+
 openssh-server
 sshfs
 rsync
-nfs-kernel-server
-nfs-common
-gpsd
-#gpsd/$BACKPORTS
-chrony
-dnsutils
-libqmi-utils
-usb-modeswitch
 curl
 wget
-#ddclient
-gir1.2-modemmanager-1.0
-tcpdump
 
+nfs-kernel-server
+nfs-common
+
+#!
+#! NOTE !!!
+#!
+#! `gpsd-clients` adds an extra 110MB to the rootfs !!
+#! as it pulls in a lot of other dependencies (python3, gtk, etc).
+#!
+#! Unfortunately, `gpscat` has moved to `gpsd-clients` in `experimental` repo
+#! (for all architectures - except IA64 for some reason)
+#!
+#! We might just have to wear that for now, unless the maintainer can
+#! optimise the dependencies or move gpscat back into `python-gps`
+#!
+
+gpsd
+#gpsd-clients
+#gpsd/$BACKPORTS
+#gpsd-clients/$BACKPORTS
+#gpsd/$EXPERIMENTAL
+#gpsd-clients/$EXPERIMENTAL
+
+chrony
+
+dnsutils
+#ddclient
+tcpdump

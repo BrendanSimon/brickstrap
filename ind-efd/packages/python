@@ -3,8 +3,11 @@ python-pip
 python-setuptools
 python-wheel
 python-numpy
+
 python-gps
 #python-gps/$BACKPORTS
+#python-gps/$EXPERIMENTAL
+
 python-enum34
 python-serial
 python-cjson
@@ -13,4 +16,3 @@ python-arrow
 python-dbus
 python-argh
 python-colorama
-
