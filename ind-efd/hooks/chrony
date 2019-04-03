@@ -1,12 +1,18 @@
 #!/bin/bash
 
+#!============================================================================
+#!
+#! script to setup/modify the chrony config file.
+#!
+#!============================================================================
+
 #! backup original conf file and replace with a SEPL customised file.
 ${CHROOTCMD} cp -a /etc/chrony/chrony.conf      /etc/chrony/chrony_ORIG.conf
 ${CHROOTCMD} cp    /etc/chrony/chrony_SEPL.conf /etc/chrony/chrony.conf
 
-#! backup original conf file and replace with a SEPL customised file.
-${CHROOTCMD} cp -a /etc/default/chrony.conf      /etc/default/chrony_ORIG.conf
-${CHROOTCMD} cp    /etc/default/chrony_SEPL.conf /etc/default/chrony.conf
+#! backup original defaults file and replace with a SEPL customised file.
+${CHROOTCMD} cp -a /etc/default/chrony          /etc/default/chrony_ORIG
+${CHROOTCMD} cp    /etc/default/chrony_SEPL     /etc/default/chrony
 
 #! Enable chrony systemd service.
 $CHROOTBINDCMD systemctl enable chrony

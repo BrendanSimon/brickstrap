@@ -1,19 +1,19 @@
 #!/bin/bash
 
-##============================================================================
-## 
-## There is a 'watchdog' package which is a daemon that can pat
-## the hardware watchdog, and can be configured to monitor other things
-## such as memory usage, internet connectivity, etc.
-## 
-## There is also hardware and process watchdog capabilities in systemd.
-## Since we are using systemd as PID 1 (aka init) then it makes some
-## sense to use it (at the very least for the hardware watchdog).
-## 
-## We will just use hardware watchdog via systemd for now.
-## See systemd hook !!
-## 
-##============================================================================
+#!============================================================================
+#!
+#! There is a 'watchdog' package which is a daemon that can pat
+#! the hardware watchdog, and can be configured to monitor other things
+#! such as memory usage, internet connectivity, etc.
+#!
+#! There is also hardware and process watchdog capabilities in systemd.
+#! Since we are using systemd as PID 1 (aka init) then it makes some
+#! sense to use it (at the very least for the hardware watchdog).
+#!
+#! We will just use hardware watchdog via systemd for now.
+#! See systemd hook !!
+#!
+#!============================================================================
 
 if false; then
 
@@ -25,7 +25,7 @@ SYSDWDOG_SERVICE_ORIG="/root/watchdog.service.ORIG"
 
 SYSDWDOG_SERVICE_TMP="${SYSDWDOG_SERVICE}.TMP"
 
-## Remove temp file so that it's empty to append to.
+#! Remove temp file so that it's empty to append to.
 ${CHROOTCMD} rm -f "${SYSDWDOG_SERVICE_TMP}"
 
 echo "${SYSDWDOG_DIR}"
@@ -33,27 +33,27 @@ echo "${SYSDWDOG_SERVICE}"
 echo "${SYSDWDOG_SERVICE_TMP}"
 echo "${SED_PATTERNS}"
 
-## Make a copy of the original file.
+#! Make a copy of the original file.
 ${CHROOTCMD} bash -c "cd ${SYSDWDOG_DIR} && cp ${SYSDWDOG_SERVICE} ${SYSDWDOG_SERVICE_ORIG}"
 
 ${CHROOTCMD} bash -c "cd ${SYSDWDOG_DIR} && grep -v "WantedBy=multi-user.target" ${SYSDWDOG_SERVICE} >> ${SYSDWDOG_SERVICE_TMP}"
 
 ${CHROOTCMD} bash -c "cd ${SYSDWDOG_DIR} && echo "WantedBy=multi-user.target" >> ${SYSDWDOG_SERVICE_TMP}"
 
-## Copy temp file back fo conf file.
+#! Copy temp file back fo conf file.
 ${CHROOTCMD} bash -c "cd ${SYSDWDOG_DIR} && mv ${SYSDWDOG_SERVICE_TMP} ${SYSDWDOG_SERVICE}"
 
-## Enable watchdog systemd service.
+#! Enable watchdog systemd service.
 $CHROOTBINDCMD systemctl enable watchdog
 
 
 
 
-##----------------------------------------------------------------------------
-## CONFIG IF USING 'watchdog' package.
-##----------------------------------------------------------------------------
+#!----------------------------------------------------------------------------
+#! CONFIG IF USING 'watchdog' package.
+#!----------------------------------------------------------------------------
 
-## script to setup/modify the watchdog config file.
+#! script to setup/modify the watchdog config file.
 
 WATCHDOG_DIR=/lib/systemd/system
 
@@ -63,7 +63,7 @@ WATCHDOG_SERVICE_ORIG="/root/watchdog.service.ORIG"
 
 WATCHDOG_SERVICE_TMP="${WATCHDOG_SERVICE}.TMP"
 
-## Remove temp file so that it's empty to append to.
+#! Remove temp file so that it's empty to append to.
 ${CHROOTCMD} rm -f "${WATCHDOG_SERVICE_TMP}"
 
 echo "${WATCHDOG_DIR}"
@@ -71,17 +71,17 @@ echo "${WATCHDOG_SERVICE}"
 echo "${WATCHDOG_SERVICE_TMP}"
 echo "${SED_PATTERNS}"
 
-## Make a copy of the original file.
+#! Make a copy of the original file.
 ${CHROOTCMD} bash -c "cd ${WATCHDOG_DIR} && cp ${WATCHDOG_SERVICE} ${WATCHDOG_SERVICE_ORIG}"
 
 ${CHROOTCMD} bash -c "cd ${WATCHDOG_DIR} && grep -v "WantedBy=multi-user.target" ${WATCHDOG_SERVICE} >> ${WATCHDOG_SERVICE_TMP}"
 
 ${CHROOTCMD} bash -c "cd ${WATCHDOG_DIR} && echo "WantedBy=multi-user.target" >> ${WATCHDOG_SERVICE_TMP}"
 
-## Copy temp file back fo conf file.
+#! Copy temp file back fo conf file.
 ${CHROOTCMD} bash -c "cd ${WATCHDOG_DIR} && mv ${WATCHDOG_SERVICE_TMP} ${WATCHDOG_SERVICE}"
 
-## Enable watchdog systemd service.
+#! Enable watchdog systemd service.
 $CHROOTBINDCMD systemctl enable watchdog
 
 fi
