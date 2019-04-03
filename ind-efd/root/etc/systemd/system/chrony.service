@@ -21,6 +21,16 @@ Documentation=man:chronyd(8) man:chronyc(1) man:chrony.conf(5)
 
 Conflicts=systemd-timesyncd.service openntpd.service ntp.service ntpsec.service
 
+#! These dependencies are good in theory, but they cause issues
+#! with our use of calling `systemctl restart gpsd` in `ExecStarPost`
+#! the command just hangs (I think it's in some kind of infinite loop)
+
+#Wants=gpsd.service
+#Requires=gpsd.service
+#BindsTo=gpsd.service
+
+#Before=gpsd.service
+
 After=network.target
 
 ConditionCapability=CAP_SYS_TIME
@@ -40,6 +50,8 @@ EnvironmentFile=-/etc/default/chrony
 #! issues and the kludge to preset date to year 2000 is no longer required.
 #ExecStartPre=/bin/bash -c '/usr/bin/test $(date +"%Y") -lt 2000 && date --set="2000-01-01 00:00:00" || true'
 
+#ExecStartPre=-/bin/systemctl stop gpsd.service gpsd.socket
+
 ExecStart=/usr/sbin/chronyd $DAEMON_OPTS
 
 ExecStartPost=-/usr/lib/chrony/chrony-helper update-daemon
@@ -55,6 +67,9 @@ ExecStartPost=-sleep 2
 #! killing gpsd does not restart the service if gpsd was not running
 #! e.g. if `systemctl stop gpsd gpsd.socket` was issued.
 #! Explicity restart the service instead
+#!
+#! NOTE: Using directive `Wants=` (or `Requires=`, `BindsTo=` or `PartOf=`)
+#!       should start up the gpsd.service
 ExecStartPost=-/bin/systemctl stop gpsd.service gpsd.socket
 ExecStartPost=-/bin/systemctl restart gpsd.service
 
