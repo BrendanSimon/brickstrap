@@ -204,7 +204,7 @@ class ConfigDefault( object ):
     measurements_log_field_names = []
 
     #! retry time interval (minimum) between reposting EFD measurements to web portal.
-    measurments_post_retry_time_interval = 10
+    measurements_post_retry_time_interval = 10
 
     #! max of 60 records (1 minute) of data per post to web portal.
     max_records_per_post = 60
@@ -571,7 +571,7 @@ class ConfigDefault( object ):
 
         print("measurements_log_field_names = {}".format(self.measurements_log_field_names))
 
-        print("measurments_post_retry_time_interval = {}".format(self.measurments_post_retry_time_interval))
+        print("measurements_post_retry_time_interval = {}".format(self.measurements_post_retry_time_interval))
         print("max_records_per_post = {}".format(self.max_records_per_post))
         print("max_cloud_queue_size = {}".format(self.max_cloud_queue_size))
 
