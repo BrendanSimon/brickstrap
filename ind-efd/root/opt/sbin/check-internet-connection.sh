@@ -60,20 +60,73 @@ ping_server="${PING_SERVER:-203.14.0.251}"
 #! number of ping packets to send (default is 10)
 ping_count="${PING_COUNT:-10}"
 
+#! ping timeout to use with the `timeout` command.
+#! with a ping every second = ping count + a small margin
+(( ping_timeout = ping_count + 5 ))
+
 #! ping reboot timeout (default is 10 minutes => 600 seconds)
 reboot_timeout="${PING_REBOOT_TIMEOUT:-600}"
 
 
 
 #=============================================================================
-#! run the argument as a command if DEBUG is set
+#! output arguments to stdout if DEBUG is set
 #=============================================================================
 function debug
 {
     if (( DEBUG )) ; then
-        #echo "@ = $@"
+        1>&2 echo "DEBUG: $@"
+    fi
+}
+
+
+
+#=============================================================================
+#! echo arguments to stdout if DRYRUN is set, else run the arguments as a command
+#=============================================================================
+function run
+{
+    if (( DRYRUN )) ; then
+        1>&2 echo "DRYRUN: $@"
+    else
+        debug "$@"
         "$@"
     fi
+
+    return $?
+}
+
+
+
+#!=============================================================================
+#!
+#!  @brief  Function to run a command governed by `timeout` command.
+#!
+#!  @param  timeout period
+#!  @param  command and command arguments
+#!
+#!=============================================================================
+
+function run_timeout
+{
+    local cmd="timeout --kill-after 5 "$@""
+
+    #! issue command goverened by timeout
+    run ${cmd}
+
+    (( ret = $? ))
+
+    debug "return: ${ret}, from: ${cmd}"
+
+    #! check for timeout and successful TERM signal killed the command
+    #! or if TERM failed and KILL was issued.
+    if (( ret == 124 )) ; then
+        1>&2 echo "TIMEOUT: TERM: ${cmd}"
+    elif (( ret == 137 )) ; then
+        1>&2 echo "TIMEOUT: KILL: ${cmd}"
+    fi
+
+    return ${ret}
 }
 
 
@@ -101,6 +154,8 @@ function do_reboot
         echo "REBOOT: ${msg}"
         /sbin/reboot
     fi
+
+    return $?
 }
 
 
@@ -135,7 +190,8 @@ while true ; do
     echo "modem: ${modem}, ${signal_quality}, ${access_tech}"
 
     echo "Pinging ${ping_server} (count=${ping_count})"
-    ping -c ${ping_count} ${ping_server} > /dev/null
+    #out=$( run_timeout ${ping_timeout} ping -c ${ping_count} ${ping_server} )
+    run_timeout ${ping_timeout} ping -c ${ping_count} ${ping_server} > /dev/null
 
     if (( $? == 0 )); then
         #! got a response => reset timer.
@@ -151,13 +207,15 @@ while true ; do
         #! then send KILL signal 5 seconds later if still running.
         echo "Ping failed (SECONDS=${SECONDS}, reboot_timeout=${reboot_timeout}).  Attempting to restart modem and internet connection..."
 
-        debug echo "DEBUG: check-internet: timeout 0: $(date)"
+        debug "DEBUG: check-internet: timeout 0: $(date)"
 
-        timeout --kill-after 5 180 /opt/sbin/modem-power-enable.sh
+        #timeout --kill-after 5 180 /opt/sbin/modem-power-enable.sh
+        run_timeout 180 /opt/sbin/modem-power-enable.sh
 
-        debug echo "DEBUG: check-internet: timeout 1: ret=$? : $(date)"
+        debug "DEBUG: check-internet: timeout 1: ret=$? : $(date)"
     fi
 
     #! Sleep for 1 minute.
+    debug "sleeping 60 seconds"
     sleep 60
 done

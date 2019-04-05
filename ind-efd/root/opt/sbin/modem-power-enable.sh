@@ -26,14 +26,63 @@ modem_power_cycle_delay=5
 
 
 #=============================================================================
-#! run the argument as a command if DEBUG is set
+#! output arguments to stdout if DEBUG is set
 #=============================================================================
 function debug
 {
     if (( DEBUG )) ; then
-        #echo "@ = $@"
+        1>&2 echo "DEBUG: $@"
+    fi
+}
+
+
+
+#=============================================================================
+#! echo arguments to stdout if DRYRUN is set, else run the arguments as a command
+#=============================================================================
+function run
+{
+    if (( DRYRUN )) ; then
+        1>&2 echo "DRYRUN: $@"
+    else
+        debug "$@"
         "$@"
     fi
+
+    return $?
+}
+
+
+
+#!=============================================================================
+#!
+#!  @brief  Function to run a command governed by `timeout` command.
+#!
+#!  @param  timeout period
+#!  @param  command and command arguments
+#!
+#!=============================================================================
+
+function run_timeout
+{
+    local cmd="timeout --kill-after 5 "$@""
+
+    #! issue command goverened by timeout
+    run ${cmd}
+
+    (( ret = $? ))
+
+    debug "return: ${ret}, from: ${cmd}"
+
+    #! check for timeout and successful TERM signal killed the command
+    #! or if TERM failed and KILL was issued.
+    if (( ret == 124 )) ; then
+        1>&2 echo "TIMEOUT: TERM: ${cmd}"
+    elif (( ret == 137 )) ; then
+        1>&2 echo "TIMEOUT: KILL: ${cmd}"
+    fi
+
+    return ${ret}
 }
 
 
@@ -122,7 +171,7 @@ else
     modem_power_off
 
     for (( i = 1 ; i <= retries ; i++ )) ; do
-        debug echo "DEBUG: check modem is off: '${device}' (attempt: ${i})"
+        debug "DEBUG: check modem is off: '${device}' (attempt: ${i})"
 
         if [ ! -e "${dev_file}" ] ; then
             break
@@ -143,7 +192,7 @@ fi
 modem_power_on
 
 for (( i = 1 ; i <= retries ; i++ )) ; do
-    debug echo "DEBUG: check modem is on: '${device}' (attempt: ${i})"
+    debug "DEBUG: check modem is on: '${device}' (attempt: ${i})"
 
     if [ -e "${dev_file}" ] ; then
         break
@@ -163,7 +212,7 @@ echo "Modem is on"
 echo "Waiting for NetworkManager device..."
 
 for (( i = 1 ; i <= retries ; i++ )) ; do
-    debug echo "DEBUG: detect NetworkManager device: ${device} (attempt: ${i})"
+    debug "DEBUG: detect NetworkManager device: ${device} (attempt: ${i})"
 
     nmcli d | grep --quiet "${device}"
     (( ret = $? ))
@@ -198,15 +247,15 @@ echo "Detected NetworkManager device"
 #!
 echo "NetworkManager connecting..."
 
-debug echo "DEBUG: modem-power-enable: timeout 0: $(date)"
+debug "DEBUG: modem-power-enable: timeout 0: $(date)"
 
-out=$( timeout --kill-after 5 60 nmcli d connect "${device}" )
+out=$( run_timeout 60 nmcli d connect "${device}" )
 (( ret = $? ))
 
 echo "${out}" | grep --quiet -i "error"
 (( err = ! $? ))
 
-debug echo "DEBUG: modem-power-enable: timeout 1: ret=$? : $(date)"
+debug "DEBUG: modem-power-enable: timeout 1: ret=$? : $(date)"
 
 if (( ret || err )) ; then
     fatal_error 67 "NetworkManager failed to connect device: '${device}' !!"
