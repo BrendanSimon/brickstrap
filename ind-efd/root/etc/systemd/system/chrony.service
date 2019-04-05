@@ -50,19 +50,18 @@ EnvironmentFile=-/etc/default/chrony
 #! issues and the kludge to preset date to year 2000 is no longer required.
 #ExecStartPre=/bin/bash -c '/usr/bin/test $(date +"%Y") -lt 2000 && date --set="2000-01-01 00:00:00" || true'
 
-#ExecStartPre=-/bin/systemctl stop gpsd.service gpsd.socket
-
 ExecStart=/usr/sbin/chronyd $DAEMON_OPTS
 
 ExecStartPost=-/usr/lib/chrony/chrony-helper update-daemon
 
 #! sleep for bit to ensure chronyd initialisation has completed.
 #! e.g. creating sockets for gpsd
-ExecStartPost=-sleep 2
+#ExecStartPost=-sleep 2
 
 #! kill gpsd after chrony has started to force restart.
 #! assumes gpsd has been configured to always restart !!
 #ExecStartPost=-/usr/bin/killall -TERM gpsd
+ExecStartPost=-systemctl kill gpsd gpsd.socket
 
 #! killing gpsd does not restart the service if gpsd was not running
 #! e.g. if `systemctl stop gpsd gpsd.socket` was issued.
@@ -70,8 +69,9 @@ ExecStartPost=-sleep 2
 #!
 #! NOTE: Using directive `Wants=` (or `Requires=`, `BindsTo=` or `PartOf=`)
 #!       should start up the gpsd.service
-ExecStartPost=-/bin/systemctl stop gpsd.service gpsd.socket
-ExecStartPost=-/bin/systemctl restart gpsd.service
+#!       These can "hang" the service startup if there is any circular dependencies !!
+#ExecStartPost=-/bin/systemctl stop gpsd.service gpsd.socket
+#ExecStartPost=-/bin/systemctl restart gpsd.service gpsd.socket
 
 PrivateTmp=yes
 
