@@ -115,7 +115,7 @@ class Cloud(object):
             r = requests.post(self.config.web_server_measurements_log, headers=self.web_server_headers, data=data, timeout=30)
         except (Exception) as exc:
             logging.error( repr(exc) )
-            logging.debug( traceback.format_exc() )
+            #logging.debug( traceback.format_exc() )
             raise
         else:
             if 0:
@@ -167,7 +167,7 @@ class Cloud(object):
         #!
         #! Get next item in the queue (wait if necessary) if number of records to post is not at limit.
         #!
-        while len(self.csv_data) < self.config.max_records_per_post:
+        while True :
 
             self.spare_led_off()
 
@@ -175,8 +175,8 @@ class Cloud(object):
             #! Block on receive queue for first time in the receive queue.
             #!
             try:
-                item = self.cloud_queue.get(block=True, timeout=2)
-            except (queue.Empty) as exc:
+                item = self.cloud_queue.get( block=True, timeout=2 )
+            except (queue.Empty) as exc :
                 logging.error( repr(exc) )
                 break
 
@@ -190,7 +190,7 @@ class Cloud(object):
             try:
                 logging.debug( "cloud:notify queue that item has been processed." )
                 self.cloud_queue.task_done()
-            except (Exception) as exc:
+            except (Exception) as exc :
                 logging.error( "cloud:EXCEPTION: issue `task_done()` to cloud queue after getting next item !!" )
                 logging.error( repr(exc) )
 
@@ -198,11 +198,15 @@ class Cloud(object):
 
             capture_datetime_utc = measurements['datetime_utc']
 
-            csv_data = self.measurements_log.to_csv(measurements=measurements, peak_detect_mode=self.config.peak_detect_mode)
-            logging.debug("cloud:csv_data={!r}".format(csv_data))
+            csv_data = self.measurements_log.to_csv( measurements=measurements, peak_detect_mode=self.config.peak_detect_mode )
+            logging.debug( "cloud:csv_data={!r}".format(csv_data) )
 
             #! write csv data to measurements log file.
-            self.measurements_log.write(csv_data=csv_data, datetime=capture_datetime_utc)
+            self.measurements_log.write( csv_data=csv_data, datetime=capture_datetime_utc )
+
+            if len( self.csv_data ) >= self.config.max_records_per_post :
+                #! full batch of data, so exit loop for posting
+                break
 
             #! append csv_data to list for posting in a batch.
             logging.debug( "appending next csv_data." )
@@ -214,22 +218,22 @@ class Cloud(object):
         #!
         #! Check if there is enough data to post.
         #!
-        if len(self.csv_data) < self.config.max_records_per_post:
+        if len( self.csv_data ) < self.config.max_records_per_post :
             #! Not enough data to post.
-            logging.warning( "cloud: Not enough data records to post ({}).".format(len(self.csv_data)) )
+            logging.warning( "cloud: Not enough data records to post ({}).".format( len( self.csv_data ) ) )
             return
 
         #!
         #! Always post data if new data was added, otherwise check if time to repost last data.
         #!
         now = time.time()
-        if not new_data:
+        if not new_data :
             time_diff = now - self.last_post_time
             #logging.debug( "cloud: now={}, last_post_time={}, time_diff={}".format(now, self.last_post_time, time_diff) )
-            if time_diff < self.config.measurments_post_retry_time_interval:
+            if time_diff < self.config.measurments_post_retry_time_interval :
                 #! Not time to retry last post.
-                logging.info("cloud:Not time to retry last post.")
-                time.sleep(1)
+                logging.info( "cloud:Not time to retry last post." )
+                time.sleep( 1 )
                 return
 
         self.last_post_time = now
@@ -237,20 +241,20 @@ class Cloud(object):
         #!
         #! concatenate csv row header and data into a single string.
         #!
-        post_data = 'data=' + self.measurements_log.csv_header + ''.join(self.csv_data)
-        logging.info("cloud:Posting data: len(csv_data)={}".format(len(self.csv_data)))
-        logging.debug("cloud:post_data={}".format(post_data))
+        post_data = 'data=' + self.measurements_log.csv_header + ''.join( self.csv_data )
+        logging.info( "cloud:Posting data: len(csv_data)={}".format( len( self.csv_data ) ) )
+        logging.debug( "cloud:post_data={}".format( post_data ) )
 
         #!
         #! post the data to the web server.
         #!
         try:
-            self.post_measurements_data(data=post_data)
+            self.post_measurements_data( data=post_data )
         except (Exception) as exc:
             logging.error( repr(exc) )
             logging.debug( traceback.format_exc() )
         else:
-            logging.info("cloud:Posted Measurement Data OK.  rows={}".format(len(self.csv_data)))
+            logging.info( "cloud:Posted Measurement Data OK.  rows={}".format( len( self.csv_data ) ) )
             #! clear list to allow more csv data to accumulate from the queue.
             self.csv_data = []
 
@@ -341,7 +345,7 @@ def main():
             time.sleep(delay)
             count = data_count[data_index]
             data_index += 1
-            if data_index >= len(data_count):
+            if data_index >= len( data_count ) :
                 data_index = 0
             print("Queueing {} csv rows".format(count))
             for i in range(count):
