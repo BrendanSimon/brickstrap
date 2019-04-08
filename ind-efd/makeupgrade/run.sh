@@ -162,8 +162,12 @@ cd "${upgrade_root_mnt}"
 #!
 #! Unpack upgrade archive to upgrade filesystem.
 #!
+#! `--numeric-onwer` is **REQUIRED** to honour the onwership within the archive
+#! when extracting, otherwise the equivalent owner IDs of the running system,
+#! which may be different !!
+#!
 echo "Unpacking rootfs archive... ['${archive}' => '${upgrade_root_mnt}']"
-cmd tar --extract --gzip --file "${prog_dir}/${archive}"
+cmd tar --extract --gzip --numeric-owner --file "${prog_dir}/${archive}"
 
 #!
 #! Copy config files from current rootfs to upgrade rootfs.
