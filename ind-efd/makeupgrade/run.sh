@@ -45,7 +45,7 @@ cmd()
     fi
 
     if [[ -z ${dryrun} ]] ; then
-        $@
+        "$@"
     fi
 }
 
