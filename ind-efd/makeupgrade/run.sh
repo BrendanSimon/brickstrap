@@ -204,10 +204,18 @@ pat_old="^(\w+=).*"
 while read -r  line ; do
     if [[ ${line} =~ ${pat_old} ]] ; then
         pat_new="^${BASH_REMATCH[1]}.*"
-        cmd sed -i "s|${pat_new}|${line}|" "${settings_new}"
+        out="$( grep "${pat_new}" "${settings_new}" || true )"
+        if [[ "${out}" == "" ]] ; then
+            #! pattern not in file so append it
+            cmd echo "${line}" >> "${settings_new}"
+        else
+            #! pattern in file so replace it if necessary
+            cmd sed -i "s|${pat_new}|${line}|" "${settings_new}"
+        fi
     fi
 done < "${settings_file}"
 
+echo -e "Move new settings file to existing settings..."
 cmd mv "${settings_new}" "${settings_file}"
 
 #!
