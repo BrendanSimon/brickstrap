@@ -30,30 +30,34 @@ reboot_delay=3
 #dryrun="#"
 
 #! Set to 1 for more diagnostic output.
-verbose=0
+#verbose=0
 
 #!===========================================================================
 
 cmd()
 {
-    if [[ ${verbose} != 0 ]] ; then
-        if [[ -z ${dryrun} ]] ; then
-            echo "executing command: $@"
+    #set -x
+
+    if (( verbose )) ; then
+	    if (( dryrun )) ; then
+            >&2 echo "skipping command: $@"
         else
-            echo "skipping command: $@"
+            >&2 echo "executing command: $@"
         fi
     fi
 
-    if [[ -z ${dryrun} ]] ; then
+    if (( ! dryrun )) ; then
         "$@"
     fi
+
+    #set +x
 }
 
 #!===========================================================================
 
 error()
 {
-    echo "ERROR: $1"
+    >&2 echo "ERROR: $1"
 }
 
 #!===========================================================================
@@ -61,7 +65,7 @@ error()
 fatal()
 {
     error "$1"
-    echo "Terminated ['${prog_base}']"
+    >&2 echo "Terminated ['${prog_base}']"
     exit -1
 }
 
@@ -77,7 +81,7 @@ copy_from_current_fs()
     fi
 
     if [[ -e ${src} ]] ; then
-        echo "copying '${src}' => '${dst}'"
+        >&2 echo "copying '${src}' => '${dst}'"
         cmd cp -a "${src}" "${dst}"
     fi
 }
@@ -274,15 +278,17 @@ cmd mount --options remount,rw /boot/flash
 if [[ ! -e "/boot/flash/ORIG" ]] ; then
     echo -e "\nMake backup of original boot files for platform..."
     cmd mkdir -p "/boot/flash/ORIG"
+    #cmd find "/boot/flash" -maxdepth 1 -type f -print0 | xargs -0 cp -t "/boot/flash/ORIG/"
     cmd find "/boot/flash" -maxdepth 1 -type f | xargs cp -t "/boot/flash/ORIG/"
 fi
 
 echo -e "\nMake backup of current boot files for platform..."
 cmd mkdir -p "/boot/flash/PREV"
+#cmd find "/boot/flash" -maxdepth 1 -type f -print0 | xargs -0 cp -t "/boot/flash/PREV/"
 cmd find "/boot/flash" -maxdepth 1 -type f | xargs cp -t "/boot/flash/PREV/"
 
 echo -e "\nUpgrade boot files for platform..."
-cmd cp "${upgrade_root_mnt}/boot/flash/*" "/boot/flash/"
+cmd cp "${upgrade_root_mnt}"/boot/flash/* "/boot/flash/"
 cmd cp "/boot/flash/BOOT${platform}.bin" "/boot/flash/BOOT.bin"
 
 #!
