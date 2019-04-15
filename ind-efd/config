@@ -1,6 +1,20 @@
+#!
+#! NOTE: `jessie-backports` distribution has been removed from primary debian
+#!       mirrors.
+#!       It seems to only be available at ``archive.debian.org` now !!
+#!
+#! 2019-04-15, Brendan Simon (Successful Endeavours Pty Ltd)
+#!
+
 SUITE="jessie"
+
 BACKPORTS="${SUITE}-backports"
+
 ARCH="armhf"
+
 #DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://mirror.aarnet.edu.au/debian"}
-DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://debian.mirror.serversaustralia.com.au/debian"}
-IMAGE_FILE_SIZE=${IMAGE_FILE_SIZE:-"1800M"}
+#DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://debian.mirror.serversaustralia.com.au/debian"}
+DEBIAN_MIRROR=${DEBIAN_MIRROR:-"http://archive.debian.org/debian"}
+
+IMAGE_FILE_SIZE=${IMAGE_FILE_SIZE:-"1800M"}A
+
